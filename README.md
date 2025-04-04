@@ -35,11 +35,44 @@ The repository includes several epidemic datasets:
 Train the model with custom parameters:
 
 ```bash
-python src/train.py --dataset japan --sim_mat japan-adj --window 20 --horizon 5 \
-  --hidden_dim 16 --attn_heads 16 --low_rank_dim 6 --num_scales 5 \
-  --kernel_size 3 --temp_conv_out_channels 12 --dropout 0.249 \
-  --attention_reg_weight 1e-3 --lr 0.001 --weight_decay 5e-4 --cuda --mylog
+python src/train.py --dataset japan --sim_mat japan-adj --window 20 --hidden_dim 16 --attn_heads 16 --low_rank_dim 6 --num_scales 5 --kernel_size 3 --temp_conv_out_channels 12 --dropout 0.249 --attention_reg_weight 1e-3 --lr 0.001 --weight_decay 5e-4 --cuda --mylog --horizon 3
 ```
+
+### Hyperparameter Optimization
+
+MSAGATNet includes an Optuna-based hyperparameter optimization framework to find optimal model configurations for different datasets and forecasting tasks:
+
+```bash
+python src/optimize.py --dataset japan --sim-mat japan-adj --window 20 --horizon 5 --trials 100 --max-params 50000
+```
+
+The optimization process:
+1. Automatically explores different hyperparameter combinations
+2. Trains and evaluates models with early stopping
+3. Tracks metrics including RMSE, PCC, and parameter efficiency
+4. Saves detailed trial histories and best model checkpoints
+
+#### Optimization Parameters
+
+- `--dataset`: Name of the dataset (e.g., `japan`, `region785`, `state360`)
+- `--sim-mat`: Name of the adjacency matrix file (e.g., `japan-adj`)
+- `--window`: Input window size (default: `20`)
+- `--horizon`: Prediction horizon (default: `5`) 
+- `--trials`: Number of optimization trials to run (default: `100`)
+- `--max-params`: Maximum parameter count threshold (default: `50000`)
+- `--seed`: Random seed for reproducibility (default: `42`)
+- `--study-name`: Custom study name (default: auto-generated)
+- `--continue-from`: Path to continue from a previous study
+- `--parallel`: Number of parallel optimization processes (default: `1`) 
+- `--gpu`: GPU index to use (default: `0`)
+
+#### Optimization Output
+
+The optimization process produces:
+- Trial logs in `optim_results/logs/`
+- Best model checkpoints in `optim_results/models/`
+- Trial history in JSON format in `optim_results/`
+- Study results in CSV format for further analysis
 
 ### Parameters
 
@@ -93,6 +126,10 @@ Performance is evaluated using:
 ```
 MSAGAT-Net/
 ├── data/                   # Epidemic datasets and adjacency matrices
+├── optim_results/          # Hyperparameter optimization outputs
+│   ├── logs/               # Trial logs
+│   ├── models/             # Saved model checkpoints from trials
+│   └── *.json              # Trial history files
 ├── report/                 # Report and visualization outputs
 │   └── figures/            # Generated plots and visualizations
 ├── results/                # Evaluation metrics and results
@@ -100,6 +137,7 @@ MSAGAT-Net/
 ├── src/                    # Source code
 │   ├── data.py             # Data loading and preprocessing
 │   ├── model.py            # MSAGATNet model implementation
+│   ├── optimize.py         # Hyperparameter optimization script
 │   ├── train.py            # Training and evaluation script
 │   └── utils.py            # Utility functions
 └── tensorboard/            # TensorBoard logs
