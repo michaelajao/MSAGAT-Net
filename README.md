@@ -148,6 +148,10 @@ python src/train.py \
   --save_dir save
 ```
 
+```bash
+python src/train.py  --cuda --mylog --dataset state360 --sim_mat state-adj-50 --window 20 --horizon 15 --hidden_dim 16 --attn_heads 8 --low_rank_dim 6 --num_scales 4 --kernel_size 3 --temp_conv_out_channels 12 --dropout 0.249 --attention_reg_weight 1e-3 --lr 0.005 --weight_decay 5e-4 --gpu 0 --epochs 1500 --batch 32 --patience 100 --save_dir save
+```
+
 ## Project Structure
 
 ```
