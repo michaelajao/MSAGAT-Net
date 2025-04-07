@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.nn import Parameter
 
 # Model configuration parameters
-HIDDEN_DIM = 16
+HIDDEN_DIM = 32
 ATTENTION_HEADS = 4
 ATTENTION_REG_WEIGHT = 1e-05
 DROPOUT = 0.355
