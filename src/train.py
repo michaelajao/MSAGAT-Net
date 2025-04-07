@@ -87,7 +87,7 @@ def setup_environment(args, logger):
     torch.manual_seed(args.seed)
     if args.cuda and torch.cuda.is_available():
         torch.cuda.manual_seed(args.seed)
-        # torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.deterministic = True
     
     # Create directories
     os.makedirs(args.save_dir, exist_ok=True)
@@ -230,6 +230,7 @@ def train_epoch(data_loader, model, optimizer, device, args):
         y_expanded = Y.unsqueeze(1).expand(-1, args.horizon, -1)
         loss = nn.MSELoss()(output, y_expanded) + attn_reg_loss
         
+        # Ensure gradient clipping is applied during training
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=args.max_grad_norm)
         optimizer.step()

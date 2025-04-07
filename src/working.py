@@ -5,13 +5,13 @@ import torch.nn.functional as F
 from torch.nn import Parameter
 
 # Model configuration parameters
-HIDDEN_DIM = 16
+HIDDEN_DIM = 32
 ATTENTION_HEADS = 4
 ATTENTION_REG_WEIGHT = 1e-05
 DROPOUT = 0.355
 NUM_SCALES = 4
 KERNEL_SIZE = 3
-TEMP_CONV_OUT_CHANNELS = 12
+TEMP_CONV_OUT_CHANNELS = 16
 LOW_RANK_DIM = 8
 
 
@@ -188,73 +188,60 @@ class DilatedMultiScaleTemporalModule(nn.Module):
         return out
 
 
-class ProgressivePredictionModule(nn.Module):
+class AttentionPredictionModule(nn.Module):
     """
-    Progressive Prediction Module for multi-step forecasting with refinement.
+    Attention-Based Prediction Module for multi-step forecasting.
     
-    Generates initial predictions and progressively refines them using
-    a gating mechanism that incorporates recent observations with time decay.
+    Uses self-attention to capture relationships between regions for prediction,
+    followed by a feed-forward network and output projection.
     """
 
-    def __init__(self, hidden_dim, horizon, low_rank_dim=LOW_RANK_DIM, dropout=DROPOUT):
-        super(ProgressivePredictionModule, self).__init__()
-        self.hidden_dim = hidden_dim
-        self.horizon = horizon
-        self.low_rank_dim = low_rank_dim
-
-        # Predictor with factorization for efficiency
-        self.predictor_low = nn.Linear(hidden_dim, low_rank_dim)
-        self.predictor_mid = nn.Sequential(
-            nn.LayerNorm(low_rank_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout)
+    def __init__(self, hidden_dim, horizon, num_heads=4, dropout=DROPOUT):
+        super(AttentionPredictionModule, self).__init__()
+        # Multi-head self-attention layer
+        self.self_attn = nn.MultiheadAttention(
+            embed_dim=hidden_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            batch_first=True  # For input shape [batch, seq, feature]
         )
-        self.predictor_high = nn.Linear(low_rank_dim, horizon)
+        self.norm1 = nn.LayerNorm(hidden_dim)
         
-        # Refinement gate
-        self.refine_gate = nn.Sequential(
-            nn.Linear(hidden_dim, low_rank_dim),
+        # Feed-forward network
+        self.ffn = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim*2),
             nn.ReLU(),
-            nn.Linear(low_rank_dim, horizon),
-            nn.Sigmoid()
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim*2, hidden_dim)
         )
+        self.norm2 = nn.LayerNorm(hidden_dim)
+        
+        # Output projection to horizon
+        self.output_proj = nn.Linear(hidden_dim, horizon)
         
     def forward(self, x, last_step=None):
         """
-        Forward pass of the prediction module.
+        Forward pass of the attention prediction module.
         
         Args:
             x: Input tensor [batch_size, num_nodes, hidden_dim]
-            last_step: Last observation [batch_size, num_nodes]
+            last_step: Not used in this module, included for API compatibility
             
         Returns:
             Predictions tensor [batch_size, num_nodes, horizon]
         """
-        # Generate initial multi-step prediction
-        x_low = self.predictor_low(x)
-        x_mid = self.predictor_mid(x_low)
-        initial_pred = self.predictor_high(x_mid)
+        # Self-attention with residual connection
+        attn_output, _ = self.self_attn(x, x, x)
+        x = self.norm1(x + attn_output)
         
-        if last_step is not None:
-            # Compute refinement gate
-            gate = self.refine_gate(x)
-            
-            # Prepare for refinement
-            last_step = last_step.unsqueeze(-1)
-            
-            # Apply time-based exponential decay
-            time_decay = torch.arange(1, self.horizon + 1, device=x.device).float()
-            time_decay = time_decay.view(1, 1, self.horizon)
-            
-            # Generate decay component
-            progressive_part = last_step * torch.exp(-0.1 * time_decay)
-            
-            # Combine predictions with adaptive gating
-            final_pred = gate * initial_pred + (1 - gate) * progressive_part
-        else:
-            final_pred = initial_pred
+        # Feed-forward network with residual connection
+        ffn_output = self.ffn(x)
+        x = self.norm2(x + ffn_output)
         
-        return final_pred
+        # Project to output horizon
+        predictions = self.output_proj(x)
+        
+        return predictions
 
 
 class DepthwiseSeparableConv1d(nn.Module):
@@ -312,7 +299,7 @@ class MSAGATNet(nn.Module):
     1. Efficient Adaptive Graph Attention Module for spatial dependencies with linear complexity
     2. Dilated Multi-Scale Temporal Module for time-series patterns at different resolutions
     3. Depthwise Separable Convolutions for parameter-efficient feature extraction
-    4. Progressive Prediction Module with time-decay refinement for accurate forecasting
+    4. Attention-Based Prediction Module for region-aware forecasting
     """
     
     def __init__(self, args, data):
@@ -356,9 +343,10 @@ class MSAGATNet(nn.Module):
             dropout=getattr(args, 'dropout', DROPOUT)
         )
         
-        self.prediction_module = ProgressivePredictionModule(
+        # Using the new Attention-Based Prediction Module
+        self.prediction_module = AttentionPredictionModule(
             self.hidden_dim, self.horizon,
-            low_rank_dim=self.low_rank_dim,
+            num_heads=min(4, self.hidden_dim // 4),  # Use at most 4 heads, or fewer if hidden_dim is small
             dropout=getattr(args, 'dropout', DROPOUT)
         )
 
@@ -374,7 +362,7 @@ class MSAGATNet(nn.Module):
             Tuple of (predictions, attention_regularization_loss)
         """
         B, T, N = x.shape
-        x_last = x[:, -1, :]  # Last observed values
+        # No need to extract last observation anymore
         
         # Reshape for temporal processing
         x_temp = x.permute(0, 2, 1).contiguous().view(B * N, 1, T)
@@ -395,8 +383,8 @@ class MSAGATNet(nn.Module):
         # Process temporal patterns
         fusion_features = self.temporal_module(graph_features)
         
-        # Generate predictions
-        predictions = self.prediction_module(fusion_features, x_last)
+        # Generate predictions using attention (no need for last observed value)
+        predictions = self.prediction_module(fusion_features)
         predictions = predictions.transpose(1, 2)  # [B, horizon, N]
         
         return predictions, attn_reg_loss

@@ -121,6 +121,33 @@ Performance is evaluated using:
 - scikit-learn
 - TensorBoard
 
+## after optimization
+```bash
+python src/train.py \
+  --dataset region785 \
+  --sim_mat region-adj \
+  --window 20 \
+  --horizon 5 \
+  --epochs 1500 \
+  --batch 32 \
+  --lr 0.0001 \
+  --weight_decay 1e-5 \
+  --dropout 0.287 \
+  --hidden_dim 24 \
+  --attn_heads 4 \
+  --num_scales 5 \
+  --kernel_size 7 \
+  --temp_conv_out_channels 16 \
+  --low_rank_dim 6 \
+  --attention_reg_weight 0.001 \
+  --seed 42 \
+  --cuda \
+  --gpu 0 \
+  --patience 100 \
+  --mylog \
+  --save_dir save
+```
+
 ## Project Structure
 
 ```
