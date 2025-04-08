@@ -1,0 +1,31 @@
+MAGAT-FN Ablation Study Report
+==============================
+
+Dataset: japan
+Window Size: 20
+Forecast Horizon: 5
+
+Performance Metrics by Model Variant
+-----------------------------------
+
+                MAE         RMSE       PCC        R2
+none      653.50420  1842.159670  0.476842  0.194093
+no_eagam  657.61816  1834.826559  0.481738  0.200496
+no_dmtm   751.98580  1973.071147  0.313209  0.075481
+no_ppm    806.10590  1809.107377  0.489909  0.222753
+
+Percentage Change from Full Model
+--------------------------------
+
+          MAE_change  RMSE_change  PCC_change  R2_change
+none        0.000000     0.000000    0.000000   0.000000
+no_eagam    0.629523    -0.398071    1.026916   3.299122
+no_dmtm    15.069773     7.106413  -34.315993 -61.110978
+no_ppm     23.351296    -1.794214    2.740503  14.766090
+
+Component Importance Analysis
+----------------------------
+
+Conclusion
+----------
+

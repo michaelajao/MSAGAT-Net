@@ -6,10 +6,50 @@ MSAGATNet is a lightweight spatiotemporal deep learning framework specifically d
 
 MSAGATNet consists of four key components:
 
-1. **Efficient Adaptive Graph Attention Module**: Captures spatial dependencies between regions with linear complexity O(N) instead of quadratic O(N²)
-2. **Dilated Multi-Scale Temporal Module**: Processes time-series patterns at different temporal resolutions
+1. **Efficient Adaptive Graph Attention Module (EAGAM)**: Captures spatial dependencies between regions with linear complexity O(N) instead of quadratic O(N²)
+2. **Dilated Multi-Scale Temporal Module (DMTM)**: Processes time-series patterns at different temporal resolutions
 3. **Depthwise Separable Convolutions**: Provides parameter-efficient feature extraction
-4. **Attention-Based Prediction Module**: Enables region-aware multi-step forecasting
+4. **Progressive Prediction Module (PPM)**: Enables region-aware multi-step forecasting with refinement
+
+## Ablation Studies
+
+We conducted comprehensive ablation studies to evaluate the contribution of each major component to the model's performance. The ablation variants include:
+
+- **Full Model**: The complete MSAGAT-Net with all components
+- **No EAGAM**: Replaces the Efficient Adaptive Graph Attention Module with a simple graph convolutional layer
+- **No DMTM**: Replaces the Dilated Multi-Scale Temporal Module with a single-scale temporal module
+- **No PPM**: Replaces the Progressive Prediction Module with a direct multi-step prediction module
+
+### Running Ablation Studies
+
+```bash
+# Run the full model
+python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation none
+
+# Run without Efficient Adaptive Graph Attention Module
+python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation no_eagam
+
+# Run without Dilated Multi-Scale Temporal Module
+python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation no_dmtm
+
+# Run without Progressive Prediction Module
+python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation no_ppm
+```
+
+### Analyzing Ablation Results
+
+After running all ablation variants, you can analyze the results:
+
+```bash
+python src/analyze_ablations.py --dataset japan --window 20 --horizon 5
+```
+
+This generates:
+- Comparison plots showing the impact of each ablation on model performance
+- A heatmap visualization of component importance
+- A detailed report summarizing the findings
+
+Our ablation studies demonstrate that each component contributes significantly to the model performance, with the Efficient Adaptive Graph Attention Module showing the largest impact on forecasting accuracy.
 
 ## Key Features
 
@@ -170,6 +210,8 @@ MSAGAT-Net/
 │   ├── model.py            # MSAGATNet model implementation
 │   ├── optimize.py         # Hyperparameter optimization script
 │   ├── train.py            # Training and evaluation script
+│   ├── train_ablation.py   # Ablation study training script
+│   ├── analyze_ablations.py# Ablation study analysis script
 │   └── utils.py            # Utility functions
 └── tensorboard/            # TensorBoard logs
 ```
