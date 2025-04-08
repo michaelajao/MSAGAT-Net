@@ -11,46 +11,6 @@ MSAGATNet consists of four key components:
 3. **Depthwise Separable Convolutions**: Provides parameter-efficient feature extraction
 4. **Progressive Prediction Module (PPM)**: Enables region-aware multi-step forecasting with refinement
 
-## Ablation Studies
-
-We conducted comprehensive ablation studies to evaluate the contribution of each major component to the model's performance. The ablation variants include:
-
-- **Full Model**: The complete MSAGAT-Net with all components
-- **No EAGAM**: Replaces the Efficient Adaptive Graph Attention Module with a simple graph convolutional layer
-- **No DMTM**: Replaces the Dilated Multi-Scale Temporal Module with a single-scale temporal module
-- **No PPM**: Replaces the Progressive Prediction Module with a direct multi-step prediction module
-
-### Running Ablation Studies
-
-```bash
-# Run the full model
-python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation none
-
-# Run without Efficient Adaptive Graph Attention Module
-python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation no_eagam
-
-# Run without Dilated Multi-Scale Temporal Module
-python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation no_dmtm
-
-# Run without Progressive Prediction Module
-python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation no_ppm
-```
-
-### Analyzing Ablation Results
-
-After running all ablation variants, you can analyze the results:
-
-```bash
-python src/analyze_ablations.py --dataset japan --window 20 --horizon 5
-```
-
-This generates:
-- Comparison plots showing the impact of each ablation on model performance
-- A heatmap visualization of component importance
-- A detailed report summarizing the findings
-
-Our ablation studies demonstrate that each component contributes significantly to the model performance, with the Efficient Adaptive Graph Attention Module showing the largest impact on forecasting accuracy.
-
 ## Key Features
 
 - **Linear-time Attention Complexity**: Uses linearized attention with the ELU+1 kernel trick to achieve O(N) complexity
@@ -151,15 +111,6 @@ Performance is evaluated using:
 - Explained Variance
 - Peak MAE (for epidemic peak prediction accuracy)
 
-## Requirements
-
-- Python 3.7+
-- PyTorch 1.7+
-- NumPy
-- Pandas
-- Matplotlib
-- scikit-learn
-- TensorBoard
 
 ## after optimization
 ```bash
@@ -215,6 +166,58 @@ MSAGAT-Net/
 │   └── utils.py            # Utility functions
 └── tensorboard/            # TensorBoard logs
 ```
+
+## Ablation Studies
+
+We conducted comprehensive ablation studies to evaluate the contribution of each major component to the model's performance. The ablation variants include:
+
+- **Full Model**: The complete MSAGAT-Net with all components
+- **No EAGAM**: Replaces the Efficient Adaptive Graph Attention Module with a simple graph convolutional layer
+- **No DMTM**: Replaces the Dilated Multi-Scale Temporal Module with a single-scale temporal module
+- **No PPM**: Replaces the Progressive Prediction Module with a direct multi-step prediction module
+
+### Running Ablation Studies
+
+```bash
+# Run the full model
+python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation none
+
+# Run without Efficient Adaptive Graph Attention Module
+python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation no_eagam
+
+# Run without Dilated Multi-Scale Temporal Module
+python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation no_dmtm
+
+# Run without Progressive Prediction Module
+python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation no_ppm
+```
+
+### Analyzing Ablation Results
+
+After running all ablation variants, you can analyze the results:
+
+```bash
+python src/analyze_ablations.py --dataset japan --window 20 --horizon 5
+```
+
+This generates:
+- Comparison plots showing the impact of each ablation on model performance
+- A heatmap visualization of component importance
+- A detailed report summarizing the findings
+
+### Visualizing Results
+
+To generate publication-quality visualizations from the ablation studies and model performance:
+
+```bash
+python generate_paper_visualizations.py --results_dir results --output_dir report/figures
+```
+
+This script produces:
+1. Performance comparison tables and plots across datasets and forecast horizons
+2. Component importance visualizations showing which model parts contribute most
+3. Ablation study visualizations showing performance impact when components are removed
+4. Enhanced versions of existing figures with publication-quality styling
 
 ## Citation
 
