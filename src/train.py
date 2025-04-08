@@ -41,7 +41,7 @@ def parse_arguments():
     parser.add_argument('--train', type=float, default=0.5)
     parser.add_argument('--val', type=float, default=0.2)
     parser.add_argument('--test', type=float, default=0.3)
-    parser.add_argument('--epochs', type=int, default=1000)
+    parser.add_argument('--epochs', type=int, default=1500)
     parser.add_argument('--batch', type=int, default=32)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--weight_decay', type=float, default=5e-4)
@@ -350,8 +350,23 @@ def main():
     # Plot loss curves
     plot_loss_curves(train_losses, val_losses, loss_fig_path, args, logger)
     
-    # Load best model for final evaluation
-    model.load_state_dict(torch.load(model_path, map_location=device))
+    # Load best model for final evaluation - with explicit device mapping for reliability
+    try:
+        # First attempt with standard mapping
+        model.load_state_dict(torch.load(model_path, map_location=device))
+    except RuntimeError as e:
+        # If that fails, use a more explicit approach
+        logger.warning(f"Error loading model with standard mapping: {e}")
+        logger.info("Trying alternative loading approach...")
+        
+        # Explicitly map any CUDA device to the current device
+        if torch.cuda.is_available():
+            model_state = torch.load(model_path, map_location=lambda storage, loc: storage.cuda(device.index))
+        else:
+            model_state = torch.load(model_path, map_location='cpu')
+            
+        model.load_state_dict(model_state)
+        logger.info("Model loaded successfully with alternative approach")
     
     # Final test evaluation
     test_metrics = evaluate(data_loader, data_loader.test, model, device, args, tag='test')
