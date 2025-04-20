@@ -1,82 +1,82 @@
-\contentsline {section}{\numberline {1}Introduction}{1}{section.1}%
-\contentsline {section}{\numberline {2}Problem Formulation}{2}{section.2}%
-\contentsline {section}{\numberline {3}MSTGAT Architecture}{2}{section.3}%
-\contentsline {subsection}{\numberline {3.1}Architectural Overview}{2}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}Feature Extraction Module}{4}{subsection.3.2}%
-\contentsline {subsubsection}{\numberline {3.2.1}Input Transformation}{4}{subsubsection.3.2.1}%
-\contentsline {subsubsection}{\numberline {3.2.2}Depthwise Separable Convolutions}{4}{subsubsection.3.2.2}%
-\contentsline {subsubsection}{\numberline {3.2.3}Low-Rank Feature Projection}{6}{subsubsection.3.2.3}%
-\contentsline {subsubsection}{\numberline {3.2.4}Theoretical Insights on Feature Extraction}{7}{subsubsection.3.2.4}%
-\contentsline {subsection}{\numberline {3.3}Spatial Dependency Modeling}{8}{subsection.3.3}%
-\contentsline {subsubsection}{\numberline {3.3.1}Motivation and Theoretical Foundations}{8}{subsubsection.3.3.1}%
+\contentsline {section}{\numberline {1}Introduction}{3}{section.1}%
+\contentsline {section}{\numberline {2}Problem Formulation}{3}{section.2}%
+\contentsline {section}{\numberline {3}MSTGAT Architecture}{4}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Architectural Overview}{4}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Feature Extraction Module}{6}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Input Transformation}{6}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}Depthwise Separable Convolutions}{6}{subsubsection.3.2.2}%
+\contentsline {subsubsection}{\numberline {3.2.3}Low-Rank Feature Projection}{8}{subsubsection.3.2.3}%
+\contentsline {subsubsection}{\numberline {3.2.4}Theoretical Insights on Feature Extraction}{9}{subsubsection.3.2.4}%
+\contentsline {subsection}{\numberline {3.3}Spatial Dependency Modeling}{9}{subsection.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.1}Motivation and Theoretical Foundations}{9}{subsubsection.3.3.1}%
 \contentsline {subsubsection}{\numberline {3.3.2}Low-Rank Graph Attention}{9}{subsubsection.3.3.2}%
-\contentsline {subsubsection}{\numberline {3.3.3}Learnable Graph Structure}{9}{subsubsection.3.3.3}%
-\contentsline {subsubsection}{\numberline {3.3.4}Enhanced Attention Mechanism}{10}{subsubsection.3.3.4}%
-\contentsline {subsubsection}{\numberline {3.3.5}Output Projection and Residual Connection}{10}{subsubsection.3.3.5}%
-\contentsline {subsubsection}{\numberline {3.3.6}Attention Regularization}{10}{subsubsection.3.3.6}%
-\contentsline {subsubsection}{\numberline {3.3.7}Interpretability of Learned Spatial Relationships}{11}{subsubsection.3.3.7}%
+\contentsline {subsubsection}{\numberline {3.3.3}Learnable Graph Structure}{11}{subsubsection.3.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.4}Enhanced Attention Mechanism}{11}{subsubsection.3.3.4}%
+\contentsline {subsubsection}{\numberline {3.3.5}Output Projection and Residual Connection}{12}{subsubsection.3.3.5}%
+\contentsline {subsubsection}{\numberline {3.3.6}Attention Regularization}{12}{subsubsection.3.3.6}%
+\contentsline {subsubsection}{\numberline {3.3.7}Interpretability of Learned Spatial Relationships}{12}{subsubsection.3.3.7}%
 \contentsline {subsection}{\numberline {3.4}Multi-Scale Temporal Modeling}{12}{subsection.3.4}%
-\contentsline {subsubsection}{\numberline {3.4.1}Motivation and Theoretical Foundations}{12}{subsubsection.3.4.1}%
-\contentsline {subsubsection}{\numberline {3.4.2}Multi-Scale Dilated Convolutions}{13}{subsubsection.3.4.2}%
-\contentsline {subsubsection}{\numberline {3.4.3}Adaptive Fusion Mechanism}{13}{subsubsection.3.4.3}%
-\contentsline {subsubsection}{\numberline {3.4.4}Low-Rank Projection and Residual Connection}{14}{subsubsection.3.4.4}%
-\contentsline {subsubsection}{\numberline {3.4.5}Theoretical Insights on Multi-Scale Temporal Modeling}{14}{subsubsection.3.4.5}%
+\contentsline {subsubsection}{\numberline {3.4.1}Motivation and Theoretical Foundations}{14}{subsubsection.3.4.1}%
+\contentsline {subsubsection}{\numberline {3.4.2}Multi-Scale Dilated Convolutions}{14}{subsubsection.3.4.2}%
+\contentsline {subsubsection}{\numberline {3.4.3}Adaptive Fusion Mechanism}{14}{subsubsection.3.4.3}%
+\contentsline {subsubsection}{\numberline {3.4.4}Low-Rank Projection and Residual Connection}{15}{subsubsection.3.4.4}%
+\contentsline {subsubsection}{\numberline {3.4.5}Theoretical Insights on Multi-Scale Temporal Modeling}{15}{subsubsection.3.4.5}%
 \contentsline {subsection}{\numberline {3.5}Horizon Prediction with Adaptive Refinement}{15}{subsection.3.5}%
 \contentsline {subsubsection}{\numberline {3.5.1}Motivation}{15}{subsubsection.3.5.1}%
-\contentsline {subsubsection}{\numberline {3.5.2}Bottleneck Prediction Architecture}{16}{subsubsection.3.5.2}%
-\contentsline {subsubsection}{\numberline {3.5.3}Adaptive Refinement Gate}{16}{subsubsection.3.5.3}%
+\contentsline {subsubsection}{\numberline {3.5.2}Bottleneck Prediction Architecture}{17}{subsubsection.3.5.2}%
+\contentsline {subsubsection}{\numberline {3.5.3}Adaptive Refinement Gate}{17}{subsubsection.3.5.3}%
 \contentsline {subsubsection}{\numberline {3.5.4}Exponential Decay from Last Observation}{17}{subsubsection.3.5.4}%
-\contentsline {subsubsection}{\numberline {3.5.5}Adaptive Fusion of Predictions}{17}{subsubsection.3.5.5}%
-\contentsline {subsubsection}{\numberline {3.5.6}Theoretical Insights on Adaptive Refinement}{17}{subsubsection.3.5.6}%
-\contentsline {subsection}{\numberline {3.6}Integration of Components and Information Flow}{17}{subsection.3.6}%
-\contentsline {section}{\numberline {4}Theoretical Analysis}{18}{section.4}%
-\contentsline {subsection}{\numberline {4.1}Expressivity Analysis}{18}{subsection.4.1}%
-\contentsline {subsubsection}{\numberline {4.1.1}Spatial Expressivity}{18}{subsubsection.4.1.1}%
-\contentsline {subsubsection}{\numberline {4.1.2}Temporal Expressivity}{18}{subsubsection.4.1.2}%
-\contentsline {subsubsection}{\numberline {4.1.3}Combined Spatiotemporal Expressivity}{18}{subsubsection.4.1.3}%
+\contentsline {subsubsection}{\numberline {3.5.5}Adaptive Fusion of Predictions}{18}{subsubsection.3.5.5}%
+\contentsline {subsubsection}{\numberline {3.5.6}Theoretical Insights on Adaptive Refinement}{18}{subsubsection.3.5.6}%
+\contentsline {subsection}{\numberline {3.6}Integration of Components and Information Flow}{18}{subsection.3.6}%
+\contentsline {section}{\numberline {4}Theoretical Analysis}{19}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Expressivity Analysis}{19}{subsection.4.1}%
+\contentsline {subsubsection}{\numberline {4.1.1}Spatial Expressivity}{19}{subsubsection.4.1.1}%
+\contentsline {subsubsection}{\numberline {4.1.2}Temporal Expressivity}{19}{subsubsection.4.1.2}%
+\contentsline {subsubsection}{\numberline {4.1.3}Combined Spatiotemporal Expressivity}{19}{subsubsection.4.1.3}%
 \contentsline {subsection}{\numberline {4.2}Computational Complexity Analysis}{19}{subsection.4.2}%
-\contentsline {subsubsection}{\numberline {4.2.1}Feature Extraction Module}{19}{subsubsection.4.2.1}%
-\contentsline {subsubsection}{\numberline {4.2.2}Spatial Attention Module}{19}{subsubsection.4.2.2}%
-\contentsline {subsubsection}{\numberline {4.2.3}Temporal Module}{19}{subsubsection.4.2.3}%
-\contentsline {subsubsection}{\numberline {4.2.4}Prediction Module}{19}{subsubsection.4.2.4}%
+\contentsline {subsubsection}{\numberline {4.2.1}Feature Extraction Module}{20}{subsubsection.4.2.1}%
+\contentsline {subsubsection}{\numberline {4.2.2}Spatial Attention Module}{20}{subsubsection.4.2.2}%
+\contentsline {subsubsection}{\numberline {4.2.3}Temporal Module}{20}{subsubsection.4.2.3}%
+\contentsline {subsubsection}{\numberline {4.2.4}Prediction Module}{20}{subsubsection.4.2.4}%
 \contentsline {subsubsection}{\numberline {4.2.5}Overall Complexity}{20}{subsubsection.4.2.5}%
-\contentsline {subsection}{\numberline {4.3}Memory Requirements Analysis}{20}{subsection.4.3}%
-\contentsline {subsubsection}{\numberline {4.3.1}Parameter Memory}{20}{subsubsection.4.3.1}%
-\contentsline {subsubsection}{\numberline {4.3.2}Activation Memory}{20}{subsubsection.4.3.2}%
-\contentsline {section}{\numberline {5}Implementation Considerations}{20}{section.5}%
-\contentsline {subsection}{\numberline {5.1}Data Preprocessing}{20}{subsection.5.1}%
-\contentsline {subsection}{\numberline {5.2}Training Strategies}{21}{subsection.5.2}%
-\contentsline {subsubsection}{\numberline {5.2.1}Loss Function}{21}{subsubsection.5.2.1}%
-\contentsline {subsubsection}{\numberline {5.2.2}Learning Rate Schedule}{21}{subsubsection.5.2.2}%
-\contentsline {subsubsection}{\numberline {5.2.3}Gradient Clipping}{21}{subsubsection.5.2.3}%
-\contentsline {subsubsection}{\numberline {5.2.4}Training Regime}{21}{subsubsection.5.2.4}%
+\contentsline {subsection}{\numberline {4.3}Memory Requirements Analysis}{21}{subsection.4.3}%
+\contentsline {subsubsection}{\numberline {4.3.1}Parameter Memory}{21}{subsubsection.4.3.1}%
+\contentsline {subsubsection}{\numberline {4.3.2}Activation Memory}{21}{subsubsection.4.3.2}%
+\contentsline {section}{\numberline {5}Implementation Considerations}{21}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Data Preprocessing}{21}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Training Strategies}{22}{subsection.5.2}%
+\contentsline {subsubsection}{\numberline {5.2.1}Loss Function}{22}{subsubsection.5.2.1}%
+\contentsline {subsubsection}{\numberline {5.2.2}Learning Rate Schedule}{22}{subsubsection.5.2.2}%
+\contentsline {subsubsection}{\numberline {5.2.3}Gradient Clipping}{22}{subsubsection.5.2.3}%
+\contentsline {subsubsection}{\numberline {5.2.4}Training Regime}{22}{subsubsection.5.2.4}%
 \contentsline {subsection}{\numberline {5.3}Hyperparameter Selection}{22}{subsection.5.3}%
-\contentsline {subsection}{\numberline {5.4}Hardware Considerations}{22}{subsection.5.4}%
-\contentsline {section}{\numberline {6}Model Variants and Ablations}{22}{section.6}%
-\contentsline {subsection}{\numberline {6.1}Feature Extraction Variants}{22}{subsection.6.1}%
-\contentsline {subsubsection}{\numberline {6.1.1}Standard Convolution vs. Depthwise Separable Convolution}{22}{subsubsection.6.1.1}%
-\contentsline {subsubsection}{\numberline {6.1.2}Direct Projection vs. Low-Rank Projection}{22}{subsubsection.6.1.2}%
+\contentsline {subsection}{\numberline {5.4}Hardware Considerations}{23}{subsection.5.4}%
+\contentsline {section}{\numberline {6}Model Variants and Ablations}{23}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Feature Extraction Variants}{23}{subsection.6.1}%
+\contentsline {subsubsection}{\numberline {6.1.1}Standard Convolution vs. Depthwise Separable Convolution}{23}{subsubsection.6.1.1}%
+\contentsline {subsubsection}{\numberline {6.1.2}Direct Projection vs. Low-Rank Projection}{23}{subsubsection.6.1.2}%
 \contentsline {subsection}{\numberline {6.2}Spatial Modeling Variants}{23}{subsection.6.2}%
 \contentsline {subsubsection}{\numberline {6.2.1}Predefined Graph vs. Learned Graph}{23}{subsubsection.6.2.1}%
 \contentsline {subsubsection}{\numberline {6.2.2}Full-Rank Graph Attention vs. Low-Rank Graph Attention}{23}{subsubsection.6.2.2}%
-\contentsline {subsection}{\numberline {6.3}Temporal Modeling Variants}{23}{subsection.6.3}%
-\contentsline {subsubsection}{\numberline {6.3.1}Single-Scale vs. Multi-Scale}{23}{subsubsection.6.3.1}%
-\contentsline {subsubsection}{\numberline {6.3.2}Fixed Fusion vs. Adaptive Fusion}{23}{subsubsection.6.3.2}%
-\contentsline {subsection}{\numberline {6.4}Prediction Variants}{23}{subsection.6.4}%
-\contentsline {subsubsection}{\numberline {6.4.1}Direct Prediction vs. Adaptive Refinement}{23}{subsubsection.6.4.1}%
-\contentsline {subsubsection}{\numberline {6.4.2}Alternative Refinement Approaches}{23}{subsubsection.6.4.2}%
+\contentsline {subsection}{\numberline {6.3}Temporal Modeling Variants}{24}{subsection.6.3}%
+\contentsline {subsubsection}{\numberline {6.3.1}Single-Scale vs. Multi-Scale}{24}{subsubsection.6.3.1}%
+\contentsline {subsubsection}{\numberline {6.3.2}Fixed Fusion vs. Adaptive Fusion}{24}{subsubsection.6.3.2}%
+\contentsline {subsection}{\numberline {6.4}Prediction Variants}{24}{subsection.6.4}%
+\contentsline {subsubsection}{\numberline {6.4.1}Direct Prediction vs. Adaptive Refinement}{24}{subsubsection.6.4.1}%
+\contentsline {subsubsection}{\numberline {6.4.2}Alternative Refinement Approaches}{24}{subsubsection.6.4.2}%
 \contentsline {section}{\numberline {7}Limitations and Future Directions}{24}{section.7}%
 \contentsline {subsection}{\numberline {7.1}Current Limitations}{24}{subsection.7.1}%
 \contentsline {subsubsection}{\numberline {7.1.1}Scalability to Very Large Graphs}{24}{subsubsection.7.1.1}%
 \contentsline {subsubsection}{\numberline {7.1.2}Handling Multiple Variables}{24}{subsubsection.7.1.2}%
 \contentsline {subsubsection}{\numberline {7.1.3}Interpretability Challenges}{24}{subsubsection.7.1.3}%
-\contentsline {subsubsection}{\numberline {7.1.4}Uncertainty Quantification}{24}{subsubsection.7.1.4}%
-\contentsline {subsection}{\numberline {7.2}Future Research Directions}{24}{subsection.7.2}%
-\contentsline {subsubsection}{\numberline {7.2.1}Hierarchical Graph Modeling}{24}{subsubsection.7.2.1}%
-\contentsline {subsubsection}{\numberline {7.2.2}Multivariate Forecasting}{24}{subsubsection.7.2.2}%
-\contentsline {subsubsection}{\numberline {7.2.3}Probabilistic Forecasting}{24}{subsubsection.7.2.3}%
-\contentsline {subsubsection}{\numberline {7.2.4}Causal Modeling}{24}{subsubsection.7.2.4}%
-\contentsline {subsubsection}{\numberline {7.2.5}Transfer Learning and Few-Shot Adaptation}{24}{subsubsection.7.2.5}%
+\contentsline {subsubsection}{\numberline {7.1.4}Uncertainty Quantification}{25}{subsubsection.7.1.4}%
+\contentsline {subsection}{\numberline {7.2}Future Research Directions}{25}{subsection.7.2}%
+\contentsline {subsubsection}{\numberline {7.2.1}Hierarchical Graph Modeling}{25}{subsubsection.7.2.1}%
+\contentsline {subsubsection}{\numberline {7.2.2}Multivariate Forecasting}{25}{subsubsection.7.2.2}%
+\contentsline {subsubsection}{\numberline {7.2.3}Probabilistic Forecasting}{25}{subsubsection.7.2.3}%
+\contentsline {subsubsection}{\numberline {7.2.4}Causal Modeling}{25}{subsubsection.7.2.4}%
+\contentsline {subsubsection}{\numberline {7.2.5}Transfer Learning and Few-Shot Adaptation}{25}{subsubsection.7.2.5}%
 \contentsline {subsubsection}{\numberline {7.2.6}Integration with Domain Knowledge}{25}{subsubsection.7.2.6}%
 \contentsline {subsection}{\numberline {7.3}Broader Impact and Applications}{25}{subsection.7.3}%
-\contentsline {section}{\numberline {8}Conclusion}{25}{section.8}%
+\contentsline {section}{\numberline {8}Conclusion}{26}{section.8}%

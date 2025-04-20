@@ -109,7 +109,7 @@ The Multi-Scale Temporal Graph Attention Network (MSTGAT) is designed as an end-
 \begin{figure}[htbp]
 \centering
 % Replace placeholder with TikZ diagram for the full architecture
-\begin{tikzpicture}[node distance=1.5cm and 2cm, >=Latex, 
+\begin{tikzpicture}[node distance=2cm and 3cm, >=Latex, 
     module/.style={rectangle, draw, thick, text centered, rounded corners, minimum height=1.5cm, text width=3.5cm, fill=blue!10},
     input/.style={rectangle, draw, thick, text centered, minimum height=1cm, text width=3cm},
     output/.style={rectangle, draw, thick, text centered, minimum height=1cm, text width=3cm},
@@ -130,21 +130,21 @@ The Multi-Scale Temporal Graph Attention Network (MSTGAT) is designed as an end-
     \draw [->, thick] (predict) -- (output);
     
     % Skip connections (dotted)
-    \node (skip1_start) [point, right=1cm of feat_ext] {};
-    \node (skip1_end) [point, right=1cm of spatial] {};
+    \node (skip1_start) [point, right=1.5cm of feat_ext] {};
+    \node (skip1_end) [point, right=1.5cm of spatial] {};
     \draw [->, dashed] (feat_ext.east) -| (skip1_end) |- (spatial.east) node[pos=0.25, right] {Skip};
 
-    \node (skip2_start) [point, right=1cm of spatial] {};
-    \node (skip2_end) [point, right=1cm of temporal] {};
+    \node (skip2_start) [point, right=1.5cm of spatial] {};
+    \node (skip2_end) [point, right=1.5cm of temporal] {};
     \draw [->, dashed] (spatial.east) -| (skip2_end) |- (temporal.east) node[pos=0.25, right] {Skip};
 
-    \node (skip3_start) [point, left=1cm of temporal] {};
-    \node (skip3_end) [point, left=1cm of predict] {};
+    \node (skip3_start) [point, left=1.5cm of temporal] {};
+    \node (skip3_end) [point, left=1.5cm of predict] {};
     \draw [->, dashed] (temporal.west) -| (skip3_end) |- (predict.west) node[pos=0.25, left] {Skip};
 
     % Input to Prediction Module (for refinement)
-    \node (input_refine) [point, left=3cm of predict] {};
-    \draw [->, dashed] (input.west) -- ++(-3,0) |- (input_refine) -- (predict.west) node[pos=0.9, above left] {Refine Input};
+    \node (input_refine) [point, left=3.5cm of predict] {};
+    \draw [->, dashed] (input.west) -- ++(-4,0) |- (input_refine) -- (predict.west) node[pos=0.9, above left] {Refine Input};
 
 \end{tikzpicture}
 \caption{Overall architecture of the proposed MSTGAT model (TikZ). The framework consists of four key components: (a) Feature Extraction Module, (b) Spatial Dependency Module, (c) Multi-Scale Temporal Module, and (d) Horizon Prediction Module. Dashed lines indicate skip connections and input for refinement.}
@@ -328,26 +328,25 @@ The feature extraction module can be understood from several theoretical perspec
 \label{sec:spatial_modeling}
 
 % Add figure for Spatial Dependency Modeling Module
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
-% Replace includegraphics with TikZ diagram
-\begin{tikzpicture}[node distance=1cm and 1.2cm, >=Latex,
-\begin{tikzpicture}[node distance=1cm and 1.2cm, >=Latex,
+% Replace includegraphics with improved TikZ diagram
+\begin{tikzpicture}[node distance=1.5cm and 2cm, >=Latex, 
     block/.style={rectangle, draw, thick, text centered, rounded corners, minimum height=1cm, text width=3.5cm},
     op/.style={rectangle, draw, thick, text centered, minimum height=0.8cm, text width=3cm},
-    attn/.style={rectangle, draw, thick, text centered, rounded corners, minimum height=1cm, text width=4cm},
+    attn/.style={rectangle, draw, thick, text centered, rounded corners, minimum height=1cm, text width=4.5cm, fill=blue!10},
     point/.style={coordinate},
-    sum/.style={circle, draw, minimum size=0.6cm}]
+    sum/.style={circle, draw, minimum size=0.8cm}]
 
     \node (input) [block] {Input $\mathbf{H}_{reshaped}$}; 
     \node (lr_qkv) [op, below=of input] {Low-Rank QKV Projection};
     \node (split) [op, below=of lr_qkv] {Split Q, K, V};
-    \node (mha) [attn, below=of split] {Multi-Head Attention (Low-Rank Bias + Enhanced Attn)};
+    \node (mha) [attn, below=of split] {Multi-Head Attention\\(Low-Rank Bias + Enhanced Attn)};
     \node (concat) [op, below=of mha] {Concatenate Heads};
     \node (lr_out) [op, below=of concat] {Low-Rank Output Projection};
     \node (sum) [sum, below=of lr_out] {+};
     \node (output) [block, below=of sum] {Output $\mathbf{H}_{spatial}$};
-    \node (res_start) [point, left=1.5cm of sum] {};
+    \node (res_start) [point, left=2cm of sum] {};
 
     \draw [->] (input) -- (lr_qkv);
     \draw [->] (lr_qkv) -- (split);
@@ -359,7 +358,7 @@ The feature extraction module can be understood from several theoretical perspec
     \draw [->] (input.west) -| (res_start) |- (sum);
 
 \end{tikzpicture}
-\caption{Diagram of the Spatial Dependency Modeling Module (TikZ).}
+\caption{Diagram of the Spatial Dependency Modeling Module (TikZ). The module learns adaptive spatial relationships through multi-head attention with a low-rank bias term.}
 \label{fig:spatial_module}
 \end{figure}
 
@@ -516,51 +515,59 @@ This interpretability is particularly valuable in epidemiological applications, 
 \label{sec:temporal_modeling}
 
 % Add figure for Multi-Scale Temporal Modeling Module
-\begin{figure}[H]
+\begin{figure}[h!]
 \centering
-% Replace includegraphics with TikZ diagram
-\begin{tikzpicture}[node distance=0.8cm and 1cm, >=Latex,
-\begin{tikzpicture}[node distance=0.8cm and 1cm, >=Latex,
-    block/.style={rectangle, draw, thick, text centered, rounded corners, minimum height=1cm, text width=3cm},
-    op/.style={rectangle, draw, thick, text centered, minimum height=0.8cm, text width=2.5cm},
-    scale/.style={rectangle, draw, thick, text centered, minimum height=0.7cm, text width=3.5cm},
-    point/.style={coordinate},
-    sum/.style={circle, draw, minimum size=0.6cm}]
+% Improved multi-scale diagram with spacing and scale
+\begin{tikzpicture}[scale=0.85, transform shape, node distance=1.2cm and 1.8cm, >=Latex,
+    scale1/.style={rectangle, draw=blue!60, thick, text centered, minimum height=0.8cm, text width=3cm, fill=blue!10},
+    scale2/.style={rectangle, draw=green!60, thick, text centered, minimum height=0.8cm, text width=4cm, fill=green!10},
+    scale3/.style={rectangle, draw=orange!60, thick, text centered, minimum height=0.8cm, text width=5cm, fill=orange!10},
+    scaleS/.style={rectangle, draw=red!60, thick, text centered, minimum height=0.8cm, text width=6cm, fill=red!10},
+    proc/.style={rectangle, draw=black!80, thick, text centered, minimum height=0.8cm, text width=1.5cm, fill=gray!10},
+    block/.style={rectangle, draw=black!80, thick, text centered, rounded corners, minimum height=1cm, text width=3cm, fill=gray!5}]
 
     \node (input) [block] {Input $\mathbf{H}_{spatial}$};
-    \node (transpose1) [op, below=of input] {Transpose};
+    \node (trans) [proc, below=of input] {Transpose};
     
-    \node (scale1) [scale, below left=of transpose1] {Dilated Conv (d=1) + BN/ReLU/Drop};
-    \node (scale2) [scale, below=of transpose1] {Dilated Conv (d=2) + BN/ReLU/Drop};
-    \node (scaledots) [below right=0.2cm and 0.1cm of scale2] {\dots};
-    \node (scaleS) [scale, below right=of transpose1] {Dilated Conv (d=$2^{S-1}$) + BN/ReLU/Drop};
+    \node (s1) [scale1, below left=1.5cm and 2.5cm of trans] {Dilated Conv (d=1)};
+    \node (b1) [proc, right=1cm of s1] {BN+ReLU};
+    \draw[->, blue!60, thick] (s1) -- (b1);
+    \draw[->, blue!60, thick] (trans.south) |- (s1.north);
     
-    \node (fusion) [block, below=2cm of scale2] {Adaptive Fusion (Weighted Sum)};
-    \node (transpose2) [op, below=of fusion] {Transpose};
-    \node (lr_proj) [op, below=of transpose2] {Low-Rank Projection};
-    \node (ln) [op, below=of lr_proj] {LayerNorm};
-    \node (sum) [sum, below=of ln] {+};
-    \node (output) [block, below=of sum] {Output $\mathbf{H}_{temporal}$};
-    \node (res_start) [point, left=1.5cm of sum] {};
-
-    \draw [->] (input) -- (transpose1);
-    \draw [->] (transpose1) -- (scale1);
-    \draw [->] (transpose1) -- (scale2);
-    \draw [->] (transpose1) -- (scaleS);
+    \node (s2) [scale2, below=1.5cm of s1] {Dilated Conv (d=2)};
+    \node (b2) [proc, right=1cm of s2] {BN+ReLU};
+    \draw[->, green!60, thick] (s2) -- (b2);
+    \draw[->, green!60, thick] (trans.south) |- (s2.north);
     
-    \draw [->] (scale1) -- (fusion);
-    \draw [->] (scale2) -- (fusion);
-    \draw [->] (scaleS) -- (fusion);
+    \node (s3) [scale3, below=1.5cm of s2] {Dilated Conv (d=4)};
+    \node (b3) [proc, right=1cm of s3] {BN+ReLU};
+    \draw[->, orange!60, thick] (s3) -- (b3);
+    \draw[->, orange!60, thick] (trans.south) |- (s3.north);
     
-    \draw [->] (fusion) -- (transpose2);
-    \draw [->] (transpose2) -- (lr_proj);
-    \draw [->] (lr_proj) -- (ln);
-    \draw [->] (ln) -- (sum);
-    \draw [->] (sum) -- (output);
-    \draw [->] (transpose2.west) -| (res_start) |- (sum);
+    \node (dots) [below=0.5cm of s3] {\Large $\vdots$};
+    
+    \node (sS) [scaleS, below=0.5cm of dots] {Dilated Conv (d=$2^{S-1}$)};
+    \node (bS) [proc, right=1cm of sS] {BN+ReLU};
+    \draw[->, red!60, thick] (sS) -- (bS);
+    \draw[->, red!60, thick] (trans.south) |- (sS.north);
+    
+    \node (fus) [block, below=1.5cm of dots, xshift=2cm] {Adaptive Fusion};
+    %% merge
+    \draw[->, thick] (b1.south) |- (fus.west);
+    \draw[->, thick] (b2.south) |- (fus.west);
+    \draw[->, thick] (b3.south) |- (fus.west);
+    \draw[->, thick] (bS.south) |- (fus.west);
+    
+    \node (trans2) [proc, below=of fus] {Transpose};
+    \node (lrp) [proc, below=of trans2] {Low-Rank Proj};
+    \node (ln) [proc, below=of lrp] {LayerNorm};
+    \node (sum2) [circle, draw=black!80, thick, minimum size=0.8cm, below=of ln] {+};
+    \node (out) [block, below=of sum2] {Output $\mathbf{H}_{temporal}$};
+    \draw[->, thick] (fus) -- (trans2) -- (lrp) -- (ln) -- (sum2) -- (out);
+    \draw[->, thick] (trans2.west) |- ([xshift=-1cm]sum2.west);
 
 \end{tikzpicture}
-\caption{Diagram of the Multi-Scale Temporal Modeling Module (TikZ).}
+\caption{Multi-Scale Temporal Module (scaled). Colored paths indicate different dilation scales for clarity.}
 \label{fig:temporal_module}
 \end{figure}
 
@@ -673,20 +680,18 @@ The multi-scale temporal module can be understood from several theoretical persp
 \label{sec:prediction}
 
 % Add figure for Horizon Prediction Module
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
-% Replace includegraphics with TikZ diagram
-\begin{tikzpicture}[node distance=1cm and 1.2cm, >=Latex,
-\begin{tikzpicture}[node distance=1cm and 1.2cm, >=Latex,
-    block/.style={rectangle, draw, thick, text centered, rounded corners, minimum height=1cm, text width=3cm},
-    op/.style={rectangle, draw, thick, text centered, minimum height=0.8cm, text width=3cm},
-    gate/.style={rectangle, draw, thick, text centered, minimum height=0.8cm, text width=2.5cm, fill=yellow!20},
-    point/.style={coordinate},
-    prod/.style={circle, draw, minimum size=0.6cm, inner sep=0pt, label=center:$\odot$},
-    sum/.style={circle, draw, minimum size=0.6cm}]
+% Improved Horizon Prediction Module diagram with better spacing and scale
+\begin{tikzpicture}[scale=0.85, transform shape, node distance=1cm and 1.8cm, >=Latex,
+    block/.style={rectangle, draw=blue!60, thick, text centered, rounded corners, minimum height=1cm, text width=3cm, fill=blue!10},
+    op/.style={rectangle, draw=orange!60, thick, text centered, minimum height=0.8cm, text width=2.5cm, fill=orange!10},
+    gate/.style={rectangle, draw=green!60, thick, text centered, minimum height=0.8cm, text width=2.5cm, fill=green!10},
+    prod/.style={circle, draw=purple!60, thick, minimum size=0.8cm, inner sep=0pt, label=center:$\odot$},
+    sum/.style={circle, draw=red!60, thick, minimum size=0.8cm}]
 
     \node (input_h) [block] {Input $\mathbf{H}_{temporal}$};
-    \node (input_x) [block, left=3cm of input_h] {Input $\mathbf{X}$};
+    \node (input_x) [block, left=4cm of input_h] {Input $\mathbf{X}$};
     
     % Prediction Path
     \node (pred_lr1) [op, below=of input_h] {Bottleneck Projection};
@@ -695,7 +700,7 @@ The multi-scale temporal module can be understood from several theoretical persp
     \node (p_initial) [block, below=of pred_lr2, fill=blue!10] {Initial Pred $\mathbf{P}_{initial}$};
 
     % Gate Path
-    \node (gate_lr1) [gate, right=of pred_lr1] {Gate Low-Rank Proj};
+    \node (gate_lr1) [gate, right=2.5cm of pred_lr1] {Gate Low-Rank Proj};
     \node (gate_act) [gate, below=of gate_lr1] {ReLU};
     \node (gate_lr2) [gate, below=of gate_act] {Gate Linear Proj (to $h$)};
     \node (gate_sig) [gate, below=of gate_lr2] {Sigmoid Gate $\mathbf{G}$};
@@ -705,41 +710,41 @@ The multi-scale temporal module can be understood from several theoretical persp
     \node (exp_decay) [op, below=of last_obs, fill=green!10] {Exponential Decay $\mathbf{E}$};
     
     % Fusion
-    \node (prod_p) [prod, below right=1cm and 0.5cm of p_initial] {};
-    \node (prod_e) [prod, below left=1cm and 0.5cm of exp_decay] {};
-    \node (gate_inv) [gate, left=of prod_e] {$1-\mathbf{G}$};
-    \node (sum) [sum, below=1cm of prod_p] {+};
+    \node (prod_p) [prod, below right=1.5cm and 0.8cm of p_initial] {};
+    \node (prod_e) [prod, below left=1.5cm and 0.8cm of exp_decay] {};
+    \node (gate_inv) [gate, left=2cm of prod_e] {$1-\mathbf{G}$};
+    \node (sum) [sum, below=1.5cm of prod_p] {+};
     \node (transpose) [op, below=of sum] {Transpose};
     \node (output) [block, below=of transpose] {Final Output $\hat{\mathbf{Y}}_{final}$};
 
     % Connections
-    \draw [->] (input_h) -- (pred_lr1);
-    \draw [->] (pred_lr1) -- (pred_ln);
-    \draw [->] (pred_ln) -- (pred_lr2);
-    \draw [->] (pred_lr2) -- (p_initial);
+    \draw[->, blue!60, thick] (input_h) -- (pred_lr1);
+    \draw[->, blue!60, thick] (pred_lr1) -- (pred_ln);
+    \draw[->, blue!60, thick] (pred_ln) -- (pred_lr2);
+    \draw[->, blue!60, thick] (pred_lr2) -- (p_initial);
     
-    \draw [->] (input_h) -- (gate_lr1);
-    \draw [->] (gate_lr1) -- (gate_act);
-    \draw [->] (gate_act) -- (gate_lr2);
-    \draw [->] (gate_lr2) -- (gate_sig);
+    \draw[->, green!60, thick] (input_h) -- (gate_lr1);
+    \draw[->, green!60, thick] (gate_lr1) -- (gate_act);
+    \draw[->, green!60, thick] (gate_act) -- (gate_lr2);
+    \draw[->, green!60, thick] (gate_lr2) -- (gate_sig);
     
-    \draw [->] (input_x) -- (last_obs);
-    \draw [->] (last_obs) -- (exp_decay);
+    \draw[->, purple!60, thick] (input_x) -- (last_obs);
+    \draw[->, purple!60, thick] (last_obs) -- (exp_decay);
     
-    \draw [->] (p_initial) -- (prod_p);
-    \draw [->] (gate_sig) -| (prod_p);
+    \draw[->, blue!60, thick] (p_initial) -- (prod_p);
+    \draw[->, green!60, thick] (gate_sig) -| (prod_p);
     
-    \draw [->] (exp_decay) -- (prod_e);
-    \draw [->] (gate_sig) -- (gate_inv);
-    \draw [->] (gate_inv) -- (prod_e);
+    \draw[->, purple!60, thick] (exp_decay) -- (prod_e);
+    \draw[->, green!60, thick] (gate_sig) -- (gate_inv);
+    \draw[->, green!60, thick] (gate_inv) -- (prod_e);
     
-    \draw [->] (prod_p) -- (sum);
-    \draw [->] (prod_e) -- (sum);
-    \draw [->] (sum) -- (transpose);
-    \draw [->] (transpose) -- (output);
+    \draw[->, red!60, thick] (prod_p) -- (sum);
+    \draw[->, red!60, thick] (prod_e) -- (sum);
+    \draw[->, red!60, thick] (sum) -- (transpose);
+    \draw[->, blue!60, thick] (transpose) -- (output);
 
 \end{tikzpicture}
-\caption{Diagram of the Horizon Prediction Module with Adaptive Refinement (TikZ).}
+\caption{Diagram of the Horizon Prediction Module (scaled). The module combines predictions and decay via colored pathways for clarity.}
 \label{fig:prediction_module}
 \end{figure}
 
