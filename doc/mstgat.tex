@@ -10,6 +10,7 @@
 \usepackage{lipsum}         % Dummy text (for placeholder citations)
 \usepackage{geometry}       % Added for margin control
 \usepackage{tikz}           % Added for TikZ diagrams
+\usepackage{float}          % Added for [H] float specifier
 
 % TikZ Libraries
 \usetikzlibrary{shapes, arrows.meta, positioning, chains, fit, calc}
@@ -26,7 +27,7 @@
 }
 
 % Placeholder for citation command if needed (replace with actual bibliography setup)
-\newcommand{\cite}[1]{[#1]} % Simple placeholder
+% \newcommand{\cite}[1]{[#1]} % Simple placeholder
 
 % --- Document Information ---
 \title{Multi-Scale Temporal Graph Attention Network for Spatiotemporal Forecasting}
@@ -105,7 +106,7 @@ Our proposed MSTGAT architecture specifically addresses these challenges through
 
 The Multi-Scale Temporal Graph Attention Network (MSTGAT) is designed as an end-to-end deep learning architecture for spatiotemporal forecasting. Figure \ref{fig:architecture} illustrates the overall framework of the proposed model.
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 % Replace placeholder with TikZ diagram for the full architecture
 \begin{tikzpicture}[node distance=1.5cm and 2cm, >=Latex, 
@@ -173,7 +174,7 @@ We now describe each component in detail.
 \label{sec:feature_extraction}
 
 % Add figure for Feature Extraction Module
-\begin{figure}[h!]
+\begin{figure}[htbp]
 \centering
 % Replace includegraphics with TikZ diagram
 \begin{tikzpicture}[node distance=1cm and 1.5cm, >=Latex, 
@@ -323,14 +324,14 @@ The feature extraction module can be understood from several theoretical perspec
 \textbf{Information Bottleneck Perspective}: The low-rank projection can be viewed through the lens of the information bottleneck principle \cite{tishby2000information}. By compressing the representation to a lower-dimensional space, the model is forced to retain only the most predictive features, discarding irrelevant information. This leads to representations that are both minimal and sufficient for the forecasting task.
 
 \textbf{Manifold Learning Perspective}: Epidemiological data often lies on a low-dimensional manifold within the high-dimensional observation space. The bottleneck projection can be seen as learning this manifold, with $D_{low}$ representing its intrinsic dimensionality.
-
 \subsection{Spatial Dependency Modeling} % Changed from \section to \subsection
 \label{sec:spatial_modeling}
 
 % Add figure for Spatial Dependency Modeling Module
-\begin{figure}[h!]
+\begin{figure}[H]
 \centering
 % Replace includegraphics with TikZ diagram
+\begin{tikzpicture}[node distance=1cm and 1.2cm, >=Latex,
 \begin{tikzpicture}[node distance=1cm and 1.2cm, >=Latex,
     block/.style={rectangle, draw, thick, text centered, rounded corners, minimum height=1cm, text width=3.5cm},
     op/.style={rectangle, draw, thick, text centered, minimum height=0.8cm, text width=3cm},
@@ -511,14 +512,14 @@ By visualizing these attention weights, we can:
 \end{itemize}
 
 This interpretability is particularly valuable in epidemiological applications, where understanding the spatial patterns of disease spread is crucial for intervention planning.
-
 \subsection{Multi-Scale Temporal Modeling} % Changed from \section to \subsection
 \label{sec:temporal_modeling}
 
 % Add figure for Multi-Scale Temporal Modeling Module
-\begin{figure}[h!]
+\begin{figure}[H]
 \centering
 % Replace includegraphics with TikZ diagram
+\begin{tikzpicture}[node distance=0.8cm and 1cm, >=Latex,
 \begin{tikzpicture}[node distance=0.8cm and 1cm, >=Latex,
     block/.style={rectangle, draw, thick, text centered, rounded corners, minimum height=1cm, text width=3cm},
     op/.style={rectangle, draw, thick, text centered, minimum height=0.8cm, text width=2.5cm},
@@ -672,9 +673,10 @@ The multi-scale temporal module can be understood from several theoretical persp
 \label{sec:prediction}
 
 % Add figure for Horizon Prediction Module
-\begin{figure}[h!]
+\begin{figure}[H]
 \centering
 % Replace includegraphics with TikZ diagram
+\begin{tikzpicture}[node distance=1cm and 1.2cm, >=Latex,
 \begin{tikzpicture}[node distance=1cm and 1.2cm, >=Latex,
     block/.style={rectangle, draw, thick, text centered, rounded corners, minimum height=1cm, text width=3cm},
     op/.style={rectangle, draw, thick, text centered, minimum height=0.8cm, text width=3cm},

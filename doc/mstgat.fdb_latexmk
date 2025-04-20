@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1745106396.84352 "c:/Users/ajaoo/Desktop/Projects/MSAGAT-Net/doc/mstgat.tex" "mstgat.pdf" "mstgat" 1745106399.37404 2
+["pdflatex"] 1745108375.90328 "c:/Users/ajaoo/Desktop/Projects/MSAGAT-Net/doc/mstgat.tex" "mstgat.pdf" "mstgat" 1745108379.10723 2
   "C:/Users/ajaoo/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1744322041 715705 78dc77ea4329bc65ba9282d767484fa7 ""
   "C:/Users/ajaoo/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1735259039 11986914 ae0e4d377906908a8ff8e344ae011c8a ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1001775420 2971 def0b6c1f0b107b3b936def894055589 ""
@@ -164,6 +164,7 @@
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/base/size10.clo" 1730403795 8448 bd43e47d84d3704b7eabd59a92e43bf1 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/epstopdf-pkg/epstopdf-base.sty" 1623003186 13886 d1306dcf79a944f6988e688c1785f9ce ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/etoolbox/etoolbox.sty" 1601897756 46845 3b58f70c6e861a13d927bff09d35ecbc ""
+  "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/float/float.sty" 1469023953 6916 16d2656a1984957e674b149555f1ea1d ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/geometry/geometry.cfg" 1578057145 1104 7ac475a4e3466b0b43e138e9356bda83 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/geometry/geometry.sty" 1578057145 42759 9cf6c5257b1bc7af01a58859749dd37a ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/graphics-cfg/color.cfg" 1465894292 1213 620bba36b25224fa9b7e1ccb4ecb76fd ""
@@ -202,11 +203,11 @@
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/rerunfilecheck/rerunfilecheck.sty" 1657800696 9714 ba3194bd52c8499b3f1e3eb91d409670 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388494052 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1729265222 55384 b454dec21c2d9f45ec0b793f0995b992 ""
-  "c:/Users/ajaoo/Desktop/Projects/MSAGAT-Net/doc/mstgat.tex" 1745106207 74599 368e509ebd6514c60aa3d5dbb34b19df ""
-  "mstgat.aux" 1745106398 14580 a78cd76ba610a5de0c1f6eb56f2b1921 "pdflatex"
-  "mstgat.out" 1745106398 17170 87f1c9b5169d8b6c9b1d8be82e34447b "pdflatex"
-  "mstgat.tex" 1745106207 74599 368e509ebd6514c60aa3d5dbb34b19df ""
-  "mstgat.toc" 1745106398 8224 54cbf9e65518f50fafe351acc91a11e6 "pdflatex"
+  "c:/Users/ajaoo/Desktop/Projects/MSAGAT-Net/doc/mstgat.tex" 1745108371 74837 f12ca96642d7dd4dd088ba502a0f98c2 ""
+  "mstgat.aux" 1745108377 14587 c38d3f32463db22403f7ffa481bd2864 "pdflatex"
+  "mstgat.out" 1745108377 17170 87f1c9b5169d8b6c9b1d8be82e34447b "pdflatex"
+  "mstgat.tex" 1745108371 74837 f12ca96642d7dd4dd088ba502a0f98c2 ""
+  "mstgat.toc" 1745108377 8235 85fcdb8c0d8c7d7c62198ccadf269abc "pdflatex"
   (generated)
   "mstgat.aux"
   "mstgat.log"

@@ -218,6 +218,8 @@ INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\generic\pgf\libraries\pgf
 INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\generic\pgf\modules\pgfmodulematrix.code.tex
 INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\generic\pgf\frontendlayer\tikz\libraries\tikzlibrarytopaths.code.tex
 INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\generic\pgf\frontendlayer\tikz\libraries\tikzlibrarytopaths.code.tex
+INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\latex\float\float.sty
+INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\latex\float\float.sty
 INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\generic\pgf\frontendlayer\tikz\libraries\tikzlibraryshapes.code.tex
 INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\generic\pgf\frontendlayer\tikz\libraries\tikzlibraryshapes.code.tex
 INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\generic\pgf\frontendlayer\tikz\libraries\tikzlibraryshapes.geometric.code.tex
@@ -255,9 +257,6 @@ INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\generic\pgf\frontendlayer
 INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\generic\pgf\frontendlayer\tikz\libraries\tikzlibraryfit.code.tex
 INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\generic\pgf\frontendlayer\tikz\libraries\tikzlibrarycalc.code.tex
 INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\generic\pgf\frontendlayer\tikz\libraries\tikzlibrarycalc.code.tex
-INPUT .\mstgat.aux
-INPUT .\mstgat.aux
-INPUT mstgat.aux
 OUTPUT mstgat.aux
 INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\context\base\mkii\supp-pdf.mkii
 INPUT C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex\context\base\mkii\supp-pdf.mkii
