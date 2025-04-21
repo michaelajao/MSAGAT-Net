@@ -11,6 +11,8 @@
 \usepackage{geometry}       % Added for margin control
 \usepackage{tikz}           % Added for TikZ diagrams
 \usepackage{float}          % Added for [H] float specifier
+\usepackage{algorithm}      % Added for algorithm environment
+\usepackage{algorithmic}   % Added for algorithmic environment
 
 % TikZ Libraries
 \usetikzlibrary{shapes, arrows.meta, positioning, chains, fit, calc}
@@ -99,6 +101,84 @@ This formulation presents several challenges:
 
 Our proposed MSTGAT architecture specifically addresses these challenges through its novel components and design principles.
 
+\begin{algorithm}[h]
+    \caption{MSAGATNet Training Algorithm}
+    \label{alg:msagatnet_training}
+    \begin{algorithmic}[1]
+    \REQUIRE 
+        Dataset $\{X,Y\}$, optional adjacency $A$, hyperparams $(\eta,\lambda,p,\gamma,E)$  
+    \ENSURE 
+        Best parameters $\Theta^*$
+    \STATE $\Theta\!\sim\!{\rm init},\ \mathrm{OPT}\!=\!\mathrm{Adam}(\eta,\lambda),\ \mathrm{SCH}\!=\!\mathrm{ReduceLROnPlateau}(p,\gamma)$  
+    \FOR{$e=1,2,\dots,E$}  
+      \STATE $L_{\rm tr}\gets0$  
+      \FOR{each batch $(X_b,Y_b)$}  
+        \STATE $(\hat Y_b,L_{\rm att})\gets\mathrm{MSAGATNet}(X_b,A;\Theta)$  
+        \STATE $L_b\gets\mathrm{MSE}(\hat Y_b,Y_b)+L_{\rm att}$  
+        \STATE $\Theta\gets\Theta-\eta\,\nabla_\Theta L_b$\quad;\quad $L_{\rm tr}\mathrel{+}=L_b$  
+      \ENDFOR  
+      \STATE $L_{\rm tr}\gets L_{\rm tr}/|\mathrm{train}|$  
+      \STATE $L_{\rm val}\gets\mathrm{Eval}(\mathrm{valid},\Theta)$;\quad $\mathrm{SCH}.step(L_{\rm val})$  
+      \IF{$L_{\rm val}<L_{\rm val}^*$}  
+        \STATE $\Theta^*\gets\Theta,\ L_{\rm val}^*\gets L_{\rm val},\ \mathrm{patience}\gets0$  
+        \STATE $\mathrm{Eval}(\mathrm{test},\Theta^*)$  
+      \ELSE  
+        \STATE $\mathrm{patience}\mathrel{+}=1$  
+      \ENDIF  
+      \IF{$\mathrm{patience}\ge p$} \STATE \textbf{break} \ENDIF  
+    \ENDFOR  
+    \RETURN $\Theta^*$  
+    \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[h]
+  \caption{MSAGATNet: Mathematical Formulation}
+  \label{alg:msagatnet_math}
+  \begin{algorithmic}[1]
+    \REQUIRE 
+      $X\in\mathbb{R}^{B\times T\times N}$,\quad optional $A_0\in\mathbb{R}^{N\times N}$
+    \ENSURE 
+      $\hat{Y}\in\mathbb{R}^{B\times h\times N},\;L_{\rm att}$
+      
+    \STATE $\tilde{X}\!=\!{\rm reshape}(X)\in\mathbb{R}^{BN\times1\times T}$ \hfill\COMMENT{Reshape for temporal convolution}
+    
+    \STATE $Z_{\rm dep}=\mathrm{DWConv}(\tilde{X})$,\ 
+           $Z=\mathrm{PWConv}(\sigma\,{\rm BN}(Z_{\rm dep}))$ \hfill\COMMENT{Depthwise separable convolution}
+           
+    \STATE $H=\sigma\bigl({\rm LN}(ZW_L W_H+b)\bigr)\in\mathbb{R}^{BN\times D}$ \hfill\COMMENT{Low-rank feature processing}
+    
+    \STATE reshape $H\to H^{(B,N,D)}$, \ 
+           $X_L=X_{:,-1,:}\in\mathbb{R}^{B\times N}$ \hfill\COMMENT{Extract last observation}
+           
+    \STATE $[Q,K,V]=\mathrm{split}(H\,W_{qkv}^L\,W_{qkv}^H+b_{qkv})$ \hfill\COMMENT{Low-rank QKV projection}
+    
+    \STATE $\widetilde{Q}=\mathrm{ELU}(Q)+1,\;\widetilde{K}=\mathrm{ELU}(K)+1$ \hfill\COMMENT{Positive mapping for linearization}
+    
+    \STATE $A=\mathrm{softmax}\bigl(\tfrac{\widetilde{Q}\widetilde{K}^T}{\sqrt{D}}+UV^T+\lambda A_0\bigr)$ \hfill\COMMENT{Attention with factorized adjacency}
+    
+    \STATE $O=\dfrac{\widetilde{Q}\,( \widetilde{K}^T V )}{\sum_j\widetilde{K}_j+\epsilon}$ \hfill\COMMENT{Linear attention computation}
+    
+    \STATE $H_s=OW_o^L\,W_o^H + H$ \hfill\COMMENT{Low-rank output projection with residual}
+    
+    \STATE $L_{\rm att}=\lambda_{\rm att}\|A\|_1$ \hfill\COMMENT{Attention regularization loss}
+    
+    \FOR{$s=1,\dots,S$}
+      \STATE $Z_s=\mathrm{Drop}\bigl(\sigma\,{\rm BN}(\mathrm{Conv1D}(H_s^T,\,d=2^{s-1}))\bigr)$ \hfill\COMMENT{Multi-scale dilated convolutions}
+    \ENDFOR
+    
+    \STATE $\alpha=\mathrm{softmax}(w),\quad Z=\sum_s\alpha_sZ_s$ \hfill\COMMENT{Adaptive scale fusion}
+    
+    \STATE $H_t=\mathrm{LN}(ZW_f^L\,W_f^H+Z)$ \hfill\COMMENT{Low-rank fusion with residual}
+    
+    \STATE $P=\mathrm{pred}(H_t),\quad G=\mathrm{sigmoid}(\mathrm{gate}(H_t))$ \hfill\COMMENT{Initial prediction and gate}
+    
+    \STATE $E=X_L\odot\exp(-\beta\,[1:h])$ \hfill\COMMENT{Time-decayed last observation}
+    
+    \STATE $\hat{Y}=G\odot P+(1-G)\odot E$ \hfill\COMMENT{Progressive prediction with gating}
+  \end{algorithmic}
+\end{algorithm}
+    
+
 \section{MSTGAT Architecture} % Changed from \chapter to \section
 \label{sec:architecture}
 
@@ -107,48 +187,47 @@ Our proposed MSTGAT architecture specifically addresses these challenges through
 The Multi-Scale Temporal Graph Attention Network (MSTGAT) is designed as an end-to-end deep learning architecture for spatiotemporal forecasting. Figure \ref{fig:architecture} illustrates the overall framework of the proposed model.
 
 \begin{figure}[htbp]
-\centering
-% Replace placeholder with TikZ diagram for the full architecture
-\begin{tikzpicture}[node distance=2cm and 3cm, >=Latex, 
-    module/.style={rectangle, draw, thick, text centered, rounded corners, minimum height=1.5cm, text width=3.5cm, fill=blue!10},
-    input/.style={rectangle, draw, thick, text centered, minimum height=1cm, text width=3cm},
-    output/.style={rectangle, draw, thick, text centered, minimum height=1cm, text width=3cm},
-    point/.style={coordinate}]
-
-    \node (input) [input] {Input Data $\mathbf{X}$}; 
-    \node (feat_ext) [module, below=of input] {(a) Feature Extraction Module};
-    \node (spatial) [module, below=of feat_ext] {(b) Spatial Dependency Module};
-    \node (temporal) [module, below=of spatial] {(c) Multi-Scale Temporal Module};
-    \node (predict) [module, below=of temporal] {(d) Horizon Prediction Module};
-    \node (output) [output, below=of predict] {Output Forecast $\hat{\mathbf{Y}}$};
+    \centering
+    \begin{tikzpicture}[node distance=2cm and 3cm, >=Latex, 
+        module/.style={rectangle, draw, thick, text centered, rounded corners, minimum height=1.5cm, text width=3.5cm, fill=blue!10},
+        input/.style={rectangle, draw, thick, text centered, minimum height=1cm, text width=3cm},
+        output/.style={rectangle, draw, thick, text centered, minimum height=1cm, text width=3cm},
+        point/.style={coordinate}]
     
-    % Main flow
-    \draw [->, thick] (input) -- (feat_ext);
-    \draw [->, thick] (feat_ext) -- (spatial);
-    \draw [->, thick] (spatial) -- (temporal);
-    \draw [->, thick] (temporal) -- (predict);
-    \draw [->, thick] (predict) -- (output);
+        \node (input) [input] {Input Data $\mathbf{X}$}; 
+        \node (feat_ext) [module, below=of input] {Feature Extraction Module};
+        \node (spatial) [module, below=of feat_ext] {Spatial Dependency Module};
+        \node (temporal) [module, below=of spatial] {Multi-Scale Temporal Module};
+        \node (predict) [module, below=of temporal] {Horizon Prediction Module};
+        \node (output) [output, below=of predict] {Output Forecast $\hat{\mathbf{Y}}$};
+        
+        % Main flow
+        \draw [->, thick] (input) -- (feat_ext);
+        \draw [->, thick] (feat_ext) -- (spatial);
+        \draw [->, thick] (spatial) -- (temporal);
+        \draw [->, thick] (temporal) -- (predict);
+        \draw [->, thick] (predict) -- (output);
+        
+        % Skip connections (dotted)
+        \node (skip1_start) [point, right=1.5cm of feat_ext] {};
+        \node (skip1_end) [point, right=1.5cm of spatial] {};
+        \draw [->, dashed] (feat_ext.east) -| (skip1_end) |- (spatial.east) node[pos=0.25, right] {Skip};
     
-    % Skip connections (dotted)
-    \node (skip1_start) [point, right=1.5cm of feat_ext] {};
-    \node (skip1_end) [point, right=1.5cm of spatial] {};
-    \draw [->, dashed] (feat_ext.east) -| (skip1_end) |- (spatial.east) node[pos=0.25, right] {Skip};
-
-    \node (skip2_start) [point, right=1.5cm of spatial] {};
-    \node (skip2_end) [point, right=1.5cm of temporal] {};
-    \draw [->, dashed] (spatial.east) -| (skip2_end) |- (temporal.east) node[pos=0.25, right] {Skip};
-
-    \node (skip3_start) [point, left=1.5cm of temporal] {};
-    \node (skip3_end) [point, left=1.5cm of predict] {};
-    \draw [->, dashed] (temporal.west) -| (skip3_end) |- (predict.west) node[pos=0.25, left] {Skip};
-
-    % Input to Prediction Module (for refinement)
-    \node (input_refine) [point, left=3.5cm of predict] {};
-    \draw [->, dashed] (input.west) -- ++(-4,0) |- (input_refine) -- (predict.west) node[pos=0.9, above left] {Refine Input};
-
-\end{tikzpicture}
-\caption{Overall architecture of the proposed MSTGAT model (TikZ). The framework consists of four key components: (a) Feature Extraction Module, (b) Spatial Dependency Module, (c) Multi-Scale Temporal Module, and (d) Horizon Prediction Module. Dashed lines indicate skip connections and input for refinement.}
-\label{fig:architecture}
+        \node (skip2_start) [point, right=1.5cm of spatial] {};
+        \node (skip2_end) [point, right=1.5cm of temporal] {};
+        \draw [->, dashed] (spatial.east) -| (skip2_end) |- (temporal.east) node[pos=0.25, right] {Skip};
+    
+        \node (skip3_start) [point, left=1.5cm of temporal] {};
+        \node (skip3_end) [point, left=1.5cm of predict] {};
+        \draw [->, dashed] (temporal.west) -| (skip3_end) |- (predict.west) node[pos=-0.5, left] {Skip};
+    
+        % Input to Prediction Module (for refinement)
+        \node (input_refine) [point, left=4cm of predict] {};
+        \draw [->, dashed] (input.west) -- ++(-4.5,0) |- (input_refine) -- (predict.west) node[pos=0.95, above=20pt, left] {Refine Input};
+    
+    \end{tikzpicture}
+    \caption{Overall architecture of the proposed MSTGAT model. The framework consists of four key components: Feature Extraction Module, Spatial Dependency Module, Multi-Scale Temporal Module, and Horizon Prediction Module. Dashed lines indicate skip connections and input for refinement.}
+    \label{fig:architecture}
 \end{figure}
 
 At a high level, MSTGAT processes the input data $\mathbf{X} \in \mathbb{R}^{B \times T \times N}$ through four sequential stages:
@@ -201,7 +280,7 @@ We now describe each component in detail.
     \draw [->] (ln_relu) -- (reshape2);
     \draw [->] (reshape2) -- (output);
 \end{tikzpicture}
-\caption{Diagram of the Feature Extraction Module (TikZ).}
+\caption{Diagram of the Feature Extraction Module}
 \label{fig:feature_extraction}
 \end{figure}
 
