@@ -30,6 +30,7 @@ class DataBasicLoader(object):
 
         self.scale = np.ones(self.m)
 
+        # Use correct argument names: train and val
         self._pre_train(int(args.train * self.n), int((args.train + args.val) * self.n), self.n)
         self._split(int(args.train * self.n), int((args.train + args.val) * self.n), self.n)
         print('size of train/val/test sets',len(self.train[0]),len(self.val[0]),len(self.test[0]))

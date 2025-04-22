@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Training Script for MSAGATNet Model
-- Streamlined training, evaluation, and visualization
-- Multi-step predictions with configurable parameters
+Training Script for MSTAGAT_Net Model
+- Handles multi-step forecasting with attention regularization
+- Supports tensorboard logging, early stopping, and model checkpointing
+- Evaluates model performance with comprehensive metrics
 """
 
 import os
@@ -19,76 +20,86 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from math import sqrt
 from scipy.stats import pearsonr
 import pandas as pd
-from utils import *  # Keep this as requested
+import matplotlib.pyplot as plt
 
-# Add parent directory to path (if needed)
+# Configure logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
+
+# Add current directory to path if needed
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-# Import the MSAGATNet model
-from model import MSAGATNet
-
-from renamed_model import MSTAGAT_Net  # Updated model name
+# Import the model module
+from model import MSTAGAT_Net
 
 # ----------------- Argument Parsing -----------------
 def parse_arguments():
     """Parse and return command line arguments."""
-    parser = argparse.ArgumentParser(description='Training script for MSAGATNet model')
-    parser.add_argument('--dataset', type=str, default='region785')
-    parser.add_argument('--sim_mat', type=str, default='region-adj')
+    parser = argparse.ArgumentParser(description='Training script for MSTAGAT_Net model')
+    
+    # Dataset and data processing parameters
+    parser.add_argument('--dataset', type=str, default='japan')
+    parser.add_argument('--sim_mat', type=str, default='japan-adj')
     parser.add_argument('--window', type=int, default=20)
     parser.add_argument('--horizon', type=int, default=5)
     parser.add_argument('--train', type=float, default=0.5)
     parser.add_argument('--val', type=float, default=0.2)
     parser.add_argument('--test', type=float, default=0.3)
+    parser.add_argument('--extra', type=str, default=None, help='Path to external data directory')
+    
+    # Training parameters
     parser.add_argument('--epochs', type=int, default=1500)
     parser.add_argument('--batch', type=int, default=32)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--weight_decay', type=float, default=5e-4)
-    parser.add_argument('--dropout', type=float, default=0.2)
+    parser.add_argument('--dropout', type=float, default=0.355)
+    parser.add_argument('--patience', type=int, default=100)
+    parser.add_argument('--max_grad_norm', type=float, default=1.0)
+    
+    # Model parameters - using the model's default values
+    parser.add_argument('--hidden_dim', type=int, default=32, help='Dimension of hidden representations')
+    parser.add_argument('--attn_heads', type=int, default=4, help='Number of attention heads')
+    parser.add_argument('--attention_reg_weight', type=float, default=1e-5, help='Weight for attention regularization')
+    parser.add_argument('--num_scales', type=int, default=4, help='Number of temporal scales in MTFM')
+    parser.add_argument('--kernel_size', type=int, default=3, help='Size of temporal convolution kernel')
+    parser.add_argument('--temp_conv_out_channels', type=int, default=16, help='Output channels for temporal convolution')
+    parser.add_argument('--low_rank_dim', type=int, default=8, help='Dimension for low-rank decompositions')
+    
+    # Learning rate scheduler
+    parser.add_argument('--lr_patience', type=int, default=20)
+    parser.add_argument('--lr_factor', type=float, default=0.5)
+    
+    # System settings
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--cuda', action='store_true')
-    parser.add_argument('--patience', type=int, default=100)
     parser.add_argument('--save_dir', type=str, default='save')
     parser.add_argument('--mylog', action='store_true', help='Enable TensorBoard logging')
-    parser.add_argument('--extra', type=str, default='')
-    parser.add_argument('--label', type=str, default='')
+    
+    # Additional features
+    parser.add_argument('--record', type=str, default='')
     parser.add_argument('--pcc', type=str, default='')
-    parser.add_argument('--result', type=int, default=0)
-    parser.add_argument('--record', type=str, default='')    
-    parser.add_argument('--model', type=str, default='msagatnet', choices=['msagatnet', 'mstagat'], help='Choose which model to use: msagatnet or mstagat')
-
-    # Model hyperparameters
-    parser.add_argument('--hidden_dim', type=int, default=32, help='Dimension of hidden representations')
-    parser.add_argument('--attention_reg_weight', type=float, default=1e-4, help='Weight for attention regularization')
-    parser.add_argument('--attn_heads', type=int, default=4, help='Number of attention heads')
-    parser.add_argument('--num_scales', type=int, default=6, help='Number of temporal scales in MTFM')
-    parser.add_argument('--kernel_size', type=int, default=9, help='Size of temporal convolution kernel')
-    parser.add_argument('--temp_conv_out_channels', type=int, default=64, help='Output channels for temporal convolution')
-    parser.add_argument('--low_rank_dim', type=int, default=8, help='Dimension for low-rank decompositions')
-    parser.add_argument('--gru_layers', type=int, default=2, help='Number of GRU layers in the predictor')
-
-    # Learning rate scheduler parameters
-    parser.add_argument('--lr_patience', type=int, default=20, help='Patience for learning rate scheduler')
-    parser.add_argument('--lr_factor', type=float, default=0.5, help='Factor for learning rate reduction')
-    parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Maximum gradient norm for clipping')
-
+    
     return parser.parse_args()
 
 # ----------------- Setup & Environment -----------------
-def setup_environment(args, logger):
+def setup_environment(args):
     """Setup reproducible environment and select device."""
-    # Set up seed for reproducibility
+    # Create a dedicated device object for consistent usage
     if args.cuda and torch.cuda.is_available():
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
+        device = torch.device(f'cuda:{args.gpu}')
+    else:
+        device = torch.device('cpu')
     
+    # Set seeds for reproducibility
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    if args.cuda and torch.cuda.is_available():
+    if torch.cuda.is_available():
         torch.cuda.manual_seed(args.seed)
         torch.backends.cudnn.deterministic = True
     
@@ -104,11 +115,209 @@ def setup_environment(args, logger):
     # Setup visualization style
     setup_visualization_style()
     
-    # Setup device
-    device = torch.device(f'cuda:{args.gpu}' if args.cuda and torch.cuda.is_available() else 'cpu')
     logger.info(f'Using device: {device}')
     
     return device, figures_dir, results_dir
+
+# ----------------- Visualization & Utility Functions -----------------
+def setup_visualization_style():
+    """Setup matplotlib visualization style."""
+    plt.style.use('seaborn-v0_8')
+    plt.rcParams.update({
+        'figure.dpi': 300,
+        'savefig.dpi': 300,
+        'font.size': 12,
+        'figure.figsize': (10, 6),
+        'axes.grid': True,
+        'grid.alpha': 0.3,
+    })
+
+def peak_error(y_true_states, y_pred_states, threshold):
+    """Calculate mean absolute error in peak regions."""
+    # Create copies to avoid modifying original data
+    y_true_copy = y_true_states.copy()
+    y_pred_copy = y_pred_states.copy()
+    
+    # Mask low values using threshold
+    mask_idx = np.argwhere(y_true_copy < threshold)
+    for idx in mask_idx:
+        y_true_copy[idx[0], idx[1]] = 0
+        y_pred_copy[idx[0], idx[1]] = 0
+    
+    # Calculate MAE only in peak regions where values > threshold
+    peak_mae_raw = mean_absolute_error(y_true_copy, y_pred_copy, multioutput='raw_values')
+    peak_mae = np.mean(peak_mae_raw)
+    
+    return peak_mae
+
+def visualize_matrices(data_loader, model, save_path, device):
+    """
+    Visualize adjacency, input correlation, and learned attention matrices.
+    
+    Args:
+        data_loader: DataLoader object
+        model: Trained model
+        save_path: Path to save visualization
+        device: Device to run model on
+    """
+    model.eval()
+
+    # Adjacency/Geolocation matrix
+    geo_mat = data_loader.adj.cpu().numpy() if hasattr(data_loader, 'adj') else np.eye(data_loader.m)
+
+    # Input correlation matrix from raw data
+    raw_data = data_loader.rawdat
+    input_corr = np.corrcoef(raw_data.T)
+
+    # Forward pass to update model's attention
+    batch = next(data_loader.get_batches(data_loader.test, min(32, len(data_loader.test)), False))
+    X, Y, index = batch
+    X = X.to(device)
+    if index is not None:
+        index = index.to(device)
+    with torch.no_grad():
+        _ = model(X, index)
+
+    # Retrieve attention weights - correctly handling MSTAGAT_Net
+    attn_mat = None
+    if hasattr(model, 'spatial_module') and hasattr(model.spatial_module, 'attn'):
+        attn_tensor = model.spatial_module.attn
+        if len(attn_tensor.shape) == 4:  # (B, heads, N, N)
+            attn_mat = attn_tensor.mean(dim=(0, 1)).detach().cpu().numpy()
+        else:
+            attn_mat = attn_tensor.detach().cpu().numpy()
+    else:
+        attn_mat = np.zeros_like(input_corr)
+        logger.warning("Model does not have 'spatial_module.attn'; using zero matrix.")
+
+    # Plot matrices
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    
+    im0 = axes[0].imshow(geo_mat, cmap='viridis')
+    axes[0].set_title("(a) Adjacency Matrix", fontsize=14)
+    plt.colorbar(im0, ax=axes[0])
+    axes[0].set_xlabel("Region Index")
+    axes[0].set_ylabel("Region Index")
+    
+    im1 = axes[1].imshow(input_corr, cmap='viridis')
+    axes[1].set_title("(b) Input Correlation Matrix", fontsize=14)
+    plt.colorbar(im1, ax=axes[1])
+    axes[1].set_xlabel("Region Index")
+    axes[1].set_ylabel("Region Index")
+    
+    im2 = axes[2].imshow(attn_mat, cmap='viridis')
+    axes[2].set_title("(c) Learned Attention Matrix", fontsize=14)
+    plt.colorbar(im2, ax=axes[2])
+    axes[2].set_xlabel("Region Index")
+    axes[2].set_ylabel("Region Index")
+    
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    logger.info(f"Saved matrix visualization to {save_path}")
+
+def visualize_predictions(y_true, y_pred, save_path, regions=5):
+    """
+    Visualize predictions vs. ground truth for selected regions.
+    
+    Args:
+        y_true: Ground truth values
+        y_pred: Predicted values
+        save_path: Path to save visualization
+        regions: Number of regions to visualize
+    """
+    n_regions = min(regions, y_true.shape[1])
+    fig, axes = plt.subplots(n_regions, 1, figsize=(12, 3 * n_regions), sharex=True)
+    if n_regions == 1:
+        axes = [axes]
+    time_steps = range(y_true.shape[0])
+    for i in range(n_regions):
+        axes[i].plot(time_steps, y_true[:, i], 'b-', label='Ground Truth', alpha=0.7)
+        axes[i].plot(time_steps, y_pred[:, i], 'r-', label='Prediction', alpha=0.7)
+        axes[i].set_title(f'Region {i+1}', fontsize=12)
+        axes[i].set_ylabel('Value', fontsize=10)
+        axes[i].grid(True, linestyle='--', alpha=0.5)
+        axes[i].legend(loc='upper right')
+    axes[-1].set_xlabel('Time Steps', fontsize=10)
+    plt.suptitle('Predictions vs. Ground Truth', fontsize=14)
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    logger.info(f"Saved prediction visualization to {save_path}")
+
+def plot_loss_curves(train_losses, val_losses, save_path, args):
+    """
+    Plot training and validation loss curves.
+    
+    Args:
+        train_losses: List of training losses
+        val_losses: List of validation losses
+        save_path: Path to save plot
+        args: Command line arguments
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    epochs = range(1, len(train_losses) + 1)
+    ax.plot(epochs, train_losses, 'b-', label='Training Loss', linewidth=2, alpha=0.8)
+    ax.plot(epochs, val_losses, 'r-', label='Validation Loss', linewidth=2, alpha=0.8)
+    ax.grid(True, linestyle='--', alpha=0.7)
+    
+    best_val_epoch = val_losses.index(min(val_losses)) + 1
+    best_val_loss = min(val_losses)
+    ax.scatter(best_val_epoch, best_val_loss, color='green', s=100, zorder=5,
+              label=f'Best Val Loss: {best_val_loss:.6f}')
+               
+    ax.set_xlabel('Epoch', fontsize=12)
+    ax.set_ylabel('Loss', fontsize=12)
+    
+    # Add title with model information
+    title = f'MSTAGAT-Net Training Progress\nDataset: {args.dataset}, Window: {args.window}, Horizon: {args.horizon}'
+    ax.set_title(title, fontsize=14, pad=10)
+    
+    textstr = f'Learning Rate: {args.lr}\nBatch Size: {args.batch}\nBest Epoch: {best_val_epoch}'
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
+    ax.text(0.02, 0.98, textstr, transform=ax.transAxes, fontsize=10,
+            verticalalignment='top', bbox=props)
+            
+    ax.legend(loc='upper right', frameon=True, framealpha=0.8)
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    
+    logger.info(f"Saved loss curves to {save_path}")
+
+def save_metrics(metrics, save_path, model_name, dataset, window, horizon):
+    """
+    Save metrics to a CSV file.
+    
+    Args:
+        metrics: Dictionary of metrics
+        save_path: Path to save CSV
+        model_name: Name of the model
+        dataset: Dataset name
+        window: Window size
+        horizon: Prediction horizon
+    """
+    import time
+    
+    # Add model and configuration info to metrics
+    metrics_with_info = {
+        'model': model_name,  # Use model name from arguments
+        'dataset': dataset,
+        'window': window,
+        'horizon': horizon,
+        'timestamp': time.strftime("%Y%m%d_%H%M%S"),
+        **metrics
+    }
+    
+    metrics_df = pd.DataFrame([metrics_with_info])
+    
+    # Check if file exists to append or create new
+    if os.path.exists(save_path):
+        existing_df = pd.read_csv(save_path)
+        updated_df = pd.concat([existing_df, metrics_df], ignore_index=True)
+        updated_df.to_csv(save_path, index=False)
+        logger.info(f"Appended metrics to file: {save_path}")
+    else:
+        metrics_df.to_csv(save_path, index=False)
+        logger.info(f"Created new metrics file: {save_path}")
 
 # ----------------- Evaluation Function -----------------
 def evaluate(data_loader, data, model, device, args, tag='val'):
@@ -233,7 +442,7 @@ def train_epoch(data_loader, model, optimizer, device, args):
         y_expanded = Y.unsqueeze(1).expand(-1, args.horizon, -1)
         loss = nn.MSELoss()(output, y_expanded) + attn_reg_loss
         
-        # Ensure gradient clipping is applied during training
+        # Apply gradient clipping
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=args.max_grad_norm)
         optimizer.step()
@@ -247,42 +456,46 @@ def train_epoch(data_loader, model, optimizer, device, args):
 def main():
     # Parse command line arguments
     args = parse_arguments()
-    
-    # Setup logging
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
-    
+
     # Setup environment
-    device, figures_dir, results_dir = setup_environment(args, logger)
-    
+    device, figures_dir, results_dir = setup_environment(args)
+
     # Setup TensorBoard logging if enabled
     writer = None
+    model_name = 'MSTAGAT-Net'
+    log_token_base = f'{model_name}.{args.dataset}.w-{args.window}.h-{args.horizon}'
     if args.mylog:
         try:
             from torch.utils.tensorboard import SummaryWriter
-            log_token = f'MSAGATNet.{args.dataset}.w-{args.window}.h-{args.horizon}'
-            tensorboard_log_dir = os.path.join('tensorboard', log_token)
+            tensorboard_log_dir = os.path.join('tensorboard', log_token_base)
             os.makedirs(tensorboard_log_dir, exist_ok=True)
             writer = SummaryWriter(tensorboard_log_dir)
             logger.info(f'TensorBoard logging to {tensorboard_log_dir}')
         except ImportError:
             logger.warning("TensorBoard not available, skipping TensorBoard logging")
-    
+
     # Load data
     from data import DataBasicLoader
     data_loader = DataBasicLoader(args)
-      # Initialize model
-    if args.model == 'mstgat':
-        model = MSTAGAT_Net(args, data_loader)
-        logger.info(f'Using MSTAGAT-Net model')
-    else:
-        model = MSAGATNet(args, data_loader)
-        logger.info(f'Using MSAGATNet model')
+
+    # Map attention_reg_weight to parameter name used internally by the model
+    setattr(args, 'attention_regularization_weight', args.attention_reg_weight)
+    setattr(args, 'bottleneck_dim', args.low_rank_dim)
+    setattr(args, 'feature_channels', args.temp_conv_out_channels)
+    setattr(args, 'attention_heads', args.attn_heads)
+
+    # Instantiate the model
+    model = MSTAGAT_Net(args, data_loader)
+    logger.info(f'Using model: {model.__class__.__name__}')
+    logger.info(f'Model parameters: hidden_dim={args.hidden_dim}, attn_heads={args.attn_heads}, ' +
+                f'attention_reg_weight={args.attention_reg_weight}, num_scales={args.num_scales}, ' +
+                f'kernel_size={args.kernel_size}, temp_conv_out_channels={args.temp_conv_out_channels}, ' +
+                f'low_rank_dim={args.low_rank_dim}')
     
     model = model.to(device)
     param_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f'Model initialized with {param_count} parameters')
-    
+
     # Setup optimizer and scheduler
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                          lr=args.lr, weight_decay=args.weight_decay)
@@ -290,36 +503,35 @@ def main():
         optimizer, mode='min', factor=args.lr_factor,
         patience=args.lr_patience, verbose=True
     )
-    
+
     # Define output paths
-    log_token = f'{args.model.upper()}.{args.dataset}.w-{args.window}.h-{args.horizon}'
-    model_path = os.path.join(args.save_dir, f'{log_token}.pt')
-    loss_fig_path = os.path.join(figures_dir, f"loss_curve_{log_token}.png")
-    matrices_fig_path = os.path.join(figures_dir, f"matrices_{log_token}.png")
-    pred_fig_path = os.path.join(figures_dir, f"predictions_{log_token}.png")
-    metrics_path = os.path.join(results_dir, f'metrics_{args.model.upper()}.csv')
-    
+    model_save_path = os.path.join(args.save_dir, f'{log_token_base}.pt')
+    loss_fig_path = os.path.join(figures_dir, f"loss_curve_{log_token_base}.png")
+    matrices_fig_path = os.path.join(figures_dir, f"matrices_{log_token_base}.png")
+    pred_fig_path = os.path.join(figures_dir, f"predictions_{log_token_base}.png")
+    results_csv_path = os.path.join(results_dir, f"metrics_{log_token_base}.csv")
+
     # Training loop variables
     train_losses, val_losses = [], []
     bad_counter, best_epoch, best_val = 0, 0, float('inf')
-    
+
     try:
         logger.info('Beginning training')
         for epoch in range(1, args.epochs + 1):
             epoch_start_time = time.time()
-            
+
             # Train for one epoch
             train_loss = train_epoch(data_loader, model, optimizer, device, args)
             train_losses.append(train_loss)
-            
+
             # Evaluate on validation set
             val_metrics = evaluate(data_loader, data_loader.val, model, device, args)
             val_loss = val_metrics['loss']
             val_losses.append(val_loss)
-            
+
             epoch_time = time.time() - epoch_start_time
             logger.info(f'Epoch {epoch:3d} | time: {epoch_time:5.2f}s | train_loss: {train_loss:5.8f} | val_loss: {val_loss:5.8f}')
-            
+
             # TensorBoard logging if enabled
             if writer:
                 writer.add_scalars('data/loss', {'train': train_loss, 'val': val_loss}, epoch)
@@ -327,100 +539,87 @@ def main():
                 writer.add_scalar('data/rmse', val_metrics['rmse'], epoch)
                 writer.add_scalar('data/pcc', val_metrics['pcc'], epoch)
                 writer.add_scalar('data/learning_rate', optimizer.param_groups[0]['lr'], epoch)
-            
+
             # Update learning rate scheduler
             scheduler.step(val_loss)
-            
+
             # Save best model and evaluate on test set if improved
             if val_loss < best_val:
                 best_val = val_loss
                 best_epoch = epoch
                 bad_counter = 0
-                
-                # Save the model
-                torch.save(model.state_dict(), model_path)
-                logger.info(f'Best validation epoch: {epoch}, saving model to {model_path}')
-                
+
+                # Save the model - with model class verification
+                logger.info(f"Saving model of type: {model.__class__.__name__}")
+                torch.save(model.state_dict(), model_save_path)
+                logger.info(f'Best validation epoch: {epoch}, saved model to {model_save_path}')
+
                 # Evaluate on test set
                 test_metrics = evaluate(data_loader, data_loader.test, model, device, args, tag='test')
                 logger.info(f'Test MAE: {test_metrics["mae"]:.4f}, RMSE: {test_metrics["rmse"]:.4f}, PCC: {test_metrics["pcc"]:.4f}')
             else:
                 bad_counter += 1
-            
+
             # Early stopping
             if bad_counter == args.patience:
                 logger.info(f'Early stopping at epoch {epoch}')
                 break
-                
+
     except KeyboardInterrupt:
         logger.info(f'Exiting from training early at epoch {epoch}')
-    
+
     # Plot loss curves
-    plot_loss_curves(train_losses, val_losses, loss_fig_path, args, logger)
-    
-    # Load best model for final evaluation - with explicit device mapping for reliability
-    try:
-        # First attempt with standard mapping
-        model.load_state_dict(torch.load(model_path, map_location=device))
-    except RuntimeError as e:
-        # If that fails, use a more explicit approach
-        logger.warning(f"Error loading model with standard mapping: {e}")
-        logger.info("Trying alternative loading approach...")
-        
-        # Explicitly map any CUDA device to the current device
-        if torch.cuda.is_available():
-            model_state = torch.load(model_path, map_location=lambda storage, loc: storage.cuda(device.index))
-        else:
-            model_state = torch.load(model_path, map_location='cpu')
-            
-        model.load_state_dict(model_state)
-        logger.info("Model loaded successfully with alternative approach")
-    
+    plot_loss_curves(train_losses, val_losses, loss_fig_path, args)
+
+    # Load best model for final evaluation
+    logger.info(f"Loading best model from {model_save_path}")
+    model.load_state_dict(torch.load(model_save_path, map_location=device))
+    logger.info(f"Loaded model type: {model.__class__.__name__}")
+
     # Final test evaluation
     test_metrics = evaluate(data_loader, data_loader.test, model, device, args, tag='test')
-    
-    # Visualize matrices
-    visualize_matrices(data_loader, model, matrices_fig_path, device, logger)
-    
-    # Visualize predictions (first few regions)
+
+    # Visualize matrices - with proper attention access
+    visualize_matrices(data_loader, model, matrices_fig_path, device)
+
+    # Visualize predictions
     visualize_predictions(
         test_metrics['y_true'], 
         test_metrics['y_pred'], 
         pred_fig_path, 
-        regions=min(5, data_loader.m), 
-        logger=logger
+        regions=min(5, data_loader.m)
     )
-    
-    # Remove predictions from saved metrics
+
+    # Remove predictions from saved metrics to avoid saving large arrays
     y_true = test_metrics.pop('y_true', None)
     y_pred = test_metrics.pop('y_pred', None)
-    
-    # Save metrics
-    save_metrics(test_metrics, metrics_path, args.dataset, args.window, args.horizon, logger)
-    
+
+    # Save metrics - with explicit model name
+    save_metrics(test_metrics, results_csv_path, model_name, args.dataset, args.window, args.horizon)
+
     # Print final results
     logger.info('\nFinal Evaluation Results:')
     logger.info(f'MAE: {test_metrics["mae"]:.4f} (±{test_metrics["std_mae"]:.4f}), RMSE: {test_metrics["rmse"]:.4f}, RMSEs: {test_metrics["rmse_states"]:.4f}')
     logger.info(f'PCC: {test_metrics["pcc"]:.4f}, PCCs: {test_metrics["pcc_states"]:.4f}')
     logger.info(f'R2: {test_metrics["r2"]:.4f}, R2s: {test_metrics["r2_states"]:.4f}')
     logger.info(f'Peak MAE: {test_metrics["peak_mae"]:.4f}')
-    
-    # Record summary if requested
+
+    # Record summary if requested - with correct model name
     if args.record:
         os.makedirs(os.path.dirname(args.record), exist_ok=True)
         with open(args.record, "a", encoding="utf-8") as f:
-            f.write(f'Model: MSAGATNet, dataset: {args.dataset}, window: {args.window}, horizon: {args.horizon}, '
+            f.write(f'Model: {model_name}, dataset: {args.dataset}, window: {args.window}, horizon: {args.horizon}, '
                    f'seed: {args.seed}, MAE: {test_metrics["mae"]:.4f}, RMSE: {test_metrics["rmse"]:.4f}, '
                    f'PCC: {test_metrics["pcc"]:.4f}, R2: {test_metrics["r2"]:.4f}, lr: {args.lr}, '
                    f'dropout: {args.dropout}, timestamp: {time.strftime("%Y%m%d_%H%M%S")}\n')
-    
+
     # Clean up
     if writer:
         writer.close()
-    
+
     logger.info(f"Training completed. Best epoch: {best_epoch}")
-    logger.info(f"Model saved to: {model_path}")
-    logger.info(f"Results saved to: {metrics_path}")
+    logger.info(f"Model saved to: {model_save_path}")
+    logger.info(f"Results saved to: {results_csv_path}")
 
 if __name__ == '__main__':
     main()

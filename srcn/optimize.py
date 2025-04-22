@@ -41,7 +41,7 @@ if parent_dir not in sys.path:
 # Import model and data loader
 from model import MSAGATNet
 from data import DataBasicLoader
-from utils import *
+from srcn.utils import *
 
 # Set up logger
 logger = logging.getLogger(__name__)
