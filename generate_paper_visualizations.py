@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Generate Publication-Quality Visualizations for MSAGAT-Net Results
+Generate Publication-Quality Visualizations for MSTAGAT-Net Results
 
 This script generates high-quality visualizations from training results for use in research papers.
 It processes multiple datasets and horizons, creating:
@@ -65,22 +65,21 @@ METRICS = {
 
 ABLATION_NAMES = {
     'none': 'Full Model',
-    'no_eagam': 'No EAGAM',
-    'no_dmtm': 'No DMTM',
-    'no_ppm': 'No PPM'
+    'no_eagam': 'No LR‑AGAM',
+    'no_dmtm': 'No DMTFM',
+    'no_ppm': 'No PPRM'
 }
 
 COMPONENT_FULL_NAMES = {
-    'eagam': 'Efficient Adaptive Graph\nAttention Module',
-    'dmtm': 'Dilated Multi-Scale\nTemporal Module',
-    'ppm': 'Progressive Prediction\nModule'
+    'eagam': 'Low‑Rank Adaptive Graph\nAttention Module',
+    'dmtm': 'Dilated Multi‑scale Temporal\nFusion Module',
+    'ppm': 'Progressive Multi‑step\nPrediction Refinement Module'
 }
 
 # Update COMPONENT_COLORS to use the full names as keys
-COMPONENT_COLORS = {
-    'Efficient Adaptive Graph\nAttention Module': '#1f77b4',  # Blue
-    'Dilated Multi-Scale\nTemporal Module': '#ff7f0e',        # Orange
-    'Progressive Prediction\nModule': '#2ca02c'               # Green
+COMPONENT_COLORS = {    'Low‑Rank Adaptive Graph\nAttention Module': '#1f77b4',  # Blue
+    'Dilated Multi‑scale Temporal\nFusion Module': '#ff7f0e',        # Orange
+    'Progressive Multi‑step\nPrediction Refinement Module': '#2ca02c'               # Green
 }
 
 # Paper-quality plot settings
@@ -276,7 +275,7 @@ def generate_component_importance_comparison(results_dir, datasets, window, hori
     # Use seaborn for improved aesthetics
     ax = sns.barplot(x='Horizon', y='Importance', hue='Component', data=df, palette=COMPONENT_COLORS)
     
-    plt.title('MSAGAT-Net: Component Importance Across Forecast Horizons', fontsize=16)
+    plt.title('MSTAGAT-Net: Component Importance Across Forecast Horizons', fontsize=16)
     plt.xlabel('Forecast Horizon (days)', fontsize=14)
     plt.ylabel('Component Importance\n(% RMSE Degradation When Removed)', fontsize=14)
     plt.legend(title='Component', fontsize=12, title_fontsize=13)
@@ -309,7 +308,7 @@ def generate_component_importance_comparison(results_dir, datasets, window, hori
     sns.heatmap(pivot_df, annot=True, fmt='.1f', cmap=cmap, 
                 linewidths=.5, cbar_kws={'label': 'Component Importance (%)'})
     
-    plt.title('MSAGAT-Net: Component Importance Shift Across Forecast Horizons', fontsize=16)
+    plt.title('MSTAGAT-Net: Component Importance Shift Across Forecast Horizons', fontsize=16)
     plt.tight_layout()
     
     # Save figure
@@ -520,14 +519,14 @@ def enhance_existing_figures(figures_dir, output_dir):
 
 def generate_overview_figure(output_dir):
     """Generate a comprehensive overview figure for the paper."""
-    # This creates a multi-panel figure showcasing key aspects of MSAGAT-Net
+    # This creates a multi-panel figure showcasing key aspects of MSTAGAT-Net
     
     fig = plt.figure(figsize=(12, 10))
     gs = gridspec.GridSpec(2, 2, height_ratios=[1, 1])
     
     # Panel 1: Component Architecture Diagram (placeholder text)
     ax1 = fig.add_subplot(gs[0, 0])
-    ax1.text(0.5, 0.5, "MSAGAT-Net Architecture\n(Replace with diagram)", 
+    ax1.text(0.5, 0.5, "MSTAGAT-Net Architecture\n(Replace with diagram)", 
              ha='center', va='center', fontsize=14)
     ax1.axis('off')
     
@@ -549,7 +548,7 @@ def generate_overview_figure(output_dir):
              ha='center', va='center', fontsize=14)
     ax4.axis('off')
     
-    plt.suptitle('MSAGAT-Net: Model Architecture and Performance Overview', fontsize=16)
+    plt.suptitle('MSTAGAT-Net: Model Architecture and Performance Overview', fontsize=16)
     plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust for super title
     
     # Save figure
@@ -590,7 +589,7 @@ def main():
     # Generate README with figure descriptions
     readme_path = os.path.join(args.output_dir, "README.md")
     with open(readme_path, 'w') as f:
-        f.write("# MSAGAT-Net Publication Figures\n\n")
+        f.write("# MSTAGAT-Net Publication Figures\n\n")
         f.write(f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
         f.write("## Figure Descriptions\n\n")
         

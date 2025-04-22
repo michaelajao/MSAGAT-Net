@@ -109,16 +109,16 @@ Our analysis shows that each component contributes significantly to the model's 
 
 ```bash
 # Run the full model
-python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation none
+python src/train_ablation.py --dataset japan --sim_mat japan-adj --window 20 --horizon 5 --ablation none
 
 # Run without Efficient Adaptive Graph Attention Module
-python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation no_eagam
+python src/train_ablation.py --dataset japan --sim_mat japan-adj --window 20 --horizon 5 --ablation no_eagam
 
 # Run without Dilated Multi-Scale Temporal Module
-python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation no_dmtm
+python src/train_ablation.py --dataset japan --sim_mat japan-adj --window 20 --horizon 5 --ablation no_dmtm
 
 # Run without Progressive Prediction Module
-python src/train_ablation.py --dataset japan --window 20 --horizon 5 --ablation no_ppm
+python src/train_ablation.py --dataset japan --sim_mat japan-adj --window 20 --horizon 5 --ablation no_ppm
 ```
 
 ### Analyzing Ablation Results

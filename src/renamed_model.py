@@ -328,9 +328,9 @@ class DepthwiseSeparableConv1D(nn.Module):
         return x
 
 
-class MSTGAT(nn.Module):
+class MSTAGAT_Net(nn.Module):
     """
-    Multi-Scale Temporal Graph Attention Network (MSTGAT)
+    Multi-Scale Temporal-Adaptive Graph Attention Network (MSTAGAT-Net)
     
     This model combines graph attention mechanisms for spatial dependencies and
     multi-scale temporal convolutions for temporal patterns to forecast time series data
@@ -347,7 +347,7 @@ class MSTGAT(nn.Module):
         data: Data object containing dataset information
     """
     def __init__(self, args, data):
-        super(MSTGAT, self).__init__()
+        super(MSTAGAT_Net, self).__init__()
         self.num_nodes = data.m
         self.window = args.window
         self.horizon = args.horizon
@@ -403,7 +403,7 @@ class MSTGAT(nn.Module):
 
     def forward(self, x, idx=None):
         """
-        Forward pass of the MSTGAT model.
+        Forward pass of the MSTAGAT-Net model.
         
         Args:
             x (tensor): Input time series [batch, time_window, nodes]

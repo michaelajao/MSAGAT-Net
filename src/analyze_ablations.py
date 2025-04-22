@@ -1,7 +1,7 @@
 """
 analyze_ablations.py
 
-This script analyzes the results of ablation studies for the MSAGAT-Net model by:
+This script analyzes the results of ablation studies for the MSTAGAT-Net model by:
 1. Loading result metrics from CSV files for different ablation variants
 2. Creating comparison plots to show the impact of each ablation
 3. Generating a detailed summary table and heatmap visualization
@@ -29,30 +29,30 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# MSAGAT-Net component names
+# MSTAGAT-Net component names
 ABLATION_NAMES = {
     'none': 'Full Model',
-    'no_eagam': 'No EAGAM',
-    'no_dmtm': 'No DMTM',
-    'no_ppm': 'No PPM'
+    'no_eagam': 'No LR‑AGAM',
+    'no_dmtm': 'No DMTFM',
+    'no_ppm': 'No PPRM'
 }
 
 COMPONENT_FULL_NAMES = {
-    'eagam': 'Efficient Adaptive Graph\nAttention Module',
-    'dmtm': 'Dilated Multi-Scale\nTemporal Module',
-    'ppm': 'Progressive Prediction\nModule'
+    'eagam': 'Low‑Rank Adaptive Graph\nAttention Module',
+    'dmtm': 'Dilated Multi‑scale Temporal\nFusion Module',
+    'ppm': 'Progressive Multi‑step\nPrediction Refinement Module'
 }
 
 # Component colors
 COMPONENT_COLORS = {
-    'Efficient Adaptive Graph\nAttention Module': '#1f77b4',  # Blue
-    'Dilated Multi-Scale\nTemporal Module': '#ff7f0e',        # Orange
-    'Progressive Prediction\nModule': '#2ca02c'               # Green
+    'Low‑Rank Adaptive Graph\nAttention Module': '#1f77b4',  # Blue
+    'Dilated Multi‑scale Temporal\nFusion Module': '#ff7f0e',        # Orange
+    'Progressive Multi‑step\nPrediction Refinement Module': '#2ca02c'               # Green
 }
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='Analyze MSAGAT-Net ablation results')
+    parser = argparse.ArgumentParser(description='Analyze MSTAGAT-Net ablation results')
     parser.add_argument('--results_dir', type=str, default='results',
                         help='Directory containing result files (default: results)')
     parser.add_argument('--figures_dir', type=str, default='report/figures',
@@ -118,7 +118,7 @@ def plot_ablation_comparison(ablation_files, dataset, window, horizon, figures_d
         display_names = [ABLATION_NAMES.get(abl, abl) for abl in ablation_types]
         
         plt.bar(display_names, values, color=colors)
-        plt.title(f'MSAGAT-Net: Impact of Ablations on {metric} (h={horizon})', fontsize=16)
+        plt.title(f'MSTAGAT-Net: Impact of Ablations on {metric} (h={horizon})', fontsize=16)
         plt.ylabel(metric, fontsize=14)
         plt.xlabel('Model Variant', fontsize=14)
         plt.grid(True, linestyle='--', alpha=0.3)
@@ -182,7 +182,7 @@ def plot_ablation_comparison(ablation_files, dataset, window, horizon, figures_d
         
         # Create heatmap
         sns.heatmap(heatmap_data, annot=True, cmap='RdYlGn_r', fmt='.1f', cbar_kws={'label': 'Percentage Change (%)'})
-        plt.title(f'MSAGAT-Net: Impact of Component Removal (% Change, h={horizon})', fontsize=16)
+        plt.title(f'MSTAGAT-Net: Impact of Component Removal (% Change, h={horizon})', fontsize=16)
         plt.tight_layout()
         output_file = os.path.join(figures_dir, f"ablation_heatmap_{dataset}.w-{window}.h-{horizon}.png")
         plt.savefig(output_file, dpi=300)
@@ -227,7 +227,7 @@ def create_component_importance_plot(summary, dataset, window, horizon, figures_
     
     bars = plt.barh(components, importance, color=component_colors)
     plt.xlabel('Component Importance\n(% RMSE Degradation When Removed)', fontsize=12)
-    plt.title(f'MSAGAT-Net: Relative Importance of Components (h={horizon})', fontsize=16)
+    plt.title(f'MSTAGAT-Net: Relative Importance of Components (h={horizon})', fontsize=16)
     plt.grid(True, linestyle='--', alpha=0.3, axis='x')
     
     # Add value labels to bars
@@ -247,7 +247,7 @@ def generate_ablation_report(summary, dataset, window, horizon, output_dir):
     report_path = os.path.join(output_dir, f"ablation_report_{dataset}.w-{window}.h-{horizon}.txt")
     
     with open(report_path, 'w') as f:
-        f.write(f"MSAGAT-Net Ablation Study Report\n")
+        f.write(f"MSTAGAT-Net Ablation Study Report\n")
         f.write(f"================================\n\n")
         
         f.write(f"Dataset: {dataset}\n")
@@ -270,9 +270,9 @@ def generate_ablation_report(summary, dataset, window, horizon, output_dir):
         
         # Map ablation types to component descriptions
         component_desc = {
-            'no_eagam': "Efficient Adaptive Graph Attention Module (EAGAM): Captures spatial dependencies between regions with linear complexity",
-            'no_dmtm': "Dilated Multi-Scale Temporal Module (DMTM): Processes time-series patterns at different temporal resolutions",
-            'no_ppm': "Progressive Prediction Module (PPM): Enables region-aware multi-step forecasting with refinement"
+            'no_eagam': "Low‑Rank Adaptive Graph Attention Module (LR‑AGAM): Captures spatial dependencies between regions with linear complexity",
+            'no_dmtm': "Dilated Multi‑scale Temporal Fusion Module (DMTFM): Processes time-series patterns at different temporal resolutions",
+            'no_ppm': "Progressive Multi‑step Prediction Refinement Module (PPRM): Enables region-aware multi-step forecasting with refinement"
         }
         
         # Calculate importance ranking based on RMSE degradation
@@ -307,7 +307,7 @@ def generate_ablation_report(summary, dataset, window, horizon, output_dir):
                 f.write(f"the {least_important.replace('no_', '').upper()} component shows the least individual impact ")
                 f.write(f"with a {importance[least_important]:.2f}% RMSE degradation when removed.\n\n")
             
-            f.write(f"The full MSAGAT-Net model with all components intact demonstrates superior performance ")
+            f.write(f"The full MSTAGAT-Net model with all components intact demonstrates superior performance ")
             f.write(f"across all metrics, confirming the value of the complete architecture design.")
     
     logger.info(f"Generated ablation study report: {report_path}")
@@ -353,7 +353,7 @@ def generate_cross_horizon_performance(results_dir, dataset, window, figures_dir
         
         plt.plot(sorted_horizons, metric_values, 'o-', linewidth=2, markersize=8, color='#1f77b4')
         
-        plt.title(f'MSAGAT-Net: {metric} vs Forecast Horizon ({dataset})', fontsize=16)
+        plt.title(f'MSTAGAT-Net: {metric} vs Forecast Horizon ({dataset})', fontsize=16)
         plt.xlabel('Forecast Horizon (days)', fontsize=14)
         plt.ylabel(metric, fontsize=14)
         plt.grid(True, linestyle='--', alpha=0.7)
@@ -381,7 +381,7 @@ def main():
     os.makedirs(args.results_dir, exist_ok=True)
     os.makedirs(args.figures_dir, exist_ok=True)
     
-    logger.info(f"Analyzing MSAGAT-Net ablation results")
+    logger.info(f"Analyzing MSTAGAT-Net ablation results")
     logger.info(f"Results directory: {args.results_dir}")
     logger.info(f"Figures directory: {args.figures_dir}")
     

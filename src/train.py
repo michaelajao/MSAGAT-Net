@@ -30,6 +30,8 @@ if parent_dir not in sys.path:
 # Import the MSAGATNet model
 from model import MSAGATNet
 
+from renamed_model import MSTAGAT_Net  # Updated model name
+
 # ----------------- Argument Parsing -----------------
 def parse_arguments():
     """Parse and return command line arguments."""
@@ -56,7 +58,8 @@ def parse_arguments():
     parser.add_argument('--label', type=str, default='')
     parser.add_argument('--pcc', type=str, default='')
     parser.add_argument('--result', type=int, default=0)
-    parser.add_argument('--record', type=str, default='')
+    parser.add_argument('--record', type=str, default='')    
+    parser.add_argument('--model', type=str, default='msagatnet', choices=['msagatnet', 'mstagat'], help='Choose which model to use: msagatnet or mstagat')
 
     # Model hyperparameters
     parser.add_argument('--hidden_dim', type=int, default=32, help='Dimension of hidden representations')
@@ -268,9 +271,14 @@ def main():
     # Load data
     from data import DataBasicLoader
     data_loader = DataBasicLoader(args)
+      # Initialize model
+    if args.model == 'mstgat':
+        model = MSTAGAT_Net(args, data_loader)
+        logger.info(f'Using MSTAGAT-Net model')
+    else:
+        model = MSAGATNet(args, data_loader)
+        logger.info(f'Using MSAGATNet model')
     
-    # Initialize model
-    model = MSAGATNet(args, data_loader)
     model = model.to(device)
     param_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f'Model initialized with {param_count} parameters')
@@ -284,12 +292,12 @@ def main():
     )
     
     # Define output paths
-    log_token = f'MSAGATNet.{args.dataset}.w-{args.window}.h-{args.horizon}'
+    log_token = f'{args.model.upper()}.{args.dataset}.w-{args.window}.h-{args.horizon}'
     model_path = os.path.join(args.save_dir, f'{log_token}.pt')
     loss_fig_path = os.path.join(figures_dir, f"loss_curve_{log_token}.png")
     matrices_fig_path = os.path.join(figures_dir, f"matrices_{log_token}.png")
     pred_fig_path = os.path.join(figures_dir, f"predictions_{log_token}.png")
-    metrics_path = os.path.join(results_dir, 'metrics_MSAGATNet.csv')
+    metrics_path = os.path.join(results_dir, f'metrics_{args.model.upper()}.csv')
     
     # Training loop variables
     train_losses, val_losses = [], []

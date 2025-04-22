@@ -37,7 +37,8 @@ if not os.path.exists(data_path):
 try:
     from model import MSAGATNet
     from ablation import MSAGATNet_Ablation
-    print("Successfully imported MSAGATNet and ablation modules")
+    from renamed_model import MSTAGAT_Net  # Renamed from MSTGAT to MSTAGAT_Net
+    print("Successfully imported MSAGATNet, MSTAGAT-Net, and ablation modules")
 except ImportError as e:
     print(f"ERROR importing modules: {e}")
     print(f"Python path: {sys.path}")
@@ -46,6 +47,7 @@ except ImportError as e:
         sys.path.append(os.path.join(current_dir))
         from src.model import MSAGATNet
         from src.ablation import MSAGATNet_Ablation
+        from src.renamed_model import MSTAGAT_Net  # Renamed from MSTGAT to MSTAGAT_Net
         print("Successfully imported modules using alternative path")
     except ImportError as e2:
         print(f"ERROR with alternative import: {e2}")
@@ -92,7 +94,10 @@ parser.add_argument('--start_date', type=str, default='2020-01-01', help='Start 
 # Add ablation parameter
 parser.add_argument('--ablation', type=str, default='none', 
                    choices=['none', 'no_eagam', 'no_dmtm', 'no_ppm'],
-                   help='Ablation study type: none, no_eagam (Efficient Adaptive Graph Attention Module), no_dmtm (Dilated Multi-Scale Temporal Module), no_ppm (Progressive Prediction Module)')
+                   help='Ablation study type: none, no_eagam (LR‑AGAM: Local-Regional Adaptive Graph Attention Module), no_dmtm (DMTFM: Dilated Multi-scale Temporal Feature Module), no_ppm (PPRM: Progressive Prediction Refinement Module)')
+# Add model selection parameter
+parser.add_argument('--model', type=str, default='mstagat', choices=['mstagat', 'mstgat'], 
+                   help='Choose which model to use: mstagat or mstgat')
 args = parser.parse_args()
 print('--------Parameters--------')
 print(args)
@@ -113,8 +118,12 @@ if args.cuda:
     torch.cuda.set_device(args.gpu)
 logger.info('cuda %s', args.cuda)
 
-# Updated log_token (include ablation parameter)
-log_token = '%s.w-%s.h-%s.%s' % (args.dataset, args.window, args.horizon, args.ablation)
+# Updated log_token (include ablation parameter and model name)
+if args.model.upper() == 'MSTAGAT':
+    model_name = 'MSTAGAT-Net'
+else:
+    model_name = args.model.upper()
+log_token = '%s.%s.w-%s.h-%s.%s' % (model_name, args.dataset, args.window, args.horizon, args.ablation)
 
 if args.mylog:
     tensorboard_log_dir = os.path.join('tensorboard', log_token)
@@ -125,12 +134,15 @@ if args.mylog:
 
 data_loader = DataBasicLoader(args)
 
-# Instantiate the model based on ablation setting
-if args.ablation != 'none':
-    logger.info('Using ablation model with setting: %s', args.ablation)
+# Instantiate the model based on model selection and ablation setting
+if args.model == 'mstgat':
+    logger.info('Using MSTAGAT-Net model')
+    model = MSTAGAT_Net(args, data_loader)
+elif args.ablation != 'none':
+    logger.info('Using MSTAGAT-Net ablation model with setting: %s', args.ablation)
     model = MSAGATNet_Ablation(args, data_loader)
 else:
-    logger.info('Using full model (no ablation)')
+    logger.info('Using full MSTAGAT-Net model (no ablation)')
     model = MSAGATNet(args, data_loader)
 
 logger.info('model %s', model)
@@ -399,7 +411,7 @@ try:
             best_model_path = os.path.join(args.save_dir, 'best_model.pt')
             shutil.copy(model_path, best_model_path)
             print('Best validation epoch:', epoch, time.ctime())
-            test_loss, mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae = evaluate(data_loader, data_loader.test, tag='test')
+            test_loss, mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae = evaluate(data_loader, data_loader.test)
             print('TEST MAE {:5.4f} std {:5.4f} RMSE {:5.4f} RMSEs {:5.4f} PCC {:5.4f} PCCs {:5.4f} MAPE {:5.4f} R2 {:5.4f} R2s {:5.4f} Var {:5.4f} Vars {:5.4f} Peak {:5.4f}'.format(
                 mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae))
         else:
@@ -460,5 +472,5 @@ logger.info("Saved final evaluation metrics to %s", metrics_csv)
 
 if args.record != '':
     with open("result/result.txt", "a", encoding="utf-8") as f:
-        f.write('Model: MAGATFN, dataset: {}, window: {}, horizon: {}, seed: {}, ablation: {}, MAE: {:5.4f}, RMSE: {:5.4f}, PCC: {:5.4f}, lr: {}, dropout: {}\n'.format(
+        f.write('Model: MSTAGAT-Net, dataset: {}, window: {}, horizon: {}, seed: {}, ablation: {}, MAE: {:5.4f}, RMSE: {:5.4f}, PCC: {:5.4f}, lr: {}, dropout: {}\n'.format(
             args.dataset, args.window, args.horizon, args.seed, args.ablation, mae, rmse, pcc, args.lr, args.dropout))
