@@ -104,6 +104,9 @@ else:
 logger.info('model %s', model.__class__.__name__) # Log the actual model class being used
 if args.cuda:
     model.cuda()
+# Set device for torch operations
+device = torch.device(f'cuda:{args.gpu}') if args.cuda else torch.device('cpu')
+
 optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                              lr=args.lr, weight_decay=args.weight_decay)
 pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -247,7 +250,7 @@ logger.info("Loss curve saved to %s", loss_fig_path)
 
 # Visualize matrices: Geolocation, Input Correlation, and Learned Attention
 matrices_fig_path = os.path.join(FIGURES_DIR, f"matrices_{log_token}.png")
-visualize_matrices(data_loader, model, matrices_fig_path)
+visualize_matrices(data_loader, model, matrices_fig_path, device)
 logger.info("Matrices comparison figure saved to %s", matrices_fig_path)
 
 # Load the best model for final evaluation and print final metrics

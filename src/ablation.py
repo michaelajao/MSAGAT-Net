@@ -19,21 +19,20 @@ import torch.nn.functional as F
 from torch.nn import Parameter
 import math
 
-# Import the original modules for reference and reuse
+# import model constants and modules directly
 from model import (
     HIDDEN_DIM,
     ATTENTION_HEADS,
     ATTENTION_REG_WEIGHT,
     DROPOUT,
-    NUM_TEMPORAL_SCALES as NUM_SCALES,
+    NUM_TEMPORAL_SCALES,
     KERNEL_SIZE,
-    FEATURE_CHANNELS as TEMP_CONV_OUT_CHANNELS,
-    BOTTLENECK_DIM as LOW_RANK_DIM,
-    SpatialAttentionModule as EfficientAdaptiveGraphAttentionModule,
-    MultiScaleTemporalModule as DilatedMultiScaleTemporalModule,
-    HorizonPredictor as ProgressivePredictionModule,
-    DepthwiseSeparableConv1D as DepthwiseSeparableConv1d,
-    MSTAGAT_Net as MSAGATNet
+    FEATURE_CHANNELS,
+    BOTTLENECK_DIM,
+    SpatialAttentionModule,
+    MultiScaleTemporalModule,
+    HorizonPredictor,
+    DepthwiseSeparableConv1D
 )
 
 # =============================================================================
@@ -121,7 +120,7 @@ class SingleScaleTemporalModule(nn.Module):
         - Input: (batch_size, num_nodes, hidden_dim)
         - Output: (batch_size, num_nodes, hidden_dim)
     """
-    def __init__(self, hidden_dim, num_scales=NUM_SCALES, kernel_size=KERNEL_SIZE, dropout=DROPOUT):
+    def __init__(self, hidden_dim, num_scales=NUM_TEMPORAL_SCALES, kernel_size=KERNEL_SIZE, dropout=DROPOUT):
         super(SingleScaleTemporalModule, self).__init__()
         self.hidden_dim = hidden_dim
         
@@ -181,7 +180,7 @@ class DirectPredictionModule(nn.Module):
         - Input: (batch_size, num_nodes, hidden_dim), (batch_size, num_nodes)
         - Output: (batch_size, num_nodes, horizon)
     """
-    def __init__(self, hidden_dim, horizon, low_rank_dim=LOW_RANK_DIM, dropout=DROPOUT):
+    def __init__(self, hidden_dim, horizon, low_rank_dim=BOTTLENECK_DIM, dropout=DROPOUT):
         super(DirectPredictionModule, self).__init__()
         self.hidden_dim = hidden_dim
         self.horizon = horizon
@@ -235,28 +234,29 @@ class MSAGATNet_Ablation(nn.Module):
         # Model dimensions
         self.hidden_dim = getattr(args, 'hidden_dim', HIDDEN_DIM)
         self.kernel_size = getattr(args, 'kernel_size', KERNEL_SIZE)
-        self.low_rank_dim = getattr(args, 'low_rank_dim', LOW_RANK_DIM)
+        self.low_rank_dim = getattr(args, 'bottleneck_dim', BOTTLENECK_DIM)
 
-        # Temporal feature extraction (same for all ablations)
-        self.temp_conv = DepthwiseSeparableConv1d(
-            in_channels=1, 
-            out_channels=TEMP_CONV_OUT_CHANNELS,
-            kernel_size=self.kernel_size, 
+        # Feature extraction
+        self.temp_conv = DepthwiseSeparableConv1D(
+            in_channels=1,
+            out_channels=FEATURE_CHANNELS,
+            kernel_size=self.kernel_size,
             padding=self.kernel_size // 2,
             dropout=getattr(args, 'dropout', DROPOUT)
         )
         
         # Feature processing and compression (same for all ablations)
-        self.feature_process_low = nn.Linear(TEMP_CONV_OUT_CHANNELS * self.window, self.low_rank_dim)
+        self.feature_process_low = nn.Linear(FEATURE_CHANNELS * self.window, self.low_rank_dim)
         self.feature_process_high = nn.Linear(self.low_rank_dim, self.hidden_dim)
         self.feature_norm = nn.LayerNorm(self.hidden_dim)
         self.feature_act = nn.ReLU()
         
-        # Ablation-specific component initialization
+        # Spatial component: choose full attention or GCN
         if self.ablation == 'no_eagam':
             # Replace Efficient Adaptive Graph Attention with simple GCN
             self.graph_attention = SimpleGraphConvolutionalLayer(
-                self.hidden_dim, num_nodes=self.m,
+                self.hidden_dim,
+                num_nodes=self.m,
                 dropout=getattr(args, 'dropout', DROPOUT)
             )
             # Store adjacency matrix from data if available
@@ -264,13 +264,16 @@ class MSAGATNet_Ablation(nn.Module):
                 self.graph_attention.adj_matrix = data.adj
         else:
             # Original: Efficient Adaptive Graph Attention Module
-            self.graph_attention = EfficientAdaptiveGraphAttentionModule(
-                self.hidden_dim, num_nodes=self.m,
+            self.graph_attention = SpatialAttentionModule(
+                hidden_dim=self.hidden_dim,
+                num_nodes=self.m,
                 dropout=getattr(args, 'dropout', DROPOUT),
-                attn_heads=getattr(args, 'attn_heads', ATTENTION_HEADS),
-                low_rank_dim=self.low_rank_dim
+                attention_heads=getattr(args, 'attention_heads', ATTENTION_HEADS),
+                attention_regularization_weight=getattr(args, 'attention_regularization_weight', ATTENTION_REG_WEIGHT),
+                bottleneck_dim=self.low_rank_dim
             )
         
+        # Temporal component: choose multi-scale or single-scale
         if self.ablation == 'no_dmtm':
             # Replace Dilated Multi-Scale Temporal with single-scale
             self.temporal_module = SingleScaleTemporalModule(
@@ -280,25 +283,28 @@ class MSAGATNet_Ablation(nn.Module):
             )
         else:
             # Original: Dilated Multi-Scale Temporal Module
-            self.temporal_module = DilatedMultiScaleTemporalModule(
-                self.hidden_dim,
-                num_scales=getattr(args, 'num_scales', NUM_SCALES),
+            self.temporal_module = MultiScaleTemporalModule(
+                hidden_dim=self.hidden_dim,
+                num_scales=getattr(args, 'num_scales', NUM_TEMPORAL_SCALES),
                 kernel_size=self.kernel_size,
                 dropout=getattr(args, 'dropout', DROPOUT)
             )
         
+        # Prediction component: choose progressive or direct
         if self.ablation == 'no_ppm':
             # Replace Progressive Prediction with direct multi-step
             self.prediction_module = DirectPredictionModule(
-                self.hidden_dim, self.horizon,
+                hidden_dim=self.hidden_dim,
+                horizon=self.horizon,
                 low_rank_dim=self.low_rank_dim,
                 dropout=getattr(args, 'dropout', DROPOUT)
             )
         else:
             # Original: Progressive Prediction Module
-            self.prediction_module = ProgressivePredictionModule(
-                self.hidden_dim, self.horizon,
-                low_rank_dim=self.low_rank_dim,
+            self.prediction_module = HorizonPredictor(
+                hidden_dim=self.hidden_dim,
+                horizon=self.horizon,
+                bottleneck_dim=self.low_rank_dim,
                 dropout=getattr(args, 'dropout', DROPOUT)
             )
 
