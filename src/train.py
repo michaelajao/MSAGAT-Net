@@ -83,6 +83,13 @@ def parse_arguments():
     
     return parser.parse_args()
 
+args = parser.parse_args()
+print('--------Parameters--------')
+print(args)
+print('--------------------------')
+
+os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
+
 # ----------------- Setup & Environment -----------------
 def setup_environment(args):
     """Setup reproducible environment and select device."""

@@ -104,7 +104,7 @@ python src/train.py \
   --bottleneck_dim 8
 ```
 
-''' bash
+```bash
 python src/train.py \
   --dataset japan \
   --sim_mat japan-adj \
@@ -128,6 +128,8 @@ python src/train.py \
   --feature_channels 16 \
   --bottleneck_dim  8
 ```
+
+
 
 
 ### Prediction

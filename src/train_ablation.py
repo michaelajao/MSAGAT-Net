@@ -59,7 +59,7 @@ parser.add_argument('--start_date', type=str, default='2020-01-01', help='Start 
 # Add ablation parameter
 parser.add_argument('--ablation', type=str, default='none', 
                    choices=['none', 'no_eagam', 'no_dmtm', 'no_ppm'],
-                   help='Ablation study type: none, no_eagam (LR‑AGAM: Local-Regional Adaptive Graph Attention Module), no_dmtm (DMTFM: Dilated Multi-scale Temporal Feature Module), no_ppm (PPRM: Progressive Prediction Refinement Module)')
+                   help='Ablation study type: none, no_eagam (LR‑AGAM: Low-rank Adaptive Graph Attention Module), no_dmtm (DMTFM: Dilated Multi-scale Temporal Feature Module), no_ppm (PPRM: Progressive Prediction Refinement Module)')
 args = parser.parse_args()
 print('--------Parameters--------')
 print(args)
@@ -256,7 +256,8 @@ logger.info("Matrices comparison figure saved to %s", matrices_fig_path)
 # Load the best model for final evaluation and print final metrics
 model.load_state_dict(torch.load(os.path.join(args.save_dir, f"{log_token}.pt"), map_location='cpu'))
 _, mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae = evaluate(data_loader, data_loader.test, tag='test')
-print('Final evaluation: MAE {:.4f}, RMSE {:.4f}, PCC {:.4f}, Peak {:.4f}'.format(mae, rmse, pcc, peak_mae))
+print('Final TEST MAE {:5.4f} std {:5.4f} RMSE {:5.4f} RMSEs {:5.4f} PCC {:5.4f} PCCs {:5.4f} MAPE {:5.4f} R2 {:5.4f} R2s {:5.4f} Var {:5.4f} Vars {:5.4f} Peak {:5.4f}'.format(
+    mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae))
 
 # Save final metrics using utils.save_metrics
 results_csv = os.path.join(RESULTS_DIR, f"final_metrics_{log_token}.csv")
