@@ -56,21 +56,19 @@ def parse_arguments():
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--weight_decay', type=float, default=5e-4)
     parser.add_argument('--dropout', type=float, default=0.355)
+    parser.add_argument('--lr_patience', type=int, default=20)
+    parser.add_argument('--lr_factor', type=float, default=0.5)
     parser.add_argument('--patience', type=int, default=100)
     parser.add_argument('--max_grad_norm', type=float, default=1.0)
     
     # Model parameters - using the model's default values
     parser.add_argument('--hidden_dim', type=int, default=32, help='Dimension of hidden representations')
-    parser.add_argument('--attn_heads', type=int, default=4, help='Number of attention heads')
-    parser.add_argument('--attention_reg_weight', type=float, default=1e-5, help='Weight for attention regularization')
+    parser.add_argument('--attention_heads', type=int, default=4, help='Number of attention heads')
+    parser.add_argument('--attention_regularization_weight', type=float, default=1e-5, help='Weight for attention regularization')
     parser.add_argument('--num_scales', type=int, default=4, help='Number of temporal scales in MTFM')
     parser.add_argument('--kernel_size', type=int, default=3, help='Size of temporal convolution kernel')
-    parser.add_argument('--temp_conv_out_channels', type=int, default=16, help='Output channels for temporal convolution')
-    parser.add_argument('--low_rank_dim', type=int, default=8, help='Dimension for low-rank decompositions')
-    
-    # Learning rate scheduler
-    parser.add_argument('--lr_patience', type=int, default=20)
-    parser.add_argument('--lr_factor', type=float, default=0.5)
+    parser.add_argument('--feature_channels', type=int, default=16, help='Output channels for temporal convolution')
+    parser.add_argument('--bottleneck_dim', type=int, default=8, help='Dimension for low-rank decompositions')
     
     # System settings
     parser.add_argument('--seed', type=int, default=42)
@@ -478,19 +476,13 @@ def main():
     from data import DataBasicLoader
     data_loader = DataBasicLoader(args)
 
-    # Map attention_reg_weight to parameter name used internally by the model
-    setattr(args, 'attention_regularization_weight', args.attention_reg_weight)
-    setattr(args, 'bottleneck_dim', args.low_rank_dim)
-    setattr(args, 'feature_channels', args.temp_conv_out_channels)
-    setattr(args, 'attention_heads', args.attn_heads)
-
     # Instantiate the model
     model = MSTAGAT_Net(args, data_loader)
     logger.info(f'Using model: {model.__class__.__name__}')
-    logger.info(f'Model parameters: hidden_dim={args.hidden_dim}, attn_heads={args.attn_heads}, ' +
-                f'attention_reg_weight={args.attention_reg_weight}, num_scales={args.num_scales}, ' +
-                f'kernel_size={args.kernel_size}, temp_conv_out_channels={args.temp_conv_out_channels}, ' +
-                f'low_rank_dim={args.low_rank_dim}')
+    logger.info(f'Model parameters: hidden_dim={args.hidden_dim}, attn_heads={args.attention_heads}, ' +
+                f'attention_reg_weight={args.attention_regularization_weight}, num_scales={args.num_scales}, ' +
+                f'kernel_size={args.kernel_size}, temp_conv_out_channels={args.feature_channels}, ' +
+                f'low_rank_dim={args.bottleneck_dim}')
     
     model = model.to(device)
     param_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -499,10 +491,6 @@ def main():
     # Setup optimizer and scheduler
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                          lr=args.lr, weight_decay=args.weight_decay)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=args.lr_factor,
-        patience=args.lr_patience, verbose=True
-    )
 
     # Define output paths
     model_save_path = os.path.join(args.save_dir, f'{log_token_base}.pt')
@@ -539,9 +527,6 @@ def main():
                 writer.add_scalar('data/rmse', val_metrics['rmse'], epoch)
                 writer.add_scalar('data/pcc', val_metrics['pcc'], epoch)
                 writer.add_scalar('data/learning_rate', optimizer.param_groups[0]['lr'], epoch)
-
-            # Update learning rate scheduler
-            scheduler.step(val_loss)
 
             # Save best model and evaluate on test set if improved
             if val_loss < best_val:

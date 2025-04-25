@@ -25,15 +25,15 @@ from model import (
     ATTENTION_HEADS,
     ATTENTION_REG_WEIGHT,
     DROPOUT,
-    NUM_SCALES,
+    NUM_TEMPORAL_SCALES as NUM_SCALES,
     KERNEL_SIZE,
-    TEMP_CONV_OUT_CHANNELS,
-    LOW_RANK_DIM,
-    EfficientAdaptiveGraphAttentionModule,
-    DilatedMultiScaleTemporalModule,
-    ProgressivePredictionModule,
-    DepthwiseSeparableConv1d,
-    MSAGATNet
+    FEATURE_CHANNELS as TEMP_CONV_OUT_CHANNELS,
+    BOTTLENECK_DIM as LOW_RANK_DIM,
+    SpatialAttentionModule as EfficientAdaptiveGraphAttentionModule,
+    MultiScaleTemporalModule as DilatedMultiScaleTemporalModule,
+    HorizonPredictor as ProgressivePredictionModule,
+    DepthwiseSeparableConv1D as DepthwiseSeparableConv1d,
+    MSTAGAT_Net as MSAGATNet
 )
 
 # =============================================================================

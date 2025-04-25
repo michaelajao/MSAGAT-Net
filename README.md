@@ -78,6 +78,34 @@ python src/train.py \
   --mylog
 ```
 
+```bash
+python src/train.py   --dataset japan   --sim_mat japan-adj   --window 20   --horizon 5   --cuda   --seed 42   --batch 32   --epochs 1500   --lr 1e-3   --weight_decay 5e-4   --dropout 0.20   --patience 100   --lr_patience 20   --lr_factor 0.5   --attention_regularization_weight 1e-4   --num_scales 6   --kernel_size 9   --feature_channels 64   --bottleneck_dim 8
+```
+
+```bash
+python src/train.py \
+  --dataset japan \
+  --sim_mat japan-adj \
+  --window 20 \
+  --horizon 5 \
+  --cuda \
+  --seed 42 \
+  --batch 32 \
+  --epochs 1500 \
+  --lr 1e-3 \
+  --weight_decay 5e-4 \
+  --dropout 0.20 \
+  --patience 100 \
+  --attention_heads 4 \
+  --attention_regularization_weight 1e-5 \
+  --num_scales 4 \
+  --kernel_size 3 \
+  --feature_channels 16 \
+  --bottleneck_dim 8
+```
+
+
+
 ### Prediction
 
 Generate forecasts with a trained model:
