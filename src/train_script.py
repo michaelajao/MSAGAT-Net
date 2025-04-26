@@ -20,8 +20,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchinfo import summary
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, explained_variance_score
 from scipy.stats import pearsonr
 
 # Add project root to path
@@ -33,6 +32,7 @@ if root_dir not in sys.path:
 # Import model and data loader
 from mstagat_net_simplified import MSTAGATNetLite, DEFAULTS
 from data import DataBasicLoader
+from utils import peak_error, plot_loss_curves, visualize_matrices, visualize_predictions, save_metrics
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -41,14 +41,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
 # ----------------- Argument Parsing -----------------
 parser = argparse.ArgumentParser(description='Train MSTAGATNetLite without main()')
 # data args
-tparser = parser.add_argument
 parser.add_argument('--dataset', type=str, default='japan')
 parser.add_argument('--window', type=int, default=20)
 parser.add_argument('--horizon', type=int, default=5)
 parser.add_argument('--train', type=float, default=0.5)
 parser.add_argument('--val', type=float, default=0.2)
 parser.add_argument('--test', type=float, default=0.3)
-parser.add_argument('--sim_mat', type=str, default=None, help='Prefix for similarity matrix file to load')
+parser.add_argument('--sim_mat', type=str, default='japan-adj', help='Adjacency matrix file name')
 parser.add_argument('--extra', type=str, default=None, help='Extra data directory name')
 parser.add_argument('--label', type=str, default=None, help='Label CSV file prefix for extra data')
 # train args
@@ -103,7 +102,6 @@ def train_epoch(loader, model, optimizer, device, args):
         target = Y.unsqueeze(1).expand(-1, args.horizon, -1)
         loss = nn.MSELoss()(pred, target)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
         optimizer.step()
         total_loss += loss.item() * X.size(0)
         count += X.size(0)
@@ -111,31 +109,48 @@ def train_epoch(loader, model, optimizer, device, args):
 
 
 def evaluate(loader, split, model, device, args):
-    """
-    Evaluate by averaging metrics across all horizon steps.
-    """
     model.eval()
-    preds, trues = [], []
+    total_loss = 0.0
+    n_samples = 0
+    y_true_list, y_pred_list = [], []
     with torch.no_grad():
         for X, Y, idx in loader.get_batches(split, args.batch, shuffle=False):
             X, Y = X.to(device), Y.to(device)
             pred = model(X, idx)
-            preds.append(pred.cpu().numpy())  # [B, H, N]
-            trues.append(Y.cpu().numpy())     # [B, N]
-    preds = np.concatenate(preds, axis=0)   # [M, H, N]
-    trues = np.concatenate(trues, axis=0)   # [M, N]
-    # Tile truths across horizon
-    trues_tiled = np.repeat(trues[:, np.newaxis, :], preds.shape[1], axis=1)  # [M, H, N]
-    # Flatten both arrays
-    y_pred = preds.reshape(-1)
-    y_true = trues_tiled.reshape(-1)
-    # Compute metrics
-    return {
-        'rmse': math.sqrt(mean_squared_error(y_true, y_pred)),
-        'mae': mean_absolute_error(y_true, y_pred),
-        'r2': r2_score(y_true, y_pred),
-        'pcc': pearsonr(y_true, y_pred)[0]
-    }
+            expanded = Y.unsqueeze(1).expand(-1, args.horizon, -1)
+            loss = nn.MSELoss()(pred, expanded)
+            total_loss += loss.item()
+            n_samples += pred.size(0) * loader.m
+            y_true_list.append(Y.cpu())
+            # take last horizon step for state metrics
+            y_pred_list.append(pred[:, -1, :].cpu())
+    # concatenate
+    y_true_mx = torch.cat(y_true_list).numpy()
+    y_pred_mx = torch.cat(y_pred_list).numpy()
+    # unnormalize
+    scale = (loader.max - loader.min)
+    y_true_states = y_true_mx * scale + loader.min
+    y_pred_states = y_pred_mx * scale + loader.min
+    # per-state metrics
+    rmse_states = np.mean(np.sqrt(mean_squared_error(y_true_states, y_pred_states, multioutput='raw_values')))
+    raw_mae = mean_absolute_error(y_true_states, y_pred_states, multioutput='raw_values')
+    std_mae = np.std(raw_mae)
+    # PCC per state
+    pcc_vals = [pearsonr(y_true_states[:, k], y_pred_states[:, k])[0] for k in range(loader.m)]
+    pcc_states = np.mean(pcc_vals)
+    r2_states = np.mean(r2_score(y_true_states, y_pred_states, multioutput='raw_values'))
+    var_states = np.mean(explained_variance_score(y_true_states, y_pred_states, multioutput='raw_values'))
+    # flatten for overall metrics
+    y_true_flat = y_true_states.reshape(-1)
+    y_pred_flat = y_pred_states.reshape(-1)
+    rmse = math.sqrt(mean_squared_error(y_true_flat, y_pred_flat))
+    mae = mean_absolute_error(y_true_flat, y_pred_flat)
+    mape = np.mean(np.abs((y_pred_flat - y_true_flat) / (y_true_flat + 1e-5)))
+    pcc = pearsonr(y_true_flat, y_pred_flat)[0]
+    r2 = r2_score(y_true_flat, y_pred_flat, multioutput='uniform_average')
+    var = explained_variance_score(y_true_flat, y_pred_flat, multioutput='uniform_average')
+    peak_mae = peak_error(y_true_states, y_pred_states, loader.peak_thold)
+    return total_loss / n_samples, mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae, y_true_states, y_pred_states
 
 # ----------------- Initialize Data, Model, Optimizer -----------------
 loader = DataBasicLoader(args)
@@ -151,21 +166,25 @@ hp.update({
 model = MSTAGATNetLite(args, loader, hp=hp).to(device)
 logger.info(f'Model parameter count: {sum(p.numel() for p in model.parameters())}')
 optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=args.lr_patience, factor=args.lr_factor)
 
 # ----------------- Training Loop -----------------
+model_name = 'MSTAGATNetLite'
+train_losses, val_losses = [], []
 best_val_loss = float('inf')
+best_epoch = 0
 early_stop = 0
 for epoch in range(1, args.epochs + 1):
     start = time.time()
     train_loss = train_epoch(loader, model, optimizer, device, args)
-    val_metrics = evaluate(loader, loader.val, model, device, args)
-    val_rmse = val_metrics['rmse']
-    scheduler.step(val_rmse)
+    val_loss, mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae, _, _ = \
+        evaluate(loader, loader.val, model, device, args)
     elapsed = time.time() - start
-    logger.info(f"Epoch {epoch} | time {elapsed:.1f}s | train_loss {train_loss:.4f} | val_rmse {val_rmse:.4f}")
-    if val_rmse < best_val_loss:
-        best_val_loss = val_rmse
+    logger.info(f'Epoch {epoch:3d} | time {elapsed:5.2f}s | train_loss {train_loss:5.8f} | val_loss {val_loss:5.8f}')
+    train_losses.append(train_loss)
+    val_losses.append(val_loss)
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        best_epoch = epoch
         torch.save(model.state_dict(), os.path.join(args.save_dir, 'best.pt'))
         early_stop = 0
     else:
@@ -176,5 +195,28 @@ for epoch in range(1, args.epochs + 1):
 
 # ----------------- Final Evaluation -----------------
 model.load_state_dict(torch.load(os.path.join(args.save_dir, 'best.pt'), map_location=device))
-test_metrics = evaluate(loader, loader.test, model, device, args)
-logger.info(f"Test Metrics: {test_metrics}")
+test_loss, mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae, y_true_test, y_pred_test = \
+    evaluate(loader, loader.test, model, device, args)
+logger.info('Final TEST MAE {mae:5.4f} std {std:5.4f} RMSE {rmse:5.4f} RMSEs {rmses:5.4f} PCC {p:5.4f} PCCs {pc:5.4f} MAPE {mape:5.4f} R2 {r2:5.4f} R2s {r2s:5.4f} Var {var:5.4f} Vars {vars:5.4f} Peak {peak:5.4f}'.format(
+mae=mae, std=std_mae, rmse=rmse, rmses=rmse_states, p=pcc, pc=pcc_states,
+mape=mape, r2=r2, r2s=r2_states, var=var, vars=var_states, peak=peak_mae))
+
+# Plot loss curves
+loss_fig = os.path.join(args.save_dir, f"loss_curve_{args.dataset}_w{args.window}_h{args.horizon}.png")
+plot_loss_curves(train_losses, val_losses, loss_fig, args=args, logger=logger)
+
+# Visualize matrices
+mat_fig = os.path.join(args.save_dir, f"matrices_{args.dataset}_w{args.window}_h{args.horizon}.png")
+visualize_matrices(loader, model, mat_fig, device, logger=logger)
+
+# Visualize predictions
+pred_fig = os.path.join(args.save_dir, f"predictions_{args.dataset}_w{args.window}_h{args.horizon}.png")
+visualize_predictions(y_true_test, y_pred_test, pred_fig, logger=logger)
+
+# Save metrics to CSV
+metrics = {'mae': mae, 'std_MAE': std_mae, 'rmse': rmse, 'rmse_states': rmse_states,
+           'pcc': pcc, 'pcc_states': pcc_states, 'MAPE': mape,
+           'R2': r2, 'R2_states': r2_states, 'Var': var, 'Vars': var_states,
+           'Peak': peak_mae}
+metrics_csv = os.path.join(args.save_dir, f"metrics_{args.dataset}_w{args.window}_h{args.horizon}.csv")
+save_metrics(metrics, metrics_csv, args.dataset, args.window, args.horizon, logger=logger, model_name=model_name)

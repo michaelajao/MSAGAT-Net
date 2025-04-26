@@ -168,24 +168,3 @@ def ablation_study(args, data, device='cpu'):
         print(f"Variant {key}: params={results[key]['params']}")
     return results
 
-# === Hyperparameter Tuning Skeleton ===
-def hyperparameter_search(args, data, device='cpu'):
-    """
-    Simple grid search over selected hyperparameters
-    """
-    hp_grid = {
-        'hidden_dim': [16,32,64],
-        'attention_heads': [2,4,8],
-        'num_temporal_scales': [1,2]
-    }
-    keys, values = zip(*hp_grid.items())
-    best = {'score': float('-inf'), 'config': None}
-    for combo in map(dict, [dict(zip(keys, v)) for v in product(*values)]):
-        hp = DEFAULTS.copy(); hp.update(combo)
-        model = MSTAGATNetLite(args, data, hp=hp).to(device)
-        # train & validate; placeholder score:
-        score = torch.rand(1).item()
-        if score > best['score']:
-            best = {'score': score, 'config': combo}
-    print("Best config", best)
-    return best

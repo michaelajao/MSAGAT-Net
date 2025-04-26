@@ -83,7 +83,7 @@ def parse_arguments():
     
     return parser.parse_args()
 
-args = parser.parse_args()
+args = parse_arguments()
 print('--------Parameters--------')
 print(args)
 print('--------------------------')
