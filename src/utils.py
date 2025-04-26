@@ -71,12 +71,12 @@ def setup_visualization_style():
         'axes.labelsize': 12,
         'xtick.labelsize': 10,
         'ytick.labelsize': 10,
-        'grids.color': 'gray',
-        'grids.linewidth': 0.5,
+        # corrected grid parameters
+        'grid.color': 'gray',
+        'grid.linewidth': 0.5,
         'axes.grid': True,
         'figure.figsize': (8, 6),
         'figure.constrained_layout.use': True,
-        'axes.grid': True,
         'grid.alpha': 0.3,
         'grid.linestyle': ':',
         'axes.axisbelow': True,
@@ -118,7 +118,7 @@ def visualize_matrices(loader, model, save_path: str, device: torch.device, logg
     if attn.ndim == 4:
         attn = attn.mean(axis=(0,1))
     # plotting
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6), constrained_layout=True)
     for ax, mat, title in zip(
         axes,
         [geo, corr, attn],
@@ -129,7 +129,7 @@ def visualize_matrices(loader, model, save_path: str, device: torch.device, logg
         ax.set_xlabel('Node')
         ax.set_ylabel('Node')
         plt.colorbar(im, ax=ax)
-    plt.tight_layout()
+    # constrained_layout handles spacing; directly save figure
     plt.savefig(save_path, bbox_inches='tight')
     plt.close(fig)
     if logger:

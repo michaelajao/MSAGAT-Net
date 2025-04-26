@@ -19,8 +19,7 @@ import argparse
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from math import sqrt
 from scipy.stats import pearsonr
-import pandas as pd
-import matplotlib.pyplot as plt
+
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -33,6 +32,7 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 # Import the model module
+from utils import *
 from model import MSTAGAT_Net
 
 # ----------------- Argument Parsing -----------------
@@ -124,205 +124,6 @@ def setup_environment(args):
     
     return device, figures_dir, results_dir
 
-# ----------------- Visualization & Utility Functions -----------------
-def setup_visualization_style():
-    """Setup matplotlib visualization style."""
-    plt.style.use('seaborn-v0_8')
-    plt.rcParams.update({
-        'figure.dpi': 300,
-        'savefig.dpi': 300,
-        'font.size': 12,
-        'figure.figsize': (10, 6),
-        'axes.grid': True,
-        'grid.alpha': 0.3,
-    })
-
-def peak_error(y_true_states, y_pred_states, threshold):
-    """Calculate mean absolute error in peak regions."""
-    # Create copies to avoid modifying original data
-    y_true_copy = y_true_states.copy()
-    y_pred_copy = y_pred_states.copy()
-    
-    # Mask low values using threshold
-    mask_idx = np.argwhere(y_true_copy < threshold)
-    for idx in mask_idx:
-        y_true_copy[idx[0], idx[1]] = 0
-        y_pred_copy[idx[0], idx[1]] = 0
-    
-    # Calculate MAE only in peak regions where values > threshold
-    peak_mae_raw = mean_absolute_error(y_true_copy, y_pred_copy, multioutput='raw_values')
-    peak_mae = np.mean(peak_mae_raw)
-    
-    return peak_mae
-
-def visualize_matrices(data_loader, model, save_path, device):
-    """
-    Visualize adjacency, input correlation, and learned attention matrices.
-    
-    Args:
-        data_loader: DataLoader object
-        model: Trained model
-        save_path: Path to save visualization
-        device: Device to run model on
-    """
-    model.eval()
-
-    # Adjacency/Geolocation matrix
-    geo_mat = data_loader.adj.cpu().numpy() if hasattr(data_loader, 'adj') else np.eye(data_loader.m)
-
-    # Input correlation matrix from raw data
-    raw_data = data_loader.rawdat
-    input_corr = np.corrcoef(raw_data.T)
-
-    # Forward pass to update model's attention
-    batch = next(data_loader.get_batches(data_loader.test, min(32, len(data_loader.test)), False))
-    X, Y, index = batch
-    X = X.to(device)
-    if index is not None:
-        index = index.to(device)
-    with torch.no_grad():
-        _ = model(X, index)
-
-    # Retrieve attention weights - correctly handling MSTAGAT_Net
-    attn_mat = None
-    if hasattr(model, 'spatial_module') and hasattr(model.spatial_module, 'attn'):
-        attn_tensor = model.spatial_module.attn
-        if len(attn_tensor.shape) == 4:  # (B, heads, N, N)
-            attn_mat = attn_tensor.mean(dim=(0, 1)).detach().cpu().numpy()
-        else:
-            attn_mat = attn_tensor.detach().cpu().numpy()
-    else:
-        attn_mat = np.zeros_like(input_corr)
-        logger.warning("Model does not have 'spatial_module.attn'; using zero matrix.")
-
-    # Plot matrices
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-    
-    im0 = axes[0].imshow(geo_mat, cmap='viridis')
-    axes[0].set_title("(a) Adjacency Matrix", fontsize=14)
-    plt.colorbar(im0, ax=axes[0])
-    axes[0].set_xlabel("Region Index")
-    axes[0].set_ylabel("Region Index")
-    
-    im1 = axes[1].imshow(input_corr, cmap='viridis')
-    axes[1].set_title("(b) Input Correlation Matrix", fontsize=14)
-    plt.colorbar(im1, ax=axes[1])
-    axes[1].set_xlabel("Region Index")
-    axes[1].set_ylabel("Region Index")
-    
-    im2 = axes[2].imshow(attn_mat, cmap='viridis')
-    axes[2].set_title("(c) Learned Attention Matrix", fontsize=14)
-    plt.colorbar(im2, ax=axes[2])
-    axes[2].set_xlabel("Region Index")
-    axes[2].set_ylabel("Region Index")
-    
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    plt.close(fig)
-    logger.info(f"Saved matrix visualization to {save_path}")
-
-def visualize_predictions(y_true, y_pred, save_path, regions=5):
-    """
-    Visualize predictions vs. ground truth for selected regions.
-    
-    Args:
-        y_true: Ground truth values
-        y_pred: Predicted values
-        save_path: Path to save visualization
-        regions: Number of regions to visualize
-    """
-    n_regions = min(regions, y_true.shape[1])
-    fig, axes = plt.subplots(n_regions, 1, figsize=(12, 3 * n_regions), sharex=True)
-    if n_regions == 1:
-        axes = [axes]
-    time_steps = range(y_true.shape[0])
-    for i in range(n_regions):
-        axes[i].plot(time_steps, y_true[:, i], 'b-', label='Ground Truth', alpha=0.7)
-        axes[i].plot(time_steps, y_pred[:, i], 'r-', label='Prediction', alpha=0.7)
-        axes[i].set_title(f'Region {i+1}', fontsize=12)
-        axes[i].set_ylabel('Value', fontsize=10)
-        axes[i].grid(True, linestyle='--', alpha=0.5)
-        axes[i].legend(loc='upper right')
-    axes[-1].set_xlabel('Time Steps', fontsize=10)
-    plt.suptitle('Predictions vs. Ground Truth', fontsize=14)
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    plt.close(fig)
-    logger.info(f"Saved prediction visualization to {save_path}")
-
-def plot_loss_curves(train_losses, val_losses, save_path, args):
-    """
-    Plot training and validation loss curves.
-    
-    Args:
-        train_losses: List of training losses
-        val_losses: List of validation losses
-        save_path: Path to save plot
-        args: Command line arguments
-    """
-    fig, ax = plt.subplots(figsize=(10, 6))
-    epochs = range(1, len(train_losses) + 1)
-    ax.plot(epochs, train_losses, 'b-', label='Training Loss', linewidth=2, alpha=0.8)
-    ax.plot(epochs, val_losses, 'r-', label='Validation Loss', linewidth=2, alpha=0.8)
-    ax.grid(True, linestyle='--', alpha=0.7)
-    
-    best_val_epoch = val_losses.index(min(val_losses)) + 1
-    best_val_loss = min(val_losses)
-    ax.scatter(best_val_epoch, best_val_loss, color='green', s=100, zorder=5,
-              label=f'Best Val Loss: {best_val_loss:.6f}')
-               
-    ax.set_xlabel('Epoch', fontsize=12)
-    ax.set_ylabel('Loss', fontsize=12)
-    
-    # Add title with model information
-    title = f'MSTAGAT-Net Training Progress\nDataset: {args.dataset}, Window: {args.window}, Horizon: {args.horizon}'
-    ax.set_title(title, fontsize=14, pad=10)
-    
-    textstr = f'Learning Rate: {args.lr}\nBatch Size: {args.batch}\nBest Epoch: {best_val_epoch}'
-    props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
-    ax.text(0.02, 0.98, textstr, transform=ax.transAxes, fontsize=10,
-            verticalalignment='top', bbox=props)
-            
-    ax.legend(loc='upper right', frameon=True, framealpha=0.8)
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    plt.close(fig)
-    
-    logger.info(f"Saved loss curves to {save_path}")
-
-def save_metrics(metrics, save_path, model_name, dataset, window, horizon):
-    """
-    Save metrics to a CSV file.
-    
-    Args:
-        metrics: Dictionary of metrics
-        save_path: Path to save CSV
-        model_name: Name of the model
-        dataset: Dataset name
-        window: Window size
-        horizon: Prediction horizon
-    """
-    import time
-    
-    # Add model and configuration info to metrics
-    metrics_with_info = {
-        'model': model_name,  # Use model name from arguments
-        'dataset': dataset,
-        'window': window,
-        'horizon': horizon,
-        'timestamp': time.strftime("%Y%m%d_%H%M%S"),
-        **metrics
-    }
-    
-    metrics_df = pd.DataFrame([metrics_with_info])
-    
-    # Check if file exists to append or create new
-    if os.path.exists(save_path):
-        existing_df = pd.read_csv(save_path)
-        updated_df = pd.concat([existing_df, metrics_df], ignore_index=True)
-        updated_df.to_csv(save_path, index=False)
-        logger.info(f"Appended metrics to file: {save_path}")
-    else:
-        metrics_df.to_csv(save_path, index=False)
-        logger.info(f"Created new metrics file: {save_path}")
 
 # ----------------- Evaluation Function -----------------
 def evaluate(data_loader, data, model, device, args, tag='val'):
@@ -586,8 +387,16 @@ def main():
     y_true = test_metrics.pop('y_true', None)
     y_pred = test_metrics.pop('y_pred', None)
 
-    # Save metrics - with explicit model name
-    save_metrics(test_metrics, results_csv_path, model_name, args.dataset, args.window, args.horizon)
+    # Save metrics using utils.save_metrics
+    save_metrics(
+        test_metrics,
+        results_csv_path,
+        dataset=args.dataset,
+        window=args.window,
+        horizon=args.horizon,
+        logger=logger,
+        model_name=model_name
+    )
 
     # Print final results
     logger.info('\nFinal Evaluation Results:')

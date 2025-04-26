@@ -130,6 +130,9 @@ python src/train.py \
 ```
 
 
+```bash
+python src/train.py `  --dataset japan `  --sim_mat japan-adj `  --window 20 `  --horizon 5 `  --hidden_dim 16 `  --attention_heads 8 `  --bottleneck_dim 6 `  --num_scales 5 `  --kernel_size 3 `  --feature_channels 12 `  --dropout 0.249 `  --attention_regularization_weight 1e-3 `  --lr 0.001 `  --weight_decay 5e-4 `  --cuda `  --mylog
+```
 
 
 ### Prediction
