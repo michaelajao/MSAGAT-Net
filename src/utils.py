@@ -67,13 +67,22 @@ def setup_visualization_style():
         'figure.dpi': 300,
         'savefig.dpi': 300,
         'font.size': 12,
+        'axes.titlesize': 14,
+        'axes.labelsize': 12,
+        'xtick.labelsize': 10,
+        'ytick.labelsize': 10,
+        'grids.color': 'gray',
+        'grids.linewidth': 0.5,
+        'axes.grid': True,
         'figure.figsize': (8, 6),
+        'figure.constrained_layout.use': True,
         'axes.grid': True,
         'grid.alpha': 0.3,
         'grid.linestyle': ':',
         'axes.axisbelow': True,
         'lines.linewidth': 2.0,
     })
+    
 
 # -------------------------
 # Matrix Visualization
