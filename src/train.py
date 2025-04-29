@@ -22,6 +22,11 @@ import pandas as pd
 # project modules
 from data import DataBasicLoader
 from model import MSTAGAT_Net
+
+# Import the new models
+from location_aware_model import LocationAwareMSAGAT_Net
+from dynagraphatnet import DynaGraphNet
+from AFGNet import AFGNet
 from utils import (
     visualize_matrices,
     visualize_predictions,
@@ -79,6 +84,32 @@ parser.add_argument("--num_scales", type=int, default=5)
 parser.add_argument("--kernel_size", type=int, default=3)
 parser.add_argument("--feature_channels", type=int, default=12)
 parser.add_argument("--attention_regularization_weight", type=float, default=1e-3)
+# Add model selection argument
+parser.add_argument(
+    "--model",
+    type=str,
+    default="msagat",
+    choices=["msagat", "location_aware", "dynagraph", "afgnet"],
+    help="Model type: msagat (original), location_aware (new model), dynagraph (dynamic graph model), or afgnet (adaptive fusion graph network)",
+)
+# Add adjacency matrix usage flag for location-aware model
+parser.add_argument(
+    "--use_adjacency",
+    action="store_true",
+    help="Use adjacency matrix for location-aware predictor module",
+)
+# Add parameters specific to DynaGraphNet
+parser.add_argument(
+    "--num_layers",
+    type=int,
+    default=1,
+    help="Number of relational attention layers for DynaGraphNet",
+)
+parser.add_argument(
+    "--autoregressive",
+    action="store_true",
+    help="Use autoregressive connection in DynaGraphNet",
+)
 args = parser.parse_args()
 print("--------Parameters--------")
 print(args)
@@ -99,8 +130,16 @@ if args.cuda:
     torch.cuda.set_device(args.gpu)
 logger.info("cuda %s", args.cuda)
 
-# Define model name and logging token (removed ablation part)
-model_name = "MSTAGAT-Net"
+# Define model name and logging token based on model type
+if args.model == "location_aware":
+    model_name = "LocationAwareMSAGAT-Net"
+elif args.model == "dynagraph":
+    model_name = "DynaGraphNet"
+elif args.model == "afgnet":
+    model_name = "AFGNet"
+else:
+    model_name = "MSTAGAT-Net"
+
 log_token = f"{model_name}.{args.dataset}.w-{args.window}.h-{args.horizon}"
 
 if args.mylog:
@@ -112,9 +151,88 @@ if args.mylog:
 
 data_loader = DataBasicLoader(args)
 
-# Instantiate the full MSTAGAT_Net model directly
-logger.info("Using full MSTAGAT-Net model")
-model = MSTAGAT_Net(args, data_loader)
+# Instantiate the model based on selection
+if args.model == "location_aware":
+    logger.info("Using LocationAwareMSAGAT-Net model")
+    model = LocationAwareMSAGAT_Net(args, data_loader)
+
+    # Load adjacency matrix for location-aware model if needed
+    if args.use_adjacency and args.sim_mat:
+        logger.info("Loading adjacency matrix for location-aware model")
+        adj_path = os.path.join(BASE_DIR, "data", f"{args.sim_mat}.txt")
+        if os.path.exists(adj_path):
+            try:
+                # First try to read as comma-separated values
+                adj_mx = np.loadtxt(adj_path, delimiter=",")
+                logger.info(
+                    f"Loaded adjacency matrix with comma delimiter: shape {adj_mx.shape}"
+                )
+            except ValueError:
+                try:
+                    # If that fails, try space-separated values
+                    adj_mx = np.loadtxt(adj_path)
+                    logger.info(
+                        f"Loaded adjacency matrix with space delimiter: shape {adj_mx.shape}"
+                    )
+                except ValueError as e:
+                    # If both fail, log the error and continue without adjacency
+                    logger.error(f"Could not load adjacency matrix: {e}")
+                    logger.warning("Continuing without adjacency matrix")
+                    adj_mx = None
+
+            # Convert adjacency matrix to tensor if successfully loaded
+            if adj_mx is not None:
+                adj_mx = torch.FloatTensor(adj_mx)
+                # Set adjacency matrix in the model
+                model.set_adjacency_matrix(adj_mx)
+                logger.info(f"Set adjacency matrix in model: shape {adj_mx.shape}")
+        else:
+            logger.warning(f"Adjacency matrix file {adj_path} not found")
+elif args.model == "dynagraph":
+    logger.info("Using DynaGraphNet model")
+    model = DynaGraphNet(args, data_loader)
+elif args.model == "afgnet":
+    logger.info("Using AFGNet model")
+    model = AFGNet(args, data_loader)
+
+    # Set device for torch operations
+    device = torch.device(f"cuda:{args.gpu}") if args.cuda else torch.device("cpu")
+
+    # Load adjacency matrix for AFGNet if using static graph
+    if args.use_adjacency and args.sim_mat:
+        logger.info("Loading adjacency matrix for AFGNet")
+        adj_path = os.path.join(BASE_DIR, "data", f"{args.sim_mat}.txt")
+        if os.path.exists(adj_path):
+            try:
+                # First try to read as comma-separated values
+                adj_mx = np.loadtxt(adj_path, delimiter=",")
+                logger.info(
+                    f"Loaded adjacency matrix with comma delimiter: shape {adj_mx.shape}"
+                )
+            except ValueError:
+                try:
+                    # If that fails, try space-separated values
+                    adj_mx = np.loadtxt(adj_path)
+                    logger.info(
+                        f"Loaded adjacency matrix with space delimiter: shape {adj_mx.shape}"
+                    )
+                except ValueError as e:
+                    # If both fail, log the error and continue without adjacency
+                    logger.error(f"Could not load adjacency matrix: {e}")
+                    logger.warning("Continuing without adjacency matrix")
+                    adj_mx = None
+
+            # Store adjacency matrix as a static graph for the model
+            if adj_mx is not None:
+                adj_mx = torch.FloatTensor(adj_mx)
+                # Set as external graph in the class
+                model.static_graph = adj_mx.to(device)
+                logger.info(f"Set static graph in model: shape {adj_mx.shape}")
+        else:
+            logger.warning(f"Adjacency matrix file {adj_path} not found")
+else:
+    logger.info("Using standard MSTAGAT-Net model")
+    model = MSTAGAT_Net(args, data_loader)
 
 logger.info(
     "model %s", model.__class__.__name__
