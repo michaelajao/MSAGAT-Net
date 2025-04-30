@@ -131,7 +131,7 @@ python src/train.py \
 
 
 ```bash
-python src/train.py `  --dataset japan `  --sim_mat japan-adj `  --window 20 `  --horizon 5 `  --hidden_dim 16 `  --attention_heads 8 `  --bottleneck_dim 6 `  --num_scales 5 `  --kernel_size 3 `  --feature_channels 12 `  --dropout 0.249 `  --attention_regularization_weight 1e-3 `  --lr 0.001 `  --weight_decay 5e-4 `  --cuda `  --mylog
+python src/train.py   --dataset japan   --sim_mat japan-adj   --window 20   --horizon 5  --epochs 1500   --batch 32   --lr 0.001   --weight_decay 5e-4   --dropout 0.2   --patience 100   --hidden_dim 32   --attention_heads 4   --attention_regularization_weight 3.15e-5   --num_scales 4   --kernel_size 3   --feature_channels 16   --bottleneck_dim 8   --seed 42   --gpu 0   --model msagat   --use_adjacency   --save_dir save   --mylog
 ```
 
 ```bash
@@ -185,6 +185,8 @@ python src/train.py \
   --bottleneck_dim 8 \
   --seed 42 \
   --gpu 0 \
+  --model msagat \
+  --use_adjacency \
   --save_dir save \
   --mylog
 ```

@@ -1,286 +1,250 @@
-import os
-import numpy as np
 import torch
 import torch.nn.functional as F
+import numpy as np
 from sklearn.metrics import mean_absolute_error
 import matplotlib.pyplot as plt
 import pandas as pd
-import time
+import os
+from scipy.stats import pearsonr
 
-
-# -------------------------
-# Graph Utilities
-# -------------------------
-def get_laplace_matrix(adj: torch.Tensor) -> torch.Tensor:
-    """
-    Compute symmetric normalized Laplacian matrix for a batch of adjacency matrices.
-
-    Args:
-        adj (torch.Tensor): Adjacency matrices [batch, N, N]
-
-    Returns:
-        torch.Tensor: Normalized Laplacian [batch, N, N]
-    """
-    B, N, _ = adj.shape
+def getLaplaceMat(batch_size, num_nodes, adj):
+    """Get normalized Laplacian matrix."""
     # Add self-loops
-    I = torch.eye(N, device=adj.device).unsqueeze(0).expand(B, -1, -1)
-    A_hat = adj + I
-    # Degree matrix
-    degree = A_hat.sum(dim=-1)  # [B, N]
-    # inv sqrt degree
-    d_inv_sqrt = torch.pow(degree + 1e-5, -0.5)
-    D_inv_sqrt = torch.diag_embed(d_inv_sqrt)
-    # Normalized Laplacian
-    L = D_inv_sqrt @ A_hat @ D_inv_sqrt
-    return L
+    adj = adj + torch.eye(num_nodes, device=adj.device)[None, :, :]
+    
+    # Calculate degree matrix
+    degree = torch.sum(adj, dim=-1)  # [B, N]
+    
+    # Normalize adjacency matrix
+    degree_inv_sqrt = torch.pow(degree + 1e-5, -0.5)
+    degree_inv_sqrt = degree_inv_sqrt.unsqueeze(-1) * torch.eye(num_nodes, device=adj.device)[None, :, :]
+    
+    # Compute normalized Laplacian
+    laplace = torch.matmul(torch.matmul(degree_inv_sqrt, adj), degree_inv_sqrt)
+    
+    return laplace
 
+def peak_error(y_true_states, y_pred_states, threshold): 
+    """Calculate mean absolute error in peak regions."""
+    # Mask low values using threshold
+    y_true_states[y_true_states < threshold] = 0
+    mask_idx = np.argwhere(y_true_states <= threshold)
+    for idx in mask_idx:
+        y_pred_states[idx[0]][idx[1]] = 0
+    
+    # Calculate MAE only in peak regions
+    peak_mae_raw = mean_absolute_error(y_true_states, y_pred_states, multioutput='raw_values')
+    peak_mae = np.mean(peak_mae_raw)
+    return peak_mae
 
-# -------------------------
-# Error Metrics
-# -------------------------
-def peak_error(y_true: np.ndarray, y_pred: np.ndarray, threshold: float) -> float:
-    """
-    Compute MAE focusing on peak regions above a threshold.
+# === Visualization Functions ===
 
-    Args:
-        y_true (np.ndarray): True values [samples, nodes]
-        y_pred (np.ndarray): Predicted values [samples, nodes]
-        threshold (float): Peak threshold
-
-    Returns:
-        float: Mean absolute error on peak regions
-    """
-    mask = y_true >= threshold
-    if not mask.any():
-        return 0.0
-    true_peaks = y_true[mask]
-    pred_peaks = y_pred[mask]
-    return mean_absolute_error(true_peaks, pred_peaks)
-
-
-# -------------------------
-# Visualization Style
-# -------------------------
 def setup_visualization_style():
-    """
-    Configure matplotlib for consistent, publication-quality figures.
-    """
-    plt.style.use("seaborn-v0_8-paper")
-    plt.rcParams.update(
-        {
-            "figure.dpi": 300,
-            "savefig.dpi": 300,
-            "font.size": 12,
-            "axes.titlesize": 14,
-            "axes.labelsize": 12,
-            "xtick.labelsize": 10,
-            "ytick.labelsize": 10,
-            # corrected grid parameters
-            "grid.color": "gray",
-            "grid.linewidth": 0.5,
-            "axes.grid": True,
-            "figure.figsize": (8, 6),
-            "figure.constrained_layout.use": True,
-            "grid.alpha": 0.3,
-            "grid.linestyle": ":",
-            "axes.axisbelow": True,
-            "lines.linewidth": 2.0,
-        }
-    )
+    """Setup matplotlib visualization style with more modest parameters."""
+    plt.style.use('seaborn-v0_8-paper')
+    plt.rcParams.update({
+        'figure.dpi': 300,
+        'savefig.dpi': 300,
+        'font.size': 12,
+        'figure.figsize': (8, 6),
+        'figure.constrained_layout.use': True,
+        'axes.grid': True,
+        'grid.alpha': 0.3,
+        'grid.linestyle': ':',
+        'axes.axisbelow': True,
+        'lines.linewidth': 2.0,
+    })
 
-
-# -------------------------
-# Matrix Visualization
-# -------------------------
-def visualize_matrices(
-    loader, model, save_path: str, device: torch.device, logger=None
-):
+def visualize_matrices(data_loader, model, save_path, device, logger=None):
     """
-    Plot adjacency, input correlation, and learned attention matrices side-by-side.
+    Visualize adjacency, input correlation, and learned attention matrices.
+    
+    Args:
+        data_loader: DataLoader object
+        model: Trained model
+        save_path: Path to save visualization
+        device: Device to run model on
+        logger: Logger object (optional)
     """
     model.eval()
-    # adjacency
-    adj = getattr(loader, "adj", None)
-    geo = adj.cpu().numpy() if adj is not None else np.eye(loader.m)
-    # input correlation
-    raw = loader.rawdat  # [T, N]
-    corr = np.corrcoef(raw.T)
-    # attention
-    batch = next(
-        loader.get_batches(loader.test, min(32, len(loader.test)), shuffle=False)
-    )
-    X, _, idx = batch
-    X, idx = X.to(device), idx.to(device) if idx is not None else None
+
+    # 1. Adjacency/Geolocation matrix
+    geo_mat = data_loader.adj.cpu().numpy() if hasattr(data_loader, 'adj') else np.eye(data_loader.m)
+
+    # 2. Input correlation matrix from raw data
+    raw_data = data_loader.rawdat
+    input_corr = np.corrcoef(raw_data.T)
+
+    # 3. Forward pass to update model's attention
+    batch = next(data_loader.get_batches(data_loader.test, min(32, len(data_loader.test)), shuffle=False))
+    X, Y, index = batch
+    X = X.to(device)
+    if index is not None:
+        index = index.to(device)
     with torch.no_grad():
-        _, _ = model(X, idx)
+        _ = model(X, index)
 
-    # Extract attention from different model architectures
-    attn = None
-
-    # Try different ways to access attention based on model type
-    # Original MSTAGAT_Net
-    if hasattr(model, "spatial_module") and hasattr(model.spatial_module, "attn"):
-        attn = model.spatial_module.attn.detach().cpu().numpy()
-
-    # LocationAwareMSAGAT_Net
-    elif hasattr(model, "spatial_module") and hasattr(
-        model.spatial_module, "attention"
-    ):
-        attn = model.spatial_module.attention_weights.detach().cpu().numpy()
-    elif hasattr(model, "spatial_module") and hasattr(model.spatial_module, "attn"):
-        attn = model.spatial_module.attn.detach().cpu().numpy()
-
-    # DynaGraphNet
-    elif hasattr(model, "attention_weights"):
-        attn = model.attention_weights.detach().cpu().numpy()
-    elif hasattr(model, "graph_generator") and hasattr(model, "attention_layers"):
-        # Use the dynamically generated graph as attention
-        try:
-            test_input = torch.randn(1, loader.m, model.hidden_dim).to(device)
-            with torch.no_grad():
-                attn = model.graph_generator(test_input).detach().cpu().numpy()[0]
-        except:
-            if logger:
-                logger.warning("Could not generate attention from DynaGraphNet")
-
-    # AFGNet
-    elif hasattr(model, "attention") and hasattr(model.attention, "attention"):
-        attn = model.attention.attention.detach().cpu().numpy()
-    elif hasattr(model, "graph_inference"):
-        # Generate a graph structure for visualization
-        try:
-            test_input = torch.randn(1, loader.m, model.feature_dim).to(device)
-            with torch.no_grad():
-                attn = model.graph_inference(test_input).detach().cpu().numpy()[0]
-        except:
-            if logger:
-                logger.warning("Could not generate attention from AFGNet")
-
-    # Any model with graph_attention
-    elif hasattr(model, "graph_attention") and hasattr(model.graph_attention, "attn"):
-        attn = model.graph_attention.attn.detach().cpu().numpy()
-
-    # Fallback to zeros if no attention found
-    if attn is None:
-        attn = np.zeros_like(corr)
+# 4. Retrieve attention weights - FIX THE BUG HERE
+    attn_mat = None
+    if hasattr(model, 'graph_attention') and hasattr(model.graph_attention, 'attn'):
+        # MSAGATNet attention access
+        attn_tensor = model.graph_attention.attn
+        if len(attn_tensor.shape) == 4:
+            attn_mat = attn_tensor.mean(dim=(0, 1)).detach().cpu().numpy()
+        else:
+            attn_mat = attn_tensor.detach().cpu().numpy()
+    elif hasattr(model, 'spatial_module') and hasattr(model.spatial_module, 'attn'):
+        # MSTAGAT_Net attention access - ADD THIS SECTION
+        attn_tensor = model.spatial_module.attn
+        if len(attn_tensor.shape) == 4:
+            attn_mat = attn_tensor.mean(dim=(0, 1)).detach().cpu().numpy()
+        else:
+            attn_mat = attn_tensor.detach().cpu().numpy()
+    else:
+        attn_mat = np.zeros_like(input_corr)
         if logger:
-            logger.warning("No attention weights found; using zeros")
+            logger.warning("Model does not have attention weights; using zero matrix.")
 
-    # average over heads/batch if needed
-    if isinstance(attn, np.ndarray) and attn.ndim == 4:
-        attn = attn.mean(axis=(0, 1))
-    elif isinstance(attn, np.ndarray) and attn.ndim == 3:
-        attn = attn.mean(axis=0)
-
-    # plotting
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6), constrained_layout=True)
-    for ax, mat, title in zip(
-        axes,
-        [geo, corr, attn],
-        ["Adjacency", "Input Correlation", "Learned Attention/Graph"],
-    ):
-        im = ax.imshow(mat, cmap="viridis")
-        ax.set_title(title)
-        ax.set_xlabel("Node")
-        ax.set_ylabel("Node")
-        plt.colorbar(im, ax=ax)
-
-    # constrained_layout handles spacing; directly save figure
-    plt.savefig(save_path, bbox_inches="tight")
+    # 5. Plot matrices
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    
+    im0 = axes[0].imshow(geo_mat, cmap='viridis')
+    axes[0].set_title("(a) Adjacency Matrix", fontsize=14)
+    plt.colorbar(im0, ax=axes[0])
+    axes[0].set_xlabel("Region Index")
+    axes[0].set_ylabel("Region Index")
+    
+    im1 = axes[1].imshow(input_corr, cmap='viridis')
+    axes[1].set_title("(b) Input Correlation Matrix", fontsize=14)
+    plt.colorbar(im1, ax=axes[1])
+    axes[1].set_xlabel("Region Index")
+    axes[1].set_ylabel("Region Index")
+    
+    im2 = axes[2].imshow(attn_mat, cmap='viridis')
+    axes[2].set_title("(c) Learned Attention Matrix", fontsize=14)
+    plt.colorbar(im2, ax=axes[2])
+    axes[2].set_xlabel("Region Index")
+    axes[2].set_ylabel("Region Index")
+    
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
     if logger:
-        logger.info(f"Matrices saved to {save_path}")
+        logger.info(f"Saved matrix visualization to {save_path}")
 
-
-# -------------------------
-# Prediction Visualization
-# -------------------------
-def visualize_predictions(
-    y_true: np.ndarray,
-    y_pred: np.ndarray,
-    save_path: str,
-    regions: int = 5,
-    logger=None,
-):
+def visualize_predictions(y_true, y_pred, save_path, regions=5, logger=None):
     """
-    Plot ground truth vs. predictions for selected regions over time.
+    Visualize predictions vs. ground truth for selected regions.
+    
+    Args:
+        y_true: Ground truth values
+        y_pred: Predicted values
+        save_path: Path to save visualization
+        regions: Number of regions to visualize
+        logger: Logger object (optional)
     """
     n_regions = min(regions, y_true.shape[1])
-    timesteps = np.arange(y_true.shape[0])
-    fig, axes = plt.subplots(n_regions, 1, figsize=(10, 3 * n_regions), sharex=True)
+    fig, axes = plt.subplots(n_regions, 1, figsize=(12, 3 * n_regions), sharex=True)
     if n_regions == 1:
         axes = [axes]
+    time_steps = range(y_true.shape[0])
     for i in range(n_regions):
-        axes[i].plot(timesteps, y_true[:, i], label="True", alpha=0.7)
-        axes[i].plot(timesteps, y_pred[:, i], label="Pred", alpha=0.7)
-        axes[i].set_title(f"Region {i}")
-        axes[i].legend()
-    axes[-1].set_xlabel("Time")
+        axes[i].plot(time_steps, y_true[:, i], 'b-', label='Ground Truth', alpha=0.7)
+        axes[i].plot(time_steps, y_pred[:, i], 'r-', label='Prediction', alpha=0.7)
+        axes[i].set_title(f'Region {i+1}', fontsize=12)
+        axes[i].set_ylabel('Value', fontsize=10)
+        axes[i].grid(True, linestyle='--', alpha=0.5)
+        axes[i].legend(loc='upper right')
+    axes[-1].set_xlabel('Time Steps', fontsize=10)
+    plt.suptitle('Predictions vs. Ground Truth', fontsize=14)
     plt.tight_layout()
-    plt.savefig(save_path, bbox_inches="tight")
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
     if logger:
-        logger.info(f"Predictions saved to {save_path}")
+        logger.info(f"Saved prediction visualization to {save_path}")
 
-
-# -------------------------
-# Loss Curve
-# -------------------------
-def plot_loss_curves(train_losses, val_losses, save_path: str, args=None, logger=None):
+def plot_loss_curves(train_losses, val_losses, save_path, args=None, logger=None):
     """
-    Plot and save training vs. validation loss curves.
+    Plot training and validation loss curves.
+    
+    Args:
+        train_losses: List of training losses
+        val_losses: List of validation losses
+        save_path: Path to save plot
+        args: Command line arguments (optional)
+        logger: Logger object (optional)
     """
-    fig, ax = plt.subplots(figsize=(8, 6))
-    epochs = np.arange(1, len(train_losses) + 1)
-    ax.plot(epochs, train_losses, label="Train")
-    ax.plot(epochs, val_losses, label="Val")
-    best = np.argmin(val_losses) + 1
-    ax.scatter(best, val_losses[best - 1], marker="o", label=f"Best Epoch ({best})")
-    ax.set_xlabel("Epoch")
-    ax.set_ylabel("Loss")
-    ax.legend()
+    fig, ax = plt.subplots(figsize=(10, 6))
+    epochs = range(1, len(train_losses) + 1)
+    ax.plot(epochs, train_losses, 'b-', label='Training Loss', linewidth=2, alpha=0.8)
+    ax.plot(epochs, val_losses, 'r-', label='Validation Loss', linewidth=2, alpha=0.8)
+    ax.grid(True, linestyle='--', alpha=0.7)
+    
+    best_val_epoch = val_losses.index(min(val_losses)) + 1
+    best_val_loss = min(val_losses)
+    ax.scatter(best_val_epoch, best_val_loss, color='green', s=100, zorder=5,
+               label=f'Best Val Loss: {best_val_loss:.6f}')
+               
+    ax.set_xlabel('Epoch', fontsize=12)
+    ax.set_ylabel('Loss', fontsize=12)
+    
+    # Add title with model information if args provided
     if args:
-        ax.set_title(f"Loss: {args.dataset}, w={args.window}, h={args.horizon}")
-    plt.tight_layout()
-    plt.savefig(save_path, bbox_inches="tight")
+        title = f'Training Progress\nDataset: {args.dataset}, Window: {args.window}, Horizon: {args.horizon}'
+        ax.set_title(title, fontsize=14, pad=10)
+        
+        textstr = f'Learning Rate: {args.lr}\nBatch Size: {args.batch}\nBest Epoch: {best_val_epoch}'
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
+        ax.text(0.02, 0.98, textstr, transform=ax.transAxes, fontsize=10,
+                verticalalignment='top', bbox=props)
+    else:
+        ax.set_title('Training Progress', fontsize=14, pad=10)
+            
+    ax.legend(loc='upper right', frameon=True, framealpha=0.8)
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
+    
     if logger:
-        logger.info(f"Loss curve saved to {save_path}")
+        logger.info(f"Saved loss curves to {save_path}")
 
-
-# -------------------------
-# Metrics Saving
-# -------------------------
-def save_metrics(
-    metrics: dict,
-    save_path: str,
-    dataset: str = None,
-    window: int = None,
-    horizon: int = None,
-    logger=None,
-    model_name: str = None,
-):
+def save_metrics(metrics, save_path, dataset=None, window=None, horizon=None, logger=None, model_name=None):
     """
-    Append or create CSV file for recorded metrics.
+    Save metrics to a CSV file or create a new one if it doesn't exist.
+    
+    Args:
+        metrics: Dictionary of metrics
+        save_path: Path to save CSV
+        dataset: Dataset name (optional)
+        window: Window size (optional)
+        horizon: Prediction horizon (optional)
+        logger: Logger object (optional)
+        model_name: Name of the model (optional)
     """
-    info = {
-        "model": model_name or "MSTAGAT",
-        "timestamp": time.strftime("%Y%m%d_%H%M%S"),
+    import time
+    
+    # Add model and configuration info to metrics if provided
+    metrics_with_info = {
+        'model': model_name or 'UnknownModel', # Use provided model name or default
+        'timestamp': time.strftime("%Y%m%d_%H%M%S"),
+        **metrics
     }
+    
     if dataset:
-        info["dataset"] = dataset
+        metrics_with_info['dataset'] = dataset
     if window:
-        info["window"] = window
+        metrics_with_info['window'] = window
     if horizon:
-        info["horizon"] = horizon
-    data = {
-        **info,
-        **{k: v for k, v in metrics.items() if not isinstance(v, np.ndarray)},
-    }
-    df = pd.DataFrame([data])
+        metrics_with_info['horizon'] = horizon
+    
+    metrics_df = pd.DataFrame([metrics_with_info])
+    
+    # Check if file exists to append or create new
     if os.path.exists(save_path):
-        df_old = pd.read_csv(save_path)
-        df = pd.concat([df_old, df], ignore_index=True)
-    df.to_csv(save_path, index=False)
-    if logger:
-        logger.info(f"Metrics saved to {save_path}")
+        existing_df = pd.read_csv(save_path)
+        updated_df = pd.concat([existing_df, metrics_df], ignore_index=True)
+        updated_df.to_csv(save_path, index=False)
+        if logger:
+            logger.info(f"Appended metrics to file: {save_path}")
+    else:
+        metrics_df.to_csv(save_path, index=False)
+        if logger:
+            logger.info(f"Created new metrics file: {save_path}")
