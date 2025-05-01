@@ -1,69 +1,34 @@
 import os
 import time
-import math
+import random
+import logging
+import argparse
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
-import sys
-import logging
-import random
-import shutil  # For backing up best model checkpoint
-import matplotlib.pyplot as plt
+import shutil
 from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, explained_variance_score
-from math import sqrt
 from scipy.stats import pearsonr
-import pandas as pd  # For handling date ranges and saving CSV files
+from math import sqrt
+import pandas as pd
 
-# Add current directory to path to ensure imports work correctly
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, current_dir)  # Add src directory to path
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)  # Add parent directory to path
-
-# Check that files can be found
-data_path = os.path.join(parent_dir, "data")
-if not os.path.exists(data_path):
-    print(f"WARNING: Data directory not found at {data_path}")
-    print(f"Current working directory: {os.getcwd()}")
-    print(f"Script location: {current_dir}")
-    print("Directories in parent folder:")
-    for d in os.listdir(parent_dir):
-        print(f"  - {d}")
-
-# Import our model and ablation models
-try:
-    from model import MSAGATNet
-    from ablation import MSAGATNet_Ablation
-    from model import MSTAGAT_Net  # Renamed from MSTGAT to MSTAGAT_Net
-    print("Successfully imported MSAGATNet, MSTAGAT-Net, and ablation modules")
-except ImportError as e:
-    print(f"ERROR importing modules: {e}")
-    print(f"Python path: {sys.path}")
-    # Try alternative import paths
-    try:
-        sys.path.append(os.path.join(current_dir))
-        from src.model import MSAGATNet
-        from src.ablation import MSAGATNet_Ablation
-        from model import MSTAGAT_Net  # Renamed from MSTGAT to MSTAGAT_Net
-        print("Successfully imported modules using alternative path")
-    except ImportError as e2:
-        print(f"ERROR with alternative import: {e2}")
-        raise
-
+# project modules
 from data import DataBasicLoader
-import argparse
-from srcn.utils import *
+from ablation import MSAGATNet_Ablation
+from model import MSTAGAT_Net
+from utils import visualize_matrices, visualize_predictions, plot_loss_curves, save_metrics, peak_error
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
 
-# Set up directory for saving figures (report/figures)
-figures_dir = os.path.join(parent_dir, "report", "figures")
-if (not os.path.exists(figures_dir)):
-    os.makedirs(figures_dir)
+# Determine project root and output directories
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FIGURES_DIR = os.path.join(BASE_DIR, 'report', 'figures')
+RESULTS_DIR = os.path.join(BASE_DIR, 'results')
+os.makedirs(FIGURES_DIR, exist_ok=True)
+os.makedirs(RESULTS_DIR, exist_ok=True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', type=str, default='region785')
@@ -94,10 +59,7 @@ parser.add_argument('--start_date', type=str, default='2020-01-01', help='Start 
 # Add ablation parameter
 parser.add_argument('--ablation', type=str, default='none', 
                    choices=['none', 'no_eagam', 'no_dmtm', 'no_ppm'],
-                   help='Ablation study type: none, no_eagam (LR‑AGAM: Local-Regional Adaptive Graph Attention Module), no_dmtm (DMTFM: Dilated Multi-scale Temporal Feature Module), no_ppm (PPRM: Progressive Prediction Refinement Module)')
-# Add model selection parameter
-parser.add_argument('--model', type=str, default='mstagat', choices=['mstagat', 'mstgat'], 
-                   help='Choose which model to use: mstagat or mstgat')
+                   help='Ablation study type: none, no_eagam (LR‑AGAM: Low-rank Adaptive Graph Attention Module), no_dmtm (DMTFM: Dilated Multi-scale Temporal Feature Module), no_ppm (PPRM: Progressive Prediction Refinement Module)')
 args = parser.parse_args()
 print('--------Parameters--------')
 print(args)
@@ -118,12 +80,9 @@ if args.cuda:
     torch.cuda.set_device(args.gpu)
 logger.info('cuda %s', args.cuda)
 
-# Updated log_token (include ablation parameter and model name)
-if args.model.upper() == 'MSTAGAT':
-    model_name = 'MSTAGAT-Net'
-else:
-    model_name = args.model.upper()
-log_token = '%s.%s.w-%s.h-%s.%s' % (model_name, args.dataset, args.window, args.horizon, args.ablation)
+# Define model name and logging token for ablation
+model_name = 'MSTAGAT-Net'
+log_token = f"{model_name}.{args.dataset}.w-{args.window}.h-{args.horizon}.{args.ablation}"
 
 if args.mylog:
     tensorboard_log_dir = os.path.join('tensorboard', log_token)
@@ -134,30 +93,20 @@ if args.mylog:
 
 data_loader = DataBasicLoader(args)
 
-# Instantiate the model based on model selection and ablation setting
-# Corrected logic: Use MSTAGAT_Net for 'none' ablation or when model is 'mstagat'
+# Instantiate the model based on ablation only
 if args.ablation == 'none':
-    logger.info('Using full MSTAGAT-Net model (no ablation)')
-    model = MSTAGAT_Net(args, data_loader) # Use renamed_model.py
-elif args.ablation != 'none':
-    # This assumes ablation is only for MSAGATNet architecture as per the original code structure
-    # If ablation should apply to MSTAGAT_Net, this needs further changes in ablation.py
-    logger.info('Using MSAGATNet ablation model with setting: %s', args.ablation)
-    model = MSAGATNet_Ablation(args, data_loader) # Uses ablation.py (based on MSAGATNet)
-# The following condition might be redundant if 'mstagat' is the default and ablation='none' is handled above.
-# Keeping it for now in case 'mstgat' is a valid separate model choice intended to use MSTAGAT_Net.
-elif args.model == 'mstgat': # Check if this choice is still relevant
-     logger.info('Using MSTAGAT-Net model (explicitly chosen)')
-     model = MSTAGAT_Net(args, data_loader) # Uses renamed_model.py
+    logger.info('Using full MSTAGAT-Net model')
+    model = MSTAGAT_Net(args, data_loader)
 else:
-     # Fallback or handle other cases if necessary
-     logger.error(f"Unexpected combination of model ({args.model}) and ablation ({args.ablation}). Defaulting to MSTAGAT-Net.")
-     model = MSTAGAT_Net(args, data_loader) # Default to MSTAGAT_Net
-
+    logger.info('Using MSAGATNet ablation model: %s', args.ablation)
+    model = MSAGATNet_Ablation(args, data_loader)
 
 logger.info('model %s', model.__class__.__name__) # Log the actual model class being used
 if args.cuda:
     model.cuda()
+# Set device for torch operations
+device = torch.device(f'cuda:{args.gpu}') if args.cuda else torch.device('cpu')
+
 optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                              lr=args.lr, weight_decay=args.weight_decay)
 pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -248,237 +197,85 @@ def train_epoch(data_loader, data):
         n_samples += (output.size(0) * data_loader.m)
     return float(total_loss / n_samples)
 
-def visualize_matrices(data_loader, model, save_path):
-    """
-    Creates a three-panel figure comparing:
-      (a) Geolocation Matrix (physical adjacency),
-      (b) Input Correlation Matrix (statistical relationships), and
-      (c) Learned Attention Matrix (dynamic relationships).
-    Includes hierarchical clustering to identify regional communities with similar patterns.
-    """
-    model.eval()
-    
-    # (a) Geolocation Matrix (physical adjacency)
-    if hasattr(data_loader, 'adj'):
-        geo_mat = data_loader.adj.cpu().numpy()
-    else:
-        geo_mat = np.eye(data_loader.m)  # Use identity matrix as fallback
-
-    # (b) Input Correlation Matrix computed from raw input data
-    raw_data = data_loader.rawdat  # shape: [n_samples, num_nodes]
-    input_corr = np.corrcoef(raw_data.T)  # Correlation between nodes
-    
-    # (c) Learned Attention Matrix: run forward pass and retrieve stored attention
-    batch = next(data_loader.get_batches(data_loader.test, args.batch, False))
-    X, _, _ = batch
-    _ = model(X, None)  # Forward pass to generate attention
-    
-    # Try to access attention weights - this needs to be adapted for ablation models
-    if hasattr(model, 'graph_module') and hasattr(model.graph_module, 'attn'):
-        attn_mat = model.graph_module.attn[0].mean(dim=0).detach().cpu().numpy()
-    elif hasattr(model, 'graph_attention') and hasattr(model.graph_attention, 'attn'):
-        attn_mat = model.graph_attention.attn[0].mean(dim=0).detach().cpu().numpy()
-    else:
-        # Fallback if attention not available
-        logger.warning("Attention matrix not available for this model variant")
-        attn_mat = np.eye(data_loader.m)  
-    
-    # Apply hierarchical clustering to reorganize matrices for better visualization
-    try:
-        from scipy.cluster.hierarchy import linkage, dendrogram
-        from scipy.spatial.distance import squareform
-        
-        # Use learned attention for clustering
-        distance = 1 - attn_mat
-        np.fill_diagonal(distance, 0)  # Zero out diagonal
-        # Convert to condensed distance matrix
-        condensed_dist = squareform(distance)
-        # Perform hierarchical clustering
-        Z = linkage(condensed_dist, method='ward')
-        
-        # Get the reordering from dendrogram
-        d = dendrogram(Z, no_plot=True)
-        idx = d['leaves']
-        
-        # Reorder all matrices according to clustering
-        geo_mat = geo_mat[idx, :][:, idx]
-        input_corr = input_corr[idx, :][:, idx]
-        attn_mat = attn_mat[idx, :][:, idx]
-        
-        clustered = True
-    except Exception as e:
-        logger.warning(f"Clustering failed: {str(e)}")
-        clustered = False
-    
-    # Create figure with three panels
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-    
-    # Plot matrices
-    im0 = axes[0].imshow(geo_mat, cmap='viridis')
-    axes[0].set_title("(a) Geolocation Matrix", fontsize=14)
-    plt.colorbar(im0, ax=axes[0])
-    axes[0].set_xlabel("Region Index" + (" (Clustered)" if clustered else ""))
-    axes[0].set_ylabel("Region Index" + (" (Clustered)" if clustered else ""))
-
-    im1 = axes[1].imshow(input_corr, cmap='viridis')
-    axes[1].set_title("(b) Input Correlation Matrix", fontsize=14)
-    plt.colorbar(im1, ax=axes[1])
-    axes[1].set_xlabel("Region Index" + (" (Clustered)" if clustered else ""))
-    axes[1].set_ylabel("Region Index" + (" (Clustered)" if clustered else ""))
-
-    im2 = axes[2].imshow(attn_mat, cmap='viridis')
-    axes[2].set_title("(c) Learned Attention Matrix", fontsize=14)
-    plt.colorbar(im2, ax=axes[2])
-    axes[2].set_xlabel("Region Index" + (" (Clustered)" if clustered else ""))
-    axes[2].set_ylabel("Region Index" + (" (Clustered)" if clustered else ""))
-
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=300)
-    plt.close(fig)
-    
-def plot_loss_curves(train_losses, val_losses, save_path, args):
-    """
-    Creates an enhanced visualization of training and validation loss curves
-    with detailed information and better styling.
-    """
-    fig, ax = plt.subplots(figsize=(10, 6))
-    epochs = range(1, len(train_losses) + 1)
-    
-    # Plot curves with enhanced styling
-    ax.plot(epochs, train_losses, 'b-', label='Training Loss', linewidth=2, alpha=0.8)
-    ax.plot(epochs, val_losses, 'r-', label='Validation Loss', linewidth=2, alpha=0.8)
-    
-    # Add grid with custom styling
-    ax.grid(True, linestyle='--', alpha=0.7)
-    
-    # Find and mark best validation point
-    best_val_epoch = val_losses.index(min(val_losses)) + 1
-    best_val_loss = min(val_losses)
-    ax.scatter(best_val_epoch, best_val_loss, color='green', s=100, zorder=5, 
-              label=f'Best Val Loss: {best_val_loss:.6f}')
-    
-    # Customize appearance
-    ax.set_xlabel('Epoch', fontsize=12)
-    ax.set_ylabel('Loss', fontsize=12)
-    title = f'Training Progress\nDataset: {args.dataset}, Window: {args.window}, Horizon: {args.horizon}, Ablation: {args.ablation}'
-    ax.set_title(title, fontsize=14, pad=10)
-    
-    # Add text box with training details
-    textstr = f'Learning Rate: {args.lr}\n'
-    textstr += f'Batch Size: {args.batch}\n'
-    textstr += f'Best Epoch: {best_val_epoch}'
-    props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
-    ax.text(0.02, 0.98, textstr, transform=ax.transAxes, fontsize=10,
-            verticalalignment='top', bbox=props)
-    
-    ax.legend(loc='upper right', frameon=True, framealpha=0.8)
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    plt.close(fig)
-
 # Training loop
-train_losses = []
-val_losses = []
+print('Begin training')
+os.makedirs(args.save_dir, exist_ok=True)
+train_losses, val_losses = [], []
+bad_counter, best_epoch, best_val = 0, 0, float('inf')
+for epoch in range(1, args.epochs + 1):
+    epoch_start_time = time.time()
+    train_loss = train_epoch(data_loader, data_loader.train)
+    val_loss, mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae = evaluate(data_loader, data_loader.val)
+    train_losses.append(train_loss)
+    val_losses.append(val_loss)
+    print('Epoch {:3d}|time:{:5.2f}s|train_loss {:5.8f}|val_loss {:5.8f}'.format(
+        epoch, (time.time() - epoch_start_time), train_loss, val_loss))
 
-bad_counter = 0
-best_epoch = 0
-best_val = 1e+20
+    if args.mylog:
+        writer.add_scalars('data/loss', {'train': train_loss, 'val': val_loss}, epoch)
+        writer.add_scalars('data/mae', {'val': mae}, epoch)
+        writer.add_scalars('data/rmse', {'val': rmse_states}, epoch)
+        writer.add_scalars('data/rmse_states', {'val': rmse_states}, epoch)
+        writer.add_scalars('data/pcc', {'val': pcc}, epoch)
+        writer.add_scalars('data/pcc_states', {'val': pcc_states}, epoch)
+        writer.add_scalars('data/R2', {'val': r2}, epoch)
+        writer.add_scalars('data/R2_states', {'val': r2_states}, epoch)
+        writer.add_scalars('data/var', {'val': var}, epoch)
+        writer.add_scalars('data/var_states', {'val': var_states}, epoch)
+        writer.add_scalars('data/peak_mae', {'val': peak_mae}, epoch)
 
-try:
-    print('Begin training')
-    if not os.path.exists(args.save_dir):
-        os.makedirs(args.save_dir)
+    if val_loss < best_val:
+        best_val = val_loss
+        best_epoch = epoch
+        bad_counter = 0
+        model_path = os.path.join(args.save_dir, '{}.pt'.format(log_token))
+        torch.save(model.state_dict(), model_path)
+        # Backup the best model checkpoint
+        best_model_path = os.path.join(args.save_dir, 'best_model.pt')
+        shutil.copy(model_path, best_model_path)
+        print('Best validation epoch:', epoch, time.ctime())
+        test_loss, mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae = evaluate(data_loader, data_loader.test)
+        print('TEST MAE {:5.4f} std {:5.4f} RMSE {:5.4f} RMSEs {:5.4f} PCC {:5.4f} PCCs {:5.4f} MAPE {:5.4f} R2 {:5.4f} R2s {:5.4f} Var {:5.4f} Vars {:5.4f} Peak {:5.4f}'.format(
+            mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae))
+    else:
+        bad_counter += 1
 
-    for epoch in range(1, args.epochs + 1):
-        epoch_start_time = time.time()
-        train_loss = train_epoch(data_loader, data_loader.train)
-        val_loss, mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae = evaluate(data_loader, data_loader.val)
-        train_losses.append(train_loss)
-        val_losses.append(val_loss)
-        print('Epoch {:3d}|time:{:5.2f}s|train_loss {:5.8f}|val_loss {:5.8f}'.format(
-            epoch, (time.time() - epoch_start_time), train_loss, val_loss))
-
-        if args.mylog:
-            writer.add_scalars('data/loss', {'train': train_loss, 'val': val_loss}, epoch)
-            writer.add_scalars('data/mae', {'val': mae}, epoch)
-            writer.add_scalars('data/rmse', {'val': rmse_states}, epoch)
-            writer.add_scalars('data/rmse_states', {'val': rmse_states}, epoch)
-            writer.add_scalars('data/pcc', {'val': pcc}, epoch)
-            writer.add_scalars('data/pcc_states', {'val': pcc_states}, epoch)
-            writer.add_scalars('data/R2', {'val': r2}, epoch)
-            writer.add_scalars('data/R2_states', {'val': r2_states}, epoch)
-            writer.add_scalars('data/var', {'val': var}, epoch)
-            writer.add_scalars('data/var_states', {'val': var_states}, epoch)
-            writer.add_scalars('data/peak_mae', {'val': peak_mae}, epoch)
-
-        if val_loss < best_val:
-            best_val = val_loss
-            best_epoch = epoch
-            bad_counter = 0
-            model_path = os.path.join(args.save_dir, '{}.pt'.format(log_token))
-            torch.save(model.state_dict(), model_path)
-            # Backup the best model checkpoint
-            best_model_path = os.path.join(args.save_dir, 'best_model.pt')
-            shutil.copy(model_path, best_model_path)
-            print('Best validation epoch:', epoch, time.ctime())
-            test_loss, mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae = evaluate(data_loader, data_loader.test)
-            print('TEST MAE {:5.4f} std {:5.4f} RMSE {:5.4f} RMSEs {:5.4f} PCC {:5.4f} PCCs {:5.4f} MAPE {:5.4f} R2 {:5.4f} R2s {:5.4f} Var {:5.4f} Vars {:5.4f} Peak {:5.4f}'.format(
-                mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae))
-        else:
-            bad_counter += 1
-
-        if bad_counter == args.patience:
-            break
-
-except KeyboardInterrupt:
-    print('-' * 89)
-    print('Exiting from training early, epoch', epoch)
+    if bad_counter == args.patience:
+        break
 
 # Plot and save the enhanced loss curves
-loss_fig_path = os.path.join(figures_dir, f"loss_curve_{log_token}.png")
+loss_fig_path = os.path.join(FIGURES_DIR, f"loss_curve_{log_token}.png")
 plot_loss_curves(train_losses, val_losses, loss_fig_path, args)
 logger.info("Loss curve saved to %s", loss_fig_path)
 
 # Visualize matrices: Geolocation, Input Correlation, and Learned Attention
-matrices_fig_path = os.path.join(figures_dir, f"matrices_{log_token}.png")
-visualize_matrices(data_loader, model, matrices_fig_path)
+matrices_fig_path = os.path.join(FIGURES_DIR, f"matrices_{log_token}.png")
+visualize_matrices(data_loader, model, matrices_fig_path, device)
 logger.info("Matrices comparison figure saved to %s", matrices_fig_path)
 
 # Load the best model for final evaluation and print final metrics
-model_path = os.path.join(args.save_dir, '{}.pt'.format(log_token))
-with open(model_path, 'rb') as f:
-    model.load_state_dict(torch.load(f))
-test_loss, mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae = evaluate(data_loader, data_loader.test, tag='test', show=args.result)
-print('Final evaluation')
-print('TEST MAE {:5.4f} std {:5.4f} RMSE {:5.4f} RMSEs {:5.4f} PCC {:5.4f} PCCs {:5.4f} MAPE {:5.4f} R2 {:5.4f} R2s {:5.4f} Var {:5.4f} Vars {:5.4f} Peak {:5.4f}'.format(
+model.load_state_dict(torch.load(os.path.join(args.save_dir, f"{log_token}.pt"), map_location='cpu'))
+_, mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae = evaluate(data_loader, data_loader.test, tag='test')
+print('Final TEST MAE {:5.4f} std {:5.4f} RMSE {:5.4f} RMSEs {:5.4f} PCC {:5.4f} PCCs {:5.4f} MAPE {:5.4f} R2 {:5.4f} R2s {:5.4f} Var {:5.4f} Vars {:5.4f} Peak {:5.4f}'.format(
     mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae))
 
-# Save final evaluation metrics to a CSV file so that you don't have to retrain every time
-results_dir = os.path.join(parent_dir, "results")
-if not os.path.exists(results_dir):
-    os.makedirs(results_dir)
-
-# Prepare a dictionary with the desired metrics
-final_metrics = {
-    "MAE": [mae],
-    "std_MAE": [std_mae],
-    "RMSE": [rmse],
-    "RMSEs": [rmse_states],
-    "PCC": [pcc],
-    "PCCs": [pcc_states],
-    "MAPE": [mape],
-    "R2": [r2],
-    "R2s": [r2_states],
-    "Var": [var],
-    "Vars": [var_states],
-    "Peak": [peak_mae]
-}
-
-# Create a DataFrame and save it as a CSV file
-metrics_df = pd.DataFrame(final_metrics)
-metrics_csv = os.path.join(results_dir, f"final_metrics_{log_token}.csv")
-metrics_df.to_csv(metrics_csv, index=False)
-logger.info("Saved final evaluation metrics to %s", metrics_csv)
+# Save final metrics using utils.save_metrics
+results_csv = os.path.join(RESULTS_DIR, f"final_metrics_{log_token}.csv")
+save_metrics({
+    'mae': mae,
+    'std_MAE': std_mae,
+    'rmse': rmse,
+    'rmse_states': rmse_states,
+    'pcc': pcc,
+    'pcc_states': pcc_states,
+    'MAPE': mape,
+    'R2': r2,
+    'R2_states': r2_states,
+    'Var': var,
+    'Vars': var_states,
+    'Peak': peak_mae
+}, results_csv, args.dataset, args.window, args.horizon, logger, model_name)
+print(f"Saved final metrics to {results_csv}")
 
 if args.record != '':
     with open("result/result.txt", "a", encoding="utf-8") as f:

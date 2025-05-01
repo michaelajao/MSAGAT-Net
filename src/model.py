@@ -4,147 +4,150 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Parameter
 
-# Model configuration parameters
-# HIDDEN_DIM = 16
-# ATTENTION_HEADS = 4
-# ATTENTION_REG_WEIGHT = 1e-05
-# DROPOUT = 0.13813778561947987
-# NUM_SCALES = 3
-# KERNEL_SIZE = 3
-# TEMP_CONV_OUT_CHANNELS = 16
-# LOW_RANK_DIM = 8
-
-# Model configuration parameters
+# Model hyperparameters with descriptive names
 HIDDEN_DIM = 32
 ATTENTION_HEADS = 4
 ATTENTION_REG_WEIGHT = 1e-05
-DROPOUT = 0.355
-NUM_SCALES = 4
+DROPOUT = 0.2
+NUM_TEMPORAL_SCALES = 4
 KERNEL_SIZE = 3
-TEMP_CONV_OUT_CHANNELS = 16
-LOW_RANK_DIM = 8
+FEATURE_CHANNELS = 16
+BOTTLENECK_DIM = 8
 
-
-class EfficientAdaptiveGraphAttentionModule(nn.Module):
+class SpatialAttentionModule(nn.Module):
     """
-    Efficient Adaptive Graph Attention Module with linear attention and low-rank decomposition.
+    Spatial Attention Module that captures node relationships in a graph structure.
     
-    This is NOT a standard graph attention module, but a specialized version that uses:
-    1. Linear attention computation (ELU+1 kernel trick) for O(N) complexity
-    2. Low-rank factorization for QKV projections
-    3. Factorized adjacency matrix (U×V^T) for memory efficiency
-    4. L1 regularization for interpretable attention patterns
+    This module implements a graph attention mechanism with low-rank decomposition
+    for computational efficiency. It computes attention scores between nodes and
+    updates node representations accordingly.
+    
+    Args:
+        hidden_dim (int): Dimensionality of node features
+        num_nodes (int): Number of nodes in the graph
+        dropout (float): Dropout probability for regularization
+        attention_heads (int): Number of parallel attention heads
+        attention_regularization_weight (float): Weight for L1 regularization on attention
+        bottleneck_dim (int): Dimension of the low-rank projection
     """
-
-    def __init__(self, hidden_dim, num_nodes, dropout=DROPOUT, attn_heads=ATTENTION_HEADS, 
-                 attn_reg_weight=ATTENTION_REG_WEIGHT, low_rank_dim=LOW_RANK_DIM):
-        super(EfficientAdaptiveGraphAttentionModule, self).__init__()
+    def __init__(self, hidden_dim, num_nodes, dropout=DROPOUT, attention_heads=ATTENTION_HEADS, 
+                 attention_regularization_weight=ATTENTION_REG_WEIGHT, bottleneck_dim=BOTTLENECK_DIM):
+        super(SpatialAttentionModule, self).__init__()
         self.hidden_dim = hidden_dim
-        self.heads = attn_heads
+        self.heads = attention_heads
         self.head_dim = hidden_dim // self.heads
         self.num_nodes = num_nodes
-        self.attn_reg_weight = attn_reg_weight
-        self.low_rank_dim = low_rank_dim
-        
+        self.attention_regularization_weight = attention_regularization_weight
+        self.bottleneck_dim = bottleneck_dim
+
         # Low-rank projections for query, key, value
-        self.qkv_proj_low = nn.Linear(hidden_dim, 3 * low_rank_dim)
-        self.qkv_proj_high = nn.Linear(3 * low_rank_dim, 3 * hidden_dim)
-        
-        # Output projection with low-rank decomposition
-        self.out_proj_low = nn.Linear(hidden_dim, low_rank_dim)
-        self.out_proj_high = nn.Linear(low_rank_dim, hidden_dim)
+        self.qkv_proj_low = nn.Linear(hidden_dim, 3 * bottleneck_dim)
+        self.qkv_proj_high = nn.Linear(3 * bottleneck_dim, 3 * hidden_dim)
+
+        # Low-rank projections for output
+        self.out_proj_low = nn.Linear(hidden_dim, bottleneck_dim)
+        self.out_proj_high = nn.Linear(bottleneck_dim, hidden_dim)
 
         self.dropout = nn.Dropout(dropout)
-        
-        # Learnable adjacency factors (U * V^T for memory efficiency)
-        self.learnable_adj_u = Parameter(torch.Tensor(self.heads, num_nodes, low_rank_dim))
-        self.learnable_adj_v = Parameter(torch.Tensor(self.heads, low_rank_dim, num_nodes))
-        nn.init.xavier_uniform_(self.learnable_adj_u)
-        nn.init.xavier_uniform_(self.learnable_adj_v)
 
-    def _linearized_attention(self, q, k, v):
+        # Learnable graph structure bias (low-rank)
+        self.u = Parameter(torch.Tensor(self.heads, num_nodes, bottleneck_dim))
+        self.v = Parameter(torch.Tensor(self.heads, bottleneck_dim, num_nodes))
+        nn.init.xavier_uniform_(self.u)
+        nn.init.xavier_uniform_(self.v)
+
+    def _compute_attention(self, q, k, v):
         """
-        Implements attention with linear complexity using kernel feature maps.
+        Compute attention scores and apply them to values.
+        
+        Args:
+            q (tensor): Query tensors [batch, heads, nodes, head_dim]
+            k (tensor): Key tensors [batch, heads, nodes, head_dim]
+            v (tensor): Value tensors [batch, heads, nodes, head_dim]
+            
+        Returns:
+            tensor: Attended values
         """
-        # Apply ELU+1 for positive feature mapping
+        # Apply ELU activation + 1 for stability
         q = F.elu(q) + 1.0
         k = F.elu(k) + 1.0
         
-        # Linear attention computation (O(N) complexity)
+        # Compute key-value products
         kv = torch.einsum('bhnd,bhne->bhde', k, v)
         
-        # Compute normalization factor
+        # Normalize keys for stability
         ones = torch.ones(k.size(0), k.size(1), k.size(2), 1, device=k.device)
         z = 1.0 / (torch.einsum('bhnd,bhno->bhn', k, ones) + 1e-8)
         
-        # Apply normalized attention
-        output = torch.einsum('bhnd,bhde,bhn->bhne', q, kv, z)
-        
-        return output
-    
+        # Apply attention mechanism
+        return torch.einsum('bhnd,bhde,bhn->bhne', q, kv, z)
+
     def forward(self, x, mask=None):
         """
-        Forward pass of the graph attention module.
+        Forward pass of the spatial attention module.
         
         Args:
-            x: Input tensor [batch_size, num_nodes, hidden_dim]
-            mask: Optional attention mask
+            x (tensor): Input node features [batch, nodes, hidden_dim]
+            mask (tensor, optional): Attention mask
             
         Returns:
-            Tuple of (output tensor, attention regularization loss)
+            tuple: (Updated node features, Attention regularization loss)
         """
         B, N, H = x.shape
         
-        # Low-rank QKV projection
+        # Low-rank projection for qkv
         qkv_low = self.qkv_proj_low(x)
         qkv = self.qkv_proj_high(qkv_low)
-        
-        # Split into query, key, value
         qkv = qkv.chunk(3, dim=-1)
-        q, k, v = [x.view(B, N, self.heads, self.head_dim) for x in qkv]
         
-        # Rearrange for attention computation
+        # Separate query, key, value and reshape for multi-head attention
+        q, k, v = [x.view(B, N, self.heads, self.head_dim) for x in qkv]
         q = q.transpose(1, 2)  # [B, heads, N, head_dim]
         k = k.transpose(1, 2)
         v = v.transpose(1, 2)
         
-        # Compute linearized attention
-        output = self._linearized_attention(q, k, v)
+        # Compute attended values
+        output = self._compute_attention(q, k, v)
         
-        # Compute factorized adjacency bias
-        adj_bias = torch.matmul(self.learnable_adj_u, self.learnable_adj_v)
+        # Compute graph structure bias from low-rank factors
+        adj_bias = torch.matmul(self.u, self.v)
         
-        # Store attention for regularization
+        # Calculate attention scores with graph bias
         self.attn = F.softmax(torch.einsum('bhnd,bhmd->bhnm', q, k) / math.sqrt(self.head_dim) + adj_bias, dim=-1)
         
-        # Compute regularization loss for sparsity
-        attn_reg_loss = self.attn_reg_weight * torch.mean(torch.abs(self.attn))
+        # Compute regularization loss on attention weights
+        attn_reg_loss = self.attention_regularization_weight * torch.mean(torch.abs(self.attn))
         
-        # Restore original shape
+        # Reshape output to original dimensions
         output = output.transpose(1, 2).contiguous().view(B, N, H)
         
-        # Low-rank output projection
+        # Low-rank projection for output
         output = self.out_proj_low(output)
         output = self.out_proj_high(output)
         
         return output, attn_reg_loss
 
 
-class DilatedMultiScaleTemporalModule(nn.Module):
+class MultiScaleTemporalModule(nn.Module):
     """
-    Dilated Multi-Scale Temporal Module for processing time-series data at different resolutions.
+    Multi-Scale Temporal Module that captures temporal patterns at different scales.
     
-    Uses parallel dilated convolutions to capture temporal patterns at various scales
-    with an adaptive fusion mechanism.
+    This module uses dilated convolutions at different dilation rates to capture
+    short and long-term temporal dependencies. The outputs from different scales
+    are adaptively fused.
+    
+    Args:
+        hidden_dim (int): Dimensionality of node features
+        num_scales (int): Number of temporal scales (different dilation rates)
+        kernel_size (int): Size of the convolutional kernel
+        dropout (float): Dropout probability for regularization
     """
-
-    def __init__(self, hidden_dim, num_scales=NUM_SCALES, kernel_size=KERNEL_SIZE, 
-                 dropout=DROPOUT):
-        super(DilatedMultiScaleTemporalModule, self).__init__()
+    def __init__(self, hidden_dim, num_scales=NUM_TEMPORAL_SCALES, kernel_size=KERNEL_SIZE, dropout=DROPOUT):
+        super(MultiScaleTemporalModule, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_scales = num_scales
-
-        # Multi-scale dilated convolutions
+        
+        # Create multiple dilated convolutional layers with increasing dilation rates
         self.scales = nn.ModuleList([
             nn.Sequential(
                 nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, 
@@ -155,147 +158,161 @@ class DilatedMultiScaleTemporalModule(nn.Module):
             ) for i in range(num_scales)
         ])
         
-        # Adaptive fusion weights
+        # Learnable weights for adaptive fusion of scales
         self.fusion_weight = Parameter(torch.ones(num_scales), requires_grad=True)
         
-        # Fusion layer
-        self.fusion_low = nn.Linear(hidden_dim, LOW_RANK_DIM)
-        self.fusion_high = nn.Linear(LOW_RANK_DIM, hidden_dim)
+        # Low-rank projection for fusion
+        self.fusion_low = nn.Linear(hidden_dim, BOTTLENECK_DIM)
+        self.fusion_high = nn.Linear(BOTTLENECK_DIM, hidden_dim)
+        
         self.layer_norm = nn.LayerNorm(hidden_dim)
 
     def forward(self, x):
         """
-        Forward pass of the temporal module.
+        Forward pass of the multi-scale temporal module.
         
         Args:
-            x: Input tensor [batch_size, num_nodes, hidden_dim]
+            x (tensor): Input features [batch, nodes, hidden_dim]
             
         Returns:
-            Processed tensor with multi-scale temporal features
+            tensor: Temporally processed features
         """
-        # Transpose for temporal convolution: [B, N, H] -> [B, H, N]
-        x = x.transpose(1, 2)
+        # Reshape for 1D convolution [batch*nodes, hidden_dim, time]
+        x = x.transpose(1, 2)  # [batch, hidden_dim, nodes]
         
-        # Process at different temporal scales
-        features = []
-        for scale in self.scales:
-            feat = scale(x)
-            features.append(feat)
+        # Apply different temporal scales
+        features = [scale(x) for scale in self.scales]
         
-        # Compute adaptive fusion weights
+        # Compute adaptive weights for scale fusion
         alpha = F.softmax(self.fusion_weight, dim=0)
         
-        # Weight and combine features from different scales
-        stacked = torch.stack(features, dim=1)
+        # Stack and fuse multi-scale features
+        stacked = torch.stack(features, dim=1)  # [batch, scales, hidden_dim, nodes]
         fused = torch.sum(alpha.view(1, self.num_scales, 1, 1) * stacked, dim=1)
         
-        # Restore dimensions and apply fusion
-        fused = fused.transpose(1, 2)
+        # Reshape back
+        fused = fused.transpose(1, 2)  # [batch, nodes, hidden_dim]
+        
+        # Apply low-rank projection and residual connection
         out = self.fusion_low(fused)
         out = self.fusion_high(out)
-        out = self.layer_norm(out + fused)  # Add residual connection
+        out = self.layer_norm(out + fused)
         
         return out
 
 
-class ProgressivePredictionModule(nn.Module):
+class HorizonPredictor(nn.Module):
     """
-    Progressive Prediction Module for multi-step forecasting with refinement.
+    Horizon Predictor module for forecasting future values.
     
-    Generates initial predictions and progressively refines them using
-    a gating mechanism that incorporates recent observations with time decay.
+    This module takes node features and generates predictions for multiple
+    future time steps. It includes an optional refinement mechanism based on
+    the last observed value.
+    
+    Args:
+        hidden_dim (int): Dimensionality of node features
+        horizon (int): Number of future time steps to predict
+        bottleneck_dim (int): Dimension for bottleneck layers
+        dropout (float): Dropout probability for regularization
     """
-
-    def __init__(self, hidden_dim, horizon, low_rank_dim=LOW_RANK_DIM, dropout=DROPOUT):
-        super(ProgressivePredictionModule, self).__init__()
+    def __init__(self, hidden_dim, horizon, bottleneck_dim=BOTTLENECK_DIM, dropout=DROPOUT):
+        super(HorizonPredictor, self).__init__()
         self.hidden_dim = hidden_dim
         self.horizon = horizon
-        self.low_rank_dim = low_rank_dim
-
-        # Predictor with factorization for efficiency
-        self.predictor_low = nn.Linear(hidden_dim, low_rank_dim)
+        self.bottleneck_dim = bottleneck_dim
+        
+        # Low-rank prediction projection
+        self.predictor_low = nn.Linear(hidden_dim, bottleneck_dim)
         self.predictor_mid = nn.Sequential(
-            nn.LayerNorm(low_rank_dim),
+            nn.LayerNorm(bottleneck_dim),
             nn.ReLU(),
             nn.Dropout(dropout)
         )
-        self.predictor_high = nn.Linear(low_rank_dim, horizon)
+        self.predictor_high = nn.Linear(bottleneck_dim, horizon)
         
-        # Refinement gate
+        # Adaptive refinement gate based on last observation
         self.refine_gate = nn.Sequential(
-            nn.Linear(hidden_dim, low_rank_dim),
+            nn.Linear(hidden_dim, bottleneck_dim),
             nn.ReLU(),
-            nn.Linear(low_rank_dim, horizon),
+            nn.Linear(bottleneck_dim, horizon),
             nn.Sigmoid()
         )
-        
+
     def forward(self, x, last_step=None):
         """
-        Forward pass of the prediction module.
+        Forward pass of the horizon predictor.
         
         Args:
-            x: Input tensor [batch_size, num_nodes, hidden_dim]
-            last_step: Last observation [batch_size, num_nodes]
+            x (tensor): Node features [batch, nodes, hidden_dim]
+            last_step (tensor, optional): Last observed values [batch, nodes]
             
         Returns:
-            Predictions tensor [batch_size, num_nodes, horizon]
+            tensor: Predictions for future time steps [batch, nodes, horizon]
         """
-        # Generate initial multi-step prediction
+        # Generate initial predictions
         x_low = self.predictor_low(x)
         x_mid = self.predictor_mid(x_low)
         initial_pred = self.predictor_high(x_mid)
         
+        # Apply refinement if last observed value is provided
         if last_step is not None:
-            # Compute refinement gate
+            # Compute adaptive gate
             gate = self.refine_gate(x)
             
-            # Prepare for refinement
+            # Prepare last step and exponential decay
             last_step = last_step.unsqueeze(-1)
-            
-            # Apply time-based exponential decay
-            time_decay = torch.arange(1, self.horizon + 1, device=x.device).float()
-            time_decay = time_decay.view(1, 1, self.horizon)
-            
-            # Generate decay component
+            time_decay = torch.arange(1, self.horizon + 1, device=x.device).float().view(1, 1, self.horizon)
             progressive_part = last_step * torch.exp(-0.1 * time_decay)
             
-            # Combine predictions with adaptive gating
+            # Adaptive fusion of model prediction and exponential decay
             final_pred = gate * initial_pred + (1 - gate) * progressive_part
         else:
             final_pred = initial_pred
-        
+            
         return final_pred
 
 
-class DepthwiseSeparableConv1d(nn.Module):
+class DepthwiseSeparableConv1D(nn.Module):
     """
-    Depthwise Separable 1D Convolution for efficient temporal processing.
+    Depthwise Separable 1D Convolution for efficient feature extraction.
     
-    Reduces parameters by separating the depthwise convolution (spatial) 
-    and pointwise convolution (channel mixing) operations while 
-    maintaining representational capacity.
+    This module splits a standard convolution into a depthwise convolution
+    (applied to each channel separately) followed by a pointwise convolution
+    (1x1 convolution across channels). This reduces parameters and computation.
+    
+    Args:
+        in_channels (int): Number of input channels
+        out_channels (int): Number of output channels
+        kernel_size (int): Size of the convolutional kernel
+        stride (int): Convolution stride
+        padding (int): Padding size
+        dilation (int): Dilation rate
+        dropout (float): Dropout probability
     """
-    
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, 
-                 dropout=DROPOUT):
-        super(DepthwiseSeparableConv1d, self).__init__()
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, dropout=DROPOUT):
+        super(DepthwiseSeparableConv1D, self).__init__()
+        
+        # Depthwise convolution (per-channel)
         self.depthwise = nn.Conv1d(in_channels, in_channels, kernel_size=kernel_size, stride=stride,
-                                  padding=padding, dilation=dilation, groups=in_channels)
+                                   padding=padding, dilation=dilation, groups=in_channels)
         self.bn1 = nn.BatchNorm1d(in_channels)
+        
+        # Pointwise convolution (1x1 conv across channels)
         self.pointwise = nn.Conv1d(in_channels, out_channels, kernel_size=1)
         self.bn2 = nn.BatchNorm1d(out_channels)
+        
         self.act = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
-        
+
     def forward(self, x):
         """
-        Forward pass of the separable convolution.
+        Forward pass of the depthwise separable convolution.
         
         Args:
-            x: Input tensor [batch_size, in_channels, sequence_length]
+            x (tensor): Input features [batch, channels, time]
             
         Returns:
-            Processed tensor [batch_size, out_channels, sequence_length]
+            tensor: Convolved features [batch, out_channels, time]
         """
         # Depthwise convolution
         x = self.depthwise(x)
@@ -311,102 +328,120 @@ class DepthwiseSeparableConv1d(nn.Module):
         return x
 
 
-class MSAGATNet(nn.Module):
+class MSTAGAT_Net(nn.Module):
     """
-    Multi-Scale Adaptive Graph Attention Spatiotemporal Network (MSAGAT-Net) for epidemic forecasting.
+    Multi-Scale Temporal-Adaptive Graph Attention Network (MSTAGAT-Net)
     
-    A lightweight model that combines efficient graph attention for spatial relationships
-    with multi-scale temporal processing for time-series forecasting.
+    This model combines graph attention mechanisms for spatial dependencies and
+    multi-scale temporal convolutions for temporal patterns to forecast time series data
+    in a network structure.
     
     Key components:
-    1. Efficient Adaptive Graph Attention Module for spatial dependencies with linear complexity
-    2. Dilated Multi-Scale Temporal Module for time-series patterns at different resolutions
-    3. Depthwise Separable Convolutions for parameter-efficient feature extraction
-    4. Progressive Prediction Module with time-decay refinement for accurate forecasting
-    """
+    - Feature extraction using depthwise separable convolutions
+    - Spatial modeling with graph attention
+    - Temporal modeling with multi-scale dilated convolutions
+    - Horizon prediction with adaptive refinement
     
+    Args:
+        args: Model configuration arguments
+        data: Data object containing dataset information
+    """
     def __init__(self, args, data):
-        super(MSAGATNet, self).__init__()
-        self.m = data.m  # Number of nodes
-        self.window = args.window  # Input window size
-        self.horizon = args.horizon  # Prediction horizon
-
-        # Model dimensions
+        super(MSTAGAT_Net, self).__init__()
+        self.num_nodes = data.m
+        self.window = args.window
+        self.horizon = args.horizon
         self.hidden_dim = getattr(args, 'hidden_dim', HIDDEN_DIM)
         self.kernel_size = getattr(args, 'kernel_size', KERNEL_SIZE)
-        self.low_rank_dim = getattr(args, 'low_rank_dim', LOW_RANK_DIM)
+        self.bottleneck_dim = getattr(args, 'bottleneck_dim', BOTTLENECK_DIM)
 
-        # Temporal feature extraction
-        self.temp_conv = DepthwiseSeparableConv1d(
+        # Feature Extraction Component
+        # ----------------------------
+        # Extract features from raw time series using depthwise separable convolutions
+        self.feature_extractor = DepthwiseSeparableConv1D(
             in_channels=1, 
-            out_channels=TEMP_CONV_OUT_CHANNELS,
+            out_channels=FEATURE_CHANNELS,
             kernel_size=self.kernel_size, 
             padding=self.kernel_size // 2,
             dropout=getattr(args, 'dropout', DROPOUT)
         )
-        
-        # Feature processing and compression
-        self.feature_process_low = nn.Linear(TEMP_CONV_OUT_CHANNELS * self.window, self.low_rank_dim)
-        self.feature_process_high = nn.Linear(self.low_rank_dim, self.hidden_dim)
+
+        # Low-rank projection of extracted features
+        self.feature_projection_low = nn.Linear(FEATURE_CHANNELS * self.window, self.bottleneck_dim)
+        self.feature_projection_high = nn.Linear(self.bottleneck_dim, self.hidden_dim)
         self.feature_norm = nn.LayerNorm(self.hidden_dim)
         self.feature_act = nn.ReLU()
-        
-        # Main components
-        self.graph_attention = EfficientAdaptiveGraphAttentionModule(
-            self.hidden_dim, num_nodes=self.m,
+
+        # Spatial Component
+        # ----------------
+        # Graph attention mechanism to capture spatial dependencies between nodes
+        self.spatial_module = SpatialAttentionModule(
+            self.hidden_dim, num_nodes=self.num_nodes,
             dropout=getattr(args, 'dropout', DROPOUT),
-            attn_heads=getattr(args, 'attn_heads', ATTENTION_HEADS),
-            low_rank_dim=self.low_rank_dim
+            attention_heads=getattr(args, 'attention_heads', ATTENTION_HEADS),
+            bottleneck_dim=self.bottleneck_dim
         )
-        
-        self.temporal_module = DilatedMultiScaleTemporalModule(
+
+        # Temporal Component
+        # -----------------
+        # Multi-scale temporal module to capture patterns at different time scales
+        self.temporal_module = MultiScaleTemporalModule(
             self.hidden_dim,
-            num_scales=getattr(args, 'num_scales', NUM_SCALES),
+            num_scales=getattr(args, 'num_scales', NUM_TEMPORAL_SCALES),
             kernel_size=self.kernel_size,
             dropout=getattr(args, 'dropout', DROPOUT)
         )
-        
-        self.prediction_module = ProgressivePredictionModule(
+
+        # Prediction Component
+        # -------------------
+        # Horizon predictor to forecast future values
+        self.prediction_module = HorizonPredictor(
             self.hidden_dim, self.horizon,
-            low_rank_dim=self.low_rank_dim,
+            bottleneck_dim=self.bottleneck_dim,
             dropout=getattr(args, 'dropout', DROPOUT)
         )
 
     def forward(self, x, idx=None):
         """
-        Forward pass of the MSAGAT-Net model.
+        Forward pass of the MSTAGAT-Net model.
         
         Args:
-            x: Input tensor [batch_size, window, num_nodes]
-            idx: Optional index tensor
+            x (tensor): Input time series [batch, time_window, nodes]
+            idx (tensor, optional): Node indices
             
         Returns:
-            Tuple of (predictions, attention_regularization_loss)
+            tuple: (Predictions, Attention regularization loss)
         """
         B, T, N = x.shape
         x_last = x[:, -1, :]  # Last observed values
         
-        # Reshape for temporal processing
+        # Feature Extraction
+        # -----------------
+        # Reshape for 1D convolution [batch*nodes, 1, time_window]
         x_temp = x.permute(0, 2, 1).contiguous().view(B * N, 1, T)
+        temporal_features = self.feature_extractor(x_temp)
+        temporal_features = temporal_features.view(B, N, -1)
         
-        # Extract temporal features
-        temp_features = self.temp_conv(x_temp)
-        temp_features = temp_features.view(B, N, -1)
-        
-        # Process features with dimension reduction
-        features = self.feature_process_low(temp_features)
-        features = self.feature_process_high(features)
+        # Feature projection through bottleneck
+        features = self.feature_projection_low(temporal_features)
+        features = self.feature_projection_high(features)
         features = self.feature_norm(features)
         features = self.feature_act(features)
         
-        # Apply graph attention for spatial dependencies
-        graph_features, attn_reg_loss = self.graph_attention(features)
+        # Spatial Processing
+        # -----------------
+        # Apply graph attention to capture spatial dependencies
+        graph_features, attn_reg_loss = self.spatial_module(features)
         
-        # Process temporal patterns
+        # Temporal Processing
+        # ------------------
+        # Apply multi-scale temporal module to capture temporal patterns
         fusion_features = self.temporal_module(graph_features)
         
-        # Generate predictions
+        # Prediction
+        # ----------
+        # Generate predictions for future time steps
         predictions = self.prediction_module(fusion_features, x_last)
-        predictions = predictions.transpose(1, 2)  # [B, horizon, N]
+        predictions = predictions.transpose(1, 2)  # [batch, horizon, nodes]
         
         return predictions, attn_reg_loss
