@@ -6,7 +6,6 @@ import argparse
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import shutil
 from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import (
@@ -27,6 +26,8 @@ from model import MSTAGAT_Net
 from location_aware_model import LocationAwareMSAGAT_Net
 from dynagraphatnet import DynaGraphNet
 from AFGNet import AFGNet
+# Import the enhanced model
+from enhanced_msagat_net import EnhancedMSAGAT_Net
 from utils import (
     visualize_matrices,
     visualize_predictions,
@@ -89,8 +90,8 @@ parser.add_argument(
     "--model",
     type=str,
     default="msagat",
-    choices=["msagat", "location_aware", "dynagraph", "afgnet"],
-    help="Model type: msagat (original), location_aware (new model), dynagraph (dynamic graph model), or afgnet (adaptive fusion graph network)",
+    choices=["msagat", "location_aware", "dynagraph", "afgnet", "enhanced_msagat"], # Added enhanced_msagat
+    help="Model type: msagat (original), location_aware, dynagraph, afgnet, or enhanced_msagat",
 )
 # Add adjacency matrix usage flag for location-aware model
 parser.add_argument(
@@ -110,6 +111,9 @@ parser.add_argument(
     action="store_true",
     help="Use autoregressive connection in DynaGraphNet",
 )
+# Add highway window argument
+parser.add_argument("--highway_window", type=int, default=0, help="Number of recent time steps for highway connection (0 to disable)")
+
 args = parser.parse_args()
 print("--------Parameters--------")
 print(args)
@@ -137,6 +141,9 @@ elif args.model == "dynagraph":
     model_name = "DynaGraphNet"
 elif args.model == "afgnet":
     model_name = "AFGNet"
+# Add model name for enhanced model
+elif args.model == "enhanced_msagat":
+    model_name = "EnhancedMSAGAT-Net"
 else:
     model_name = "MSTAGAT-Net"
 
@@ -151,85 +158,66 @@ if args.mylog:
 
 data_loader = DataBasicLoader(args)
 
+# --- Adjacency Matrix Loading Logic (Consolidated) ---
+adj_mx = None
+# Load adjacency if sim_mat is specified (needed by location_aware, afgnet, enhanced_msagat)
+if args.sim_mat and args.model in ["location_aware", "afgnet", "enhanced_msagat"]:
+    logger.info(f"Attempting to load adjacency matrix for {args.model}: {args.sim_mat}")
+    adj_path = os.path.join(BASE_DIR, "data", f"{args.sim_mat}.txt")
+    if os.path.exists(adj_path):
+        try:
+            adj_mx = np.loadtxt(adj_path, delimiter=",")
+            logger.info(f"Loaded adjacency matrix with comma delimiter: shape {adj_mx.shape}")
+        except ValueError:
+            try:
+                adj_mx = np.loadtxt(adj_path)
+                logger.info(f"Loaded adjacency matrix with space delimiter: shape {adj_mx.shape}")
+            except ValueError as e:
+                logger.error(f"Could not load adjacency matrix: {e}")
+                adj_mx = None # Ensure adj_mx is None if loading fails
+
+        if adj_mx is not None:
+            # Ensure it's square and matches node count
+            if adj_mx.shape[0] == adj_mx.shape[1] == data_loader.m:
+                 adj_mx = torch.FloatTensor(adj_mx)
+                 # Attach to data_loader for model __init__
+                 data_loader.adj = adj_mx
+                 logger.info(f"Attached adjacency matrix to data_loader: shape {adj_mx.shape}")
+            else:
+                logger.error(f"Adjacency matrix shape {adj_mx.shape} does not match node count {data_loader.m}. Ignoring.")
+                adj_mx = None # Reset if shape mismatch
+                data_loader.adj = None # Ensure it's None in data_loader too
+    else:
+        logger.warning(f"Adjacency matrix file {adj_path} not found.")
+        data_loader.adj = None # Ensure it's None if file not found
+else:
+    data_loader.adj = None # Ensure adj is None if not needed or specified
+
+
 # Instantiate the model based on selection
 if args.model == "location_aware":
     logger.info("Using LocationAwareMSAGAT-Net model")
     model = LocationAwareMSAGAT_Net(args, data_loader)
+    # Specific adj handling for location_aware if different (seems covered by consolidated logic now)
+    # if args.use_adjacency and data_loader.adj is not None:
+    #     model.set_adjacency_matrix(data_loader.adj) # Example if specific method needed
 
-    # Load adjacency matrix for location-aware model if needed
-    if args.use_adjacency and args.sim_mat:
-        logger.info("Loading adjacency matrix for location-aware model")
-        adj_path = os.path.join(BASE_DIR, "data", f"{args.sim_mat}.txt")
-        if os.path.exists(adj_path):
-            try:
-                # First try to read as comma-separated values
-                adj_mx = np.loadtxt(adj_path, delimiter=",")
-                logger.info(
-                    f"Loaded adjacency matrix with comma delimiter: shape {adj_mx.shape}"
-                )
-            except ValueError:
-                try:
-                    # If that fails, try space-separated values
-                    adj_mx = np.loadtxt(adj_path)
-                    logger.info(
-                        f"Loaded adjacency matrix with space delimiter: shape {adj_mx.shape}"
-                    )
-                except ValueError as e:
-                    # If both fail, log the error and continue without adjacency
-                    logger.error(f"Could not load adjacency matrix: {e}")
-                    logger.warning("Continuing without adjacency matrix")
-                    adj_mx = None
-
-            # Convert adjacency matrix to tensor if successfully loaded
-            if adj_mx is not None:
-                adj_mx = torch.FloatTensor(adj_mx)
-                # Set adjacency matrix in the model
-                model.set_adjacency_matrix(adj_mx)
-                logger.info(f"Set adjacency matrix in model: shape {adj_mx.shape}")
-        else:
-            logger.warning(f"Adjacency matrix file {adj_path} not found")
 elif args.model == "dynagraph":
     logger.info("Using DynaGraphNet model")
     model = DynaGraphNet(args, data_loader)
 elif args.model == "afgnet":
     logger.info("Using AFGNet model")
     model = AFGNet(args, data_loader)
+    # Specific adj handling for AFGNet if different (seems covered by consolidated logic now)
+    # if args.use_adjacency and data_loader.adj is not None:
+    #     device = torch.device(f"cuda:{args.gpu}") if args.cuda else torch.device("cpu")
+    #     model.static_graph = data_loader.adj.to(device) # Example if specific attribute needed
 
-    # Set device for torch operations
-    device = torch.device(f"cuda:{args.gpu}") if args.cuda else torch.device("cpu")
+# Add instantiation for the enhanced model
+elif args.model == "enhanced_msagat":
+    logger.info("Using EnhancedMSAGAT-Net model")
+    model = EnhancedMSAGAT_Net(args, data_loader) # Passes data_loader which might have .adj
 
-    # Load adjacency matrix for AFGNet if using static graph
-    if args.use_adjacency and args.sim_mat:
-        logger.info("Loading adjacency matrix for AFGNet")
-        adj_path = os.path.join(BASE_DIR, "data", f"{args.sim_mat}.txt")
-        if os.path.exists(adj_path):
-            try:
-                # First try to read as comma-separated values
-                adj_mx = np.loadtxt(adj_path, delimiter=",")
-                logger.info(
-                    f"Loaded adjacency matrix with comma delimiter: shape {adj_mx.shape}"
-                )
-            except ValueError:
-                try:
-                    # If that fails, try space-separated values
-                    adj_mx = np.loadtxt(adj_path)
-                    logger.info(
-                        f"Loaded adjacency matrix with space delimiter: shape {adj_mx.shape}"
-                    )
-                except ValueError as e:
-                    # If both fail, log the error and continue without adjacency
-                    logger.error(f"Could not load adjacency matrix: {e}")
-                    logger.warning("Continuing without adjacency matrix")
-                    adj_mx = None
-
-            # Store adjacency matrix as a static graph for the model
-            if adj_mx is not None:
-                adj_mx = torch.FloatTensor(adj_mx)
-                # Set as external graph in the class
-                model.static_graph = adj_mx.to(device)
-                logger.info(f"Set static graph in model: shape {adj_mx.shape}")
-        else:
-            logger.warning(f"Adjacency matrix file {adj_path} not found")
 else:
     logger.info("Using standard MSTAGAT-Net model")
     model = MSTAGAT_Net(args, data_loader)
@@ -242,7 +230,7 @@ if args.cuda:
 # Set device for torch operations
 device = torch.device(f"cuda:{args.gpu}") if args.cuda else torch.device("cpu")
 
-optimizer = torch.optim.Adam(
+optimizer = torch.optim.AdamW(
     filter(lambda p: p.requires_grad, model.parameters()),
     lr=args.lr,
     weight_decay=args.weight_decay,
@@ -370,6 +358,8 @@ def train_epoch(data_loader, data):
         loss = nn.MSELoss()(output, y_expanded) + attn_reg_loss
         total_loss += loss.item()
         loss.backward()
+        # Add gradient clipping
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0) # Uncommented
         optimizer.step()
         n_samples += output.size(0) * data_loader.m
     return float(total_loss / n_samples)
@@ -401,6 +391,7 @@ for epoch in range(1, args.epochs + 1):
         _,
         _,
     ) = evaluate(data_loader, data_loader.val)
+
     train_losses.append(train_loss)
     val_losses.append(val_loss)
     print(
@@ -412,8 +403,10 @@ for epoch in range(1, args.epochs + 1):
     if args.mylog:
         writer.add_scalars("data/loss", {"train": train_loss, "val": val_loss}, epoch)
         writer.add_scalars("data/mae", {"val": mae}, epoch)
-        # Ensure rmse_states is captured and logged
-        writer.add_scalars("data/rmse_states", {"val": rmse_states}, epoch)
+        # Ensure rmse_states is captured and logged correctly
+        # rmse_states is a single float value (mean RMSE across states)
+        writer.add_scalars("data/rmse", {"val": rmse}, epoch) # Log overall RMSE
+        writer.add_scalars("data/rmse_states", {"val": rmse_states}, epoch) # Log mean RMSE across states
         writer.add_scalars("data/pcc", {"val": pcc}, epoch)
         writer.add_scalars("data/pcc_states", {"val": pcc_states}, epoch)
         writer.add_scalars("data/R2", {"val": r2}, epoch)

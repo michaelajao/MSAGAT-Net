@@ -19,17 +19,20 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from math import sqrt
 from scipy.stats import pearsonr
 import pandas as pd
-from src.utils import *  # Keep this as requested
 
 # Add parent directory to path (if needed)
+# Ensure os is imported if not already
+import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-# Import the models
-from model import MSAGATNet
-from model import MSTAGAT_Net
+# Use absolute imports relative to the project root (parent_dir)
+from src_original.utils import *  # Changed from relative import
+from src_original.model import MSAGATNet # Changed from potentially ambiguous import
+# Remove import for MSTAGAT_Net as it's not defined in src_original/model.py
+# from src_original.model import MSTAGAT_Net
 
 # ----------------- Argument Parsing -----------------
 def parse_arguments():
@@ -277,8 +280,11 @@ def main():
         model = MSAGATNet(args, data_loader)
         logger.info('Using model: MSAGATNet')
     elif args.model == 'mstagat':
-        model = MSTAGAT_Net(args, data_loader)
-        logger.info('Using model: MSTAGAT_Net')
+        # Raise an error because MSTAGAT_Net cannot be imported from src_original.model
+        logger.error(f"Model type 'mstagat' selected, but MSTAGAT_Net class not found in src_original/model.py")
+        raise ImportError("MSTAGAT_Net class not found in src_original.model.py")
+        # model = MSTAGAT_Net(args, data_loader) # This line would fail
+        # logger.info('Using model: MSTAGAT_Net')
     else:
         logger.error(f"Unknown model type: {args.model}. Defaulting to MSAGATNet.")
         model = MSAGATNet(args, data_loader) # Default or raise error

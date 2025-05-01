@@ -177,7 +177,7 @@ def visualize_matrices(
     for ax, mat, title in zip(
         axes,
         [geo, corr, attn],
-        ["Adjacency", "Input Correlation", "Learned Attention/Graph"],
+        ["Adjacency", "Input Correlation", "Learned Attention"],
     ):
         im = ax.imshow(mat, cmap="viridis")
         ax.set_title(title)
@@ -207,15 +207,17 @@ def visualize_predictions(
     """
     n_regions = min(regions, y_true.shape[1])
     timesteps = np.arange(y_true.shape[0])
-    fig, axes = plt.subplots(n_regions, 1, figsize=(10, 3 * n_regions), sharex=True)
+    fig, axes = plt.subplots(n_regions, 1, figsize=(12, 3 * n_regions), sharex=True)
     if n_regions == 1:
         axes = [axes]
     for i in range(n_regions):
-        axes[i].plot(timesteps, y_true[:, i], label="True", alpha=0.7)
-        axes[i].plot(timesteps, y_pred[:, i], label="Pred", alpha=0.7)
+        axes[i].plot(timesteps, y_true[:, i], label="Ground Truth", alpha=0.7)
+        axes[i].plot(timesteps, y_pred[:, i], label="Prediction", alpha=0.7)
         axes[i].set_title(f"Region {i}")
+        axes[i].set_ylabel("Value")
+        axes[i].grid(True, linestyle='--', alpha=0.5)
         axes[i].legend()
-    axes[-1].set_xlabel("Time")
+    axes[-1].set_xlabel("Time Step")
     plt.tight_layout()
     plt.savefig(save_path, bbox_inches="tight")
     plt.close(fig)
@@ -226,27 +228,70 @@ def visualize_predictions(
 # -------------------------
 # Loss Curve
 # -------------------------
+# def plot_loss_curves(train_losses, val_losses, save_path: str, args=None, logger=None):
+#     """
+#     Plot and save training vs. validation loss curves.
+#     """
+#     fig, ax = plt.subplots(figsize=(10, 6))
+#     epochs = np.arange(1, len(train_losses) + 1)
+#     ax.plot(epochs, train_losses, label="Train")
+#     ax.plot(epochs, val_losses, label="Val")
+#     best = np.argmin(val_losses) + 1
+#     ax.scatter(best, val_losses[best - 1], marker="o", label=f"Best Epoch ({best})")
+#     ax.set_xlabel("Epoch")
+#     ax.set_ylabel("Loss")
+#     ax.legend()
+#     if args:
+#         ax.set_title(f"Loss: {args.dataset}, w={args.window}, h={args.horizon}")
+#     plt.tight_layout()
+#     plt.savefig(save_path, bbox_inches="tight")
+#     plt.close(fig)
+#     if logger:
+#         logger.info(f"Loss curve saved to {save_path}")
+
 def plot_loss_curves(train_losses, val_losses, save_path: str, args=None, logger=None):
     """
-    Plot and save training vs. validation loss curves.
+    Plot training and validation loss curves.
+    
+    Args:
+        train_losses: List of training losses
+        val_losses: List of validation losses
+        save_path: Path to save plot
+        args: Command line arguments (optional)
+        logger: Logger object (optional)
     """
-    fig, ax = plt.subplots(figsize=(8, 6))
-    epochs = np.arange(1, len(train_losses) + 1)
-    ax.plot(epochs, train_losses, label="Train")
-    ax.plot(epochs, val_losses, label="Val")
-    best = np.argmin(val_losses) + 1
-    ax.scatter(best, val_losses[best - 1], marker="o", label=f"Best Epoch ({best})")
-    ax.set_xlabel("Epoch")
-    ax.set_ylabel("Loss")
-    ax.legend()
+    fig, ax = plt.subplots(figsize=(10, 6))
+    epochs = range(1, len(train_losses) + 1)
+    ax.plot(epochs, train_losses, 'b-', label='Training Loss', linewidth=2, alpha=0.8)
+    ax.plot(epochs, val_losses, 'r-', label='Validation Loss', linewidth=2, alpha=0.8)
+    ax.grid(True, linestyle='--', alpha=0.7)
+    
+    best_val_epoch = val_losses.index(min(val_losses)) + 1
+    best_val_loss = min(val_losses)
+    ax.scatter(best_val_epoch, best_val_loss, color='green', s=100, zorder=5,
+               label=f'Best Val Loss: {best_val_loss:.6f}')
+               
+    ax.set_xlabel('Epoch', fontsize=12)
+    ax.set_ylabel('Loss', fontsize=12)
+    
+    # Add title with model information if args provided
     if args:
-        ax.set_title(f"Loss: {args.dataset}, w={args.window}, h={args.horizon}")
-    plt.tight_layout()
-    plt.savefig(save_path, bbox_inches="tight")
+        title = f'Training Progress\nDataset: {args.dataset}, Window: {args.window}, Horizon: {args.horizon}'
+        ax.set_title(title, fontsize=14, pad=10)
+        
+        textstr = f'Learning Rate: {args.lr}\nBatch Size: {args.batch}\nBest Epoch: {best_val_epoch}'
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
+        ax.text(0.02, 0.98, textstr, transform=ax.transAxes, fontsize=10,
+                verticalalignment='top', bbox=props)
+    else:
+        ax.set_title('Training Progress', fontsize=14, pad=10)
+            
+    ax.legend(loc='upper right', frameon=True, framealpha=0.8)
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
+    
     if logger:
-        logger.info(f"Loss curve saved to {save_path}")
-
+        logger.info(f"loss curves to {save_path}")
 
 # -------------------------
 # Metrics Saving

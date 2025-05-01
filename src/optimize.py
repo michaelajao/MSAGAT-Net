@@ -13,6 +13,7 @@ from sklearn.metrics import mean_squared_error
 from scipy.stats import pearsonr
 import joblib
 from math import sqrt
+import json  # Added import for json
 
 # Project modules
 from data import DataBasicLoader
@@ -216,14 +217,14 @@ def objective(trial):
     )
 
     # Setup optimizer and scheduler
-    optimizer = optim.Adam(
+    optimizer = optim.AdamW(
         filter(lambda p: p.requires_grad, model.parameters()),
         lr=trial_args.lr,
         weight_decay=trial_args.weight_decay,
     )
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", factor=0.5, patience=20, verbose=False
-    )
+    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+    #     optimizer, mode="min", factor=0.5, patience=20, verbose=False
+    # )
 
     # Training variables
     best_val_rmse = float("inf")
@@ -246,7 +247,7 @@ def objective(trial):
         val_pcc = val_metrics["pcc"]
 
         # Update scheduler
-        scheduler.step(val_loss)
+        # scheduler.step(val_loss)
 
         # Log progress (less frequently for optimization)
         if epoch == 1 or epoch % 50 == 0 or (epoch < 10 and epoch % 2 == 0):
@@ -381,6 +382,12 @@ def main():
     logger.info("  Hyperparameters:")
     for key, value in best_trial.params.items():
         logger.info(f"    {key}: {value}")
+
+    # Save best parameters to a JSON file
+    best_params_path = os.path.join(OPTIM_DIR, f"{args.study_name}_best_params.json")
+    with open(best_params_path, 'w') as f:
+        json.dump(best_trial.params, f, indent=4)
+    logger.info(f"Best hyperparameters saved to: {best_params_path}")
 
     # Generate command for best configuration
     best_params = best_trial.params
