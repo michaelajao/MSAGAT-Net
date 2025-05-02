@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-ASGNet: Adaptive Spatiotemporal Graph Network with learnable components
-for spatiotemporal forecasting tasks.
+ASGNet: Adaptive Spatiotemporal Graph Network without bottleneck layers
+for efficient spatiotemporal forecasting
 """
 import math
 import torch
@@ -9,16 +9,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Parameter
 
-# Default values
+# Default hyperparameters
 DROPOUT = 0.2
 ATTENTION_HEADS = 8
-BOTTLENECK_DIM = 6
 NUM_TEMPORAL_SCALES = 5
 KERNEL_SIZE = 3
 
+
 class MultiScaleTemporalProcessor(nn.Module):
     """
-    Processes time series data at multiple temporal scales with learnable importance.
+    Processes time series data at multiple temporal scales with learnable importance weights.
+    No bottleneck in feature aggregation.
     """
     def __init__(self, input_dim, hidden_dim, num_scales=NUM_TEMPORAL_SCALES, kernel_size=KERNEL_SIZE, dropout=DROPOUT):
         super(MultiScaleTemporalProcessor, self).__init__()
@@ -38,7 +39,7 @@ class MultiScaleTemporalProcessor(nn.Module):
             )
             self.batch_norms.append(nn.BatchNorm1d(hidden_dim))
             
-        # Output projection with batch normalization
+        # Direct projection without bottleneck
         self.projection = nn.Sequential(
             nn.Linear(num_scales * hidden_dim, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
@@ -71,13 +72,14 @@ class MultiScaleTemporalProcessor(nn.Module):
         output = self.projection(concatenated)
         return output
 
-class LearnableSparseAttention(nn.Module):
+
+class DirectAttention(nn.Module):
     """
-    Graph attention with learnable sparsity, structure bias, and regularization.
+    Optimized attention mechanism with no bottleneck layers.
+    Uses full-sized projections for higher expressivity.
     """
-    def __init__(self, hidden_dim, num_nodes, heads=ATTENTION_HEADS, 
-                 bottleneck_dim=BOTTLENECK_DIM, dropout=DROPOUT):
-        super(LearnableSparseAttention, self).__init__()
+    def __init__(self, hidden_dim, num_nodes, heads=ATTENTION_HEADS, dropout=DROPOUT):
+        super(DirectAttention, self).__init__()
         self.hidden_dim = hidden_dim
         self.heads = heads
         self.head_dim = hidden_dim // heads
@@ -88,31 +90,26 @@ class LearnableSparseAttention(nn.Module):
         
         # Learnable regularization weights
         self.l1_reg_weight = Parameter(torch.tensor(1e-4))
-        self.entropy_reg_weight = Parameter(torch.tensor(1e-3))
         
-        # Low-rank projections for Q, K, V
-        self.qkv_proj_low = nn.Linear(hidden_dim, 3 * bottleneck_dim)
-        self.qkv_proj_high = nn.Linear(3 * bottleneck_dim, 3 * hidden_dim)
+        # Direct QKV projections without bottleneck
+        self.qkv_proj = nn.Linear(hidden_dim, 3 * hidden_dim)
         
-        # Output projections
-        self.out_proj = nn.Sequential(
-            nn.Linear(hidden_dim, bottleneck_dim),
-            nn.ReLU(),
-            nn.Linear(bottleneck_dim, hidden_dim),
-            nn.Dropout(dropout)
-        )
+        # Direct output projection without bottleneck
+        self.out_proj = nn.Linear(hidden_dim, hidden_dim)
+        self.dropout = nn.Dropout(dropout)
         
         # Layer normalization
         self.layer_norm = nn.LayerNorm(hidden_dim)
         
-        # Learnable graph structure (low-rank)
-        self.structure_u = Parameter(torch.Tensor(heads, num_nodes, bottleneck_dim))
-        self.structure_v = Parameter(torch.Tensor(heads, bottleneck_dim, num_nodes))
-        nn.init.xavier_uniform_(self.structure_u)
-        nn.init.xavier_uniform_(self.structure_v)
-        
-        # Learnable scalar for static adjacency bias
-        self.adj_bias_scale = Parameter(torch.tensor(0.1))
+        # Learnable graph structure (full rank)
+        self.use_graph_structure = True
+        if self.use_graph_structure:
+            # Use direct parameterization instead of low-rank factorization
+            self.attention_bias = Parameter(torch.Tensor(heads, num_nodes, num_nodes))
+            nn.init.zeros_(self.attention_bias)  # Initialize with zeros
+            
+            # Learnable scalar for static adjacency bias
+            self.adj_bias_scale = Parameter(torch.tensor(0.1))
         
     def forward(self, x, adj=None):
         # Input: (batch_size, num_nodes, hidden_dim)
@@ -121,65 +118,57 @@ class LearnableSparseAttention(nn.Module):
         
         B, N, C = x.shape
         
-        # Low-rank QKV projections
-        qkv_low = self.qkv_proj_low(x)
-        qkv = self.qkv_proj_high(qkv_low).reshape(B, N, 3, self.heads, self.head_dim).permute(2, 0, 3, 1, 4)
-        q, k, v = qkv[0], qkv[1], qkv[2]  # Shape: (B, heads, N, head_dim)
+        # Compute QKV projections
+        qkv = self.qkv_proj(x).reshape(B, N, 3, self.heads, self.head_dim)
+        qkv = qkv.permute(2, 0, 3, 1, 4)  # (3, B, heads, N, head_dim)
+        q, k, v = qkv[0], qkv[1], qkv[2]  # Each shape: (B, heads, N, head_dim)
         
         # Calculate attention scores
         attn_scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
         
-        # Add learnable graph structure
-        graph_bias = torch.matmul(self.structure_u, self.structure_v)
-        attn_scores = attn_scores + graph_bias.unsqueeze(0)
+        # Add learnable graph structure if enabled
+        if self.use_graph_structure:
+            # Add learned attention bias directly (not factorized)
+            attn_scores = attn_scores + self.attention_bias.unsqueeze(0)
+            
+            # Add static adjacency bias if provided
+            if adj is not None:
+                if adj.dim() == 2:
+                    adj_bias = adj.unsqueeze(0).unsqueeze(1).expand(B, self.heads, N, N)
+                else:
+                    adj_bias = adj.unsqueeze(1).expand(B, self.heads, N, N)
+                    
+                # Apply bias with learnable scale
+                adj_bias = torch.where(adj_bias > 0, torch.zeros_like(adj_bias), 
+                                      torch.full_like(adj_bias, -1e9))
+                attn_scores = attn_scores + self.adj_bias_scale * adj_bias
         
-        # Add static adjacency bias if provided
-        if adj is not None:
-            if adj.dim() == 2:
-                adj_bias = adj.unsqueeze(0).unsqueeze(1).expand(B, self.heads, N, N)
-            else:
-                adj_bias = adj.unsqueeze(1).expand(B, self.heads, N, N)
-                
-            # Apply bias with learnable scale
-            adj_bias = torch.where(adj_bias > 0, torch.zeros_like(adj_bias), 
-                                  torch.full_like(adj_bias, -1e9))
-            attn_scores = attn_scores + self.adj_bias_scale * adj_bias
+        # Apply adaptive sparsity using vectorized operations
+        sparse_attn = torch.zeros_like(attn_scores).fill_(-float('inf'))
         
-        # Apply adaptive sparsity
         # Get sparsity threshold for each head (sigmoid to keep between 0-1)
         thresholds = torch.sigmoid(self.sparsity_threshold)
         
-        # Initialize sparse attention matrix
-        sparse_attn = torch.full_like(attn_scores, float('-inf'))
-        
-        # Apply different thresholds for each head
         for h in range(self.heads):
-            # Calculate percentile value for this head
-            k_value = max(1, int(N * (1.0 - thresholds[h])))
+            # Calculate k for this head - using a fixed percentage of nodes
+            k_value = max(1, int(N * (1.0 - thresholds[h].item())))
             
-            # Get top-k indices for each query in this head
-            _, indices = torch.topk(attn_scores[:, h], k=k_value, dim=-1)
+            # For each head and batch item, get top-k values and indices
+            top_values, top_indices = torch.topk(attn_scores[:, h], k=k_value, dim=-1)
             
-            # Create sparse mask
-            for b in range(B):
-                for i in range(N):
-                    sparse_attn[b, h, i, indices[b, i]] = attn_scores[b, h, i, indices[b, i]]
+            # Create sparse attention for this head
+            batch_range = torch.arange(B, device=x.device)[:, None, None]
+            node_range = torch.arange(N, device=x.device)[None, :, None]
+            # Use advanced indexing to place values
+            sparse_attn[batch_range, h, node_range, top_indices] = top_values
         
         # Apply softmax
         attn_weights = F.softmax(sparse_attn, dim=-1)
+        attn_weights = self.dropout(attn_weights)
         
-        # Calculate regularization losses
-        # L1 regularization (sparsity)
+        # Calculate L1 regularization with learnable weight
         l1_weight = F.softplus(self.l1_reg_weight)
-        l1_loss = l1_weight * torch.mean(torch.abs(attn_weights))
-        
-        # Entropy regularization (uniformity)
-        entropy_weight = F.softplus(self.entropy_reg_weight)
-        entropy = -torch.sum(attn_weights * torch.log(attn_weights + 1e-9), dim=-1)
-        entropy_loss = -entropy_weight * torch.mean(entropy)
-        
-        # Combined regularization loss
-        reg_loss = l1_loss + entropy_loss
+        reg_loss = l1_weight * torch.mean(torch.abs(attn_weights))
         
         # Apply attention to values
         attended = torch.matmul(attn_weights, v)
@@ -187,24 +176,27 @@ class LearnableSparseAttention(nn.Module):
         # Reshape and project output
         attended = attended.permute(0, 2, 1, 3).contiguous().view(B, N, C)
         output = self.out_proj(attended)
+        output = self.dropout(output)
         
         # Add residual connection
         output = output + residual
         
         return output, reg_loss
 
+
 class SpatiotemporalFusion(nn.Module):
     """
     Fuses spatial and temporal features with learnable importance weights.
+    No bottleneck in fusion layer.
     """
-    def __init__(self, hidden_dim, num_nodes, window_size, dropout=DROPOUT):
+    def __init__(self, hidden_dim, dropout=DROPOUT):
         super(SpatiotemporalFusion, self).__init__()
         
         # Learnable balance between spatial and temporal features
         self.spatial_importance = Parameter(torch.ones(hidden_dim))
         self.temporal_importance = Parameter(torch.ones(hidden_dim))
         
-        # Spatial-temporal fusion
+        # Direct fusion without bottleneck
         self.fusion = nn.Sequential(
             nn.Linear(2 * hidden_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
@@ -237,23 +229,23 @@ class SpatiotemporalFusion(nn.Module):
         
         return output
 
-class AdaptiveForecaster(nn.Module):
+
+class DirectForecaster(nn.Module):
     """
-    Multi-horizon forecasting module with optional highway connection.
+    Direct forecaster module without bottleneck layers.
     """
-    def __init__(self, input_dim, horizon, num_nodes, bottleneck_dim=BOTTLENECK_DIM, dropout=DROPOUT):
-        super(AdaptiveForecaster, self).__init__()
+    def __init__(self, input_dim, horizon, num_nodes, dropout=DROPOUT):
+        super(DirectForecaster, self).__init__()
         
         self.horizon = horizon
         self.num_nodes = num_nodes
         
-        # Main prediction path
+        # Direct prediction path without bottleneck
         self.prediction = nn.Sequential(
-            nn.Linear(input_dim, bottleneck_dim),
-            nn.BatchNorm1d(bottleneck_dim),
+            nn.Linear(input_dim, input_dim),  # Same size hidden layer
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(bottleneck_dim, horizon)
+            nn.Linear(input_dim, horizon)
         )
         
         # Highway gate (learnable weight for highway connection)
@@ -264,7 +256,7 @@ class AdaptiveForecaster(nn.Module):
         B, N, _ = x.shape
         
         # Reshape for batch norm
-        x_reshaped = x.reshape(B * N, -1)
+        x_reshaped = x.view(B * N, -1)
         
         # Apply prediction layers
         pred = self.prediction(x_reshaped)
@@ -282,10 +274,73 @@ class AdaptiveForecaster(nn.Module):
             
         return pred
 
+
+class LinearAttention(nn.Module):
+    """
+    Linear attention mechanism with O(N) complexity instead of O(N²).
+    Direct projections without bottleneck.
+    """
+    def __init__(self, hidden_dim, num_nodes, heads=ATTENTION_HEADS, dropout=DROPOUT):
+        super(LinearAttention, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.heads = heads
+        self.head_dim = hidden_dim // heads
+        
+        # Direct QKV projections without bottleneck
+        self.qkv_proj = nn.Linear(hidden_dim, 3 * hidden_dim)
+        
+        # Direct output projection without bottleneck
+        self.out_proj = nn.Linear(hidden_dim, hidden_dim)
+        self.dropout = nn.Dropout(dropout)
+        
+        # Layer normalization
+        self.layer_norm = nn.LayerNorm(hidden_dim)
+        
+    def forward(self, x, adj=None):
+        # Input: (batch_size, num_nodes, hidden_dim)
+        residual = x
+        x = self.layer_norm(x)
+        
+        B, N, C = x.shape
+        
+        # QKV projections
+        qkv = self.qkv_proj(x).reshape(B, N, 3, self.heads, self.head_dim)
+        qkv = qkv.permute(2, 0, 3, 1, 4)  # (3, B, heads, N, head_dim)
+        q, k, v = qkv[0], qkv[1], qkv[2]  # Each shape: (B, heads, N, head_dim)
+        
+        # Apply ELU + 1 kernel for linear attention
+        q = F.elu(q) + 1.0
+        k = F.elu(k) + 1.0
+        
+        # Linear attention: compute KV first, then multiply by Q
+        kv = torch.einsum('bhnd,bhne->bhde', k, v)
+        
+        # Normalize by the sum of keys
+        k_sum = k.sum(dim=2, keepdim=True)
+        
+        # Compute attention output
+        output = torch.einsum('bhnd,bhde->bhne', q, kv)
+        
+        # Normalize by the sum of queries times sum of keys
+        normalizer = torch.einsum('bhnd,bhd->bhn', q, k_sum.squeeze(-2))
+        output = output / (normalizer.unsqueeze(-1) + 1e-8)
+        
+        # Reshape and apply output projection
+        output = output.permute(0, 2, 1, 3).contiguous().view(B, N, C)
+        output = self.out_proj(output)
+        output = self.dropout(output)
+        
+        # Add residual connection
+        output = output + residual
+        
+        # Return zero regularization loss for API compatibility
+        return output, torch.tensor(0.0, device=output.device)
+
+
 class ASGNet(nn.Module):
     """
-    ASGNet: Adaptive Spatiotemporal Graph Network with learnable components
-    for spatiotemporal forecasting tasks.
+    ASGNet: Adaptive Spatiotemporal Graph Network without bottleneck layers
+    for efficient spatiotemporal forecasting tasks.
     """
     def __init__(self, args, data_loader):
         super(ASGNet, self).__init__()
@@ -294,6 +349,9 @@ class ASGNet(nn.Module):
         self.horizon = args.horizon
         self.hidden_dim = args.hidden_dim
         self.highway_window = getattr(args, 'highway_window', 0)
+        
+        # Check if linear attention is requested
+        self.use_linear_attention = getattr(args, 'use_linear_attention', False)
         
         # 1. Temporal Module
         self.temporal_module = MultiScaleTemporalProcessor(
@@ -304,31 +362,35 @@ class ASGNet(nn.Module):
             dropout=args.dropout
         )
         
-        # 2. Spatial Attention Module
-        self.spatial_module = LearnableSparseAttention(
-            hidden_dim=self.hidden_dim,
-            num_nodes=self.num_nodes,
-            heads=args.attention_heads,
-            bottleneck_dim=args.bottleneck_dim,
-            dropout=args.dropout
-        )
+        # 2. Spatial Attention Module - choose implementation
+        if self.use_linear_attention:
+            self.spatial_module = LinearAttention(
+                hidden_dim=self.hidden_dim,
+                num_nodes=self.num_nodes,
+                heads=args.attention_heads,
+                dropout=args.dropout
+            )
+        else:
+            self.spatial_module = DirectAttention(
+                hidden_dim=self.hidden_dim,
+                num_nodes=self.num_nodes,
+                heads=args.attention_heads,
+                dropout=args.dropout
+            )
         
         # 3. Optional Spatiotemporal Fusion Module
         self.use_st_fusion = getattr(args, 'use_st_fusion', True)
         if self.use_st_fusion:
             self.fusion_module = SpatiotemporalFusion(
                 hidden_dim=self.hidden_dim,
-                num_nodes=self.num_nodes,
-                window_size=self.window,
                 dropout=args.dropout
             )
         
         # 4. Forecasting Module
-        self.forecaster = AdaptiveForecaster(
+        self.forecaster = DirectForecaster(
             input_dim=self.hidden_dim,
             horizon=self.horizon,
             num_nodes=self.num_nodes,
-            bottleneck_dim=args.bottleneck_dim,
             dropout=args.dropout
         )
         

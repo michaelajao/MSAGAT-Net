@@ -191,6 +191,11 @@ python src/train.py \
   --mylog
 ```
 
+```bash
+python src/train.py   --dataset japan  --sim_mat japan-adj   --window 20   --horizon 3   --epochs 1500   --batch 32   --lr 0.005   --weight_decay 6.72e-5   --dropout 0.2   --patience 100   --hidden_dim 16   --attention_heads 4   --num_scales 4   --kernel_size 5   --feature_channels 12   --attention_regularization_weight 3.15e-4   --bottleneck_dim 12   --seed 42   --gpu 0   --model enhanced_msagat   --highway_window 3   --save_dir save   --mylog
+```
+
+
 
 ### Prediction
 

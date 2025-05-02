@@ -21,7 +21,7 @@ from sklearn.metrics import (
 from scipy.stats import pearsonr
 from math import sqrt
 
-# project modules
+# Project modules
 from data import DataBasicLoader
 from utils import (
     visualize_matrices,
@@ -42,9 +42,10 @@ RESULTS_DIR = os.path.join(BASE_DIR, "results")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
+# Parse arguments
 parser = argparse.ArgumentParser()
-parser.add_argument("--dataset", type=str, default="region785")
-parser.add_argument("--sim_mat", type=str, default="region-adj")
+parser.add_argument("--dataset", type=str, default="japan")
+parser.add_argument("--sim_mat", type=str, default="japan-adj")
 parser.add_argument("--window", type=int, default=20)
 parser.add_argument("--horizon", type=int, default=5)
 parser.add_argument("--train", type=float, default=0.5)
@@ -80,33 +81,35 @@ parser.add_argument("--bottleneck_dim", type=int, default=6)
 parser.add_argument("--num_scales", type=int, default=5)
 parser.add_argument("--kernel_size", type=int, default=3)
 parser.add_argument("--attention_regularization_weight", type=float, default=1e-3)
-parser.add_argument("--highway_window", type=int, default=0, 
+parser.add_argument("--highway_window", type=int, default=5, 
                      help="Number of recent time steps for highway connection (0 to disable)")
 parser.add_argument("--use_st_fusion", action="store_true", default=True,
                      help="Use spatiotemporal fusion module")
+parser.add_argument("--use_linear_attention", action="store_true",
+                     help="Use linear attention mechanism (O(N) instead of O(N²))")
 
 args = parser.parse_args()
 print("--------Parameters--------")
 print(args)
 print("--------------------------")
 
+# Set random seeds and device
 os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
-
 random.seed(args.seed)
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
-
 torch.backends.cudnn.deterministic = True
-# torch.backends.cudnn.benchmark = False
 
+# Set device
 args.cuda = args.cuda and torch.cuda.is_available()
 args.cuda = args.gpu is not None
 if args.cuda:
     torch.cuda.set_device(args.gpu)
 logger.info("cuda %s", args.cuda)
+device = torch.device(f"cuda:{args.gpu}") if args.cuda else torch.device("cpu")
 
-# Define model name for logging
-model_name = "ASGNet"
+# Setup logging
+model_name = "ASGNet" + ("-Linear" if args.use_linear_attention else "")
 log_token = f"{model_name}.{args.dataset}.w-{args.window}.h-{args.horizon}"
 
 if args.mylog:
@@ -116,10 +119,10 @@ if args.mylog:
     writer = SummaryWriter(tensorboard_log_dir)
     logger.info("tensorboard logging to %s", tensorboard_log_dir)
 
+# Load data
 data_loader = DataBasicLoader(args)
 
 # Load adjacency matrix if specified
-adj_mx = None
 if args.sim_mat:
     logger.info(f"Attempting to load adjacency matrix: {args.sim_mat}")
     adj_path = os.path.join(BASE_DIR, "data", f"{args.sim_mat}.txt")
@@ -153,14 +156,14 @@ else:
     data_loader.adj = None
 
 # Instantiate the ASGNet model
-logger.info("Using ASGNet model")
+logger.info(f"Using {model_name} model")
 model = ASGNet(args, data_loader)
 logger.info("model %s", model.__class__.__name__)
 
 if args.cuda:
     model.cuda()
-device = torch.device(f"cuda:{args.gpu}") if args.cuda else torch.device("cpu")
 
+# Define optimizer with weight decay
 optimizer = torch.optim.AdamW(
     filter(lambda p: p.requires_grad, model.parameters()),
     lr=args.lr,
@@ -171,33 +174,38 @@ print("#params:", pytorch_total_params)
 
 
 def evaluate(data_loader, data, tag="val", show=0):
+    """Evaluate model performance on given dataset"""
     model.eval()
     total_loss = 0.0
     n_samples = 0.0
-    y_true, y_pred = [], []
     batch_size = args.batch
     y_pred_mx = []
     y_true_mx = []
     x_value_mx = []
 
-    for inputs in data_loader.get_batches(data, batch_size, False):
-        X, Y = inputs[0], inputs[1]
-        index = inputs[2]
-        output, attn_reg_loss = model(X, index)
-        y_expanded = Y.unsqueeze(1).expand(-1, args.horizon, -1)
-        loss_train = nn.MSELoss()(output, y_expanded) + attn_reg_loss
-        total_loss += loss_train.item()
-        n_samples += output.size(0) * data_loader.m
+    with torch.no_grad():
+        for inputs in data_loader.get_batches(data, batch_size, False):
+            X, Y = inputs[0], inputs[1]
+            index = inputs[2]
+            if args.cuda:
+                X, Y = X.cuda(), Y.cuda()
+                
+            output, attn_reg_loss = model(X, index)
+            y_expanded = Y.unsqueeze(1).expand(-1, args.horizon, -1)
+            loss_train = nn.MSELoss()(output, y_expanded) + attn_reg_loss
+            total_loss += loss_train.item()
+            n_samples += output.size(0) * data_loader.m
 
-        x_value_mx.append(X.data.cpu())
-        y_true_mx.append(Y.data.cpu())
-        y_pred_mx.append(output.data.cpu())
+            x_value_mx.append(X.cpu())
+            y_true_mx.append(Y.cpu())
+            y_pred_mx.append(output.cpu())
 
     x_value_mx = torch.cat(x_value_mx)
     y_pred_mx = torch.cat(y_pred_mx)
     y_true_mx = torch.cat(y_true_mx)
-    y_pred_mx = y_pred_mx[:, -1, :]
+    y_pred_mx = y_pred_mx[:, -1, :]  # Last prediction step
 
+    # Convert to numpy and denormalize
     x_value_states = (
         x_value_mx.numpy() * (data_loader.max - data_loader.min) + data_loader.min
     )
@@ -208,6 +216,7 @@ def evaluate(data_loader, data, tag="val", show=0):
         y_pred_mx.numpy() * (data_loader.max - data_loader.min) + data_loader.min
     )
 
+    # Calculate metrics
     rmse_states = np.mean(
         np.sqrt(
             mean_squared_error(y_true_states, y_pred_states, multioutput="raw_values")
@@ -217,6 +226,7 @@ def evaluate(data_loader, data, tag="val", show=0):
         y_true_states, y_pred_states, multioutput="raw_values"
     )
     std_mae = np.std(raw_mae)
+    
     if not args.pcc:
         pcc_tmp = []
         for k in range(data_loader.m):
@@ -224,6 +234,7 @@ def evaluate(data_loader, data, tag="val", show=0):
         pcc_states = np.mean(np.array(pcc_tmp))
     else:
         pcc_states = 1
+        
     r2_states = np.mean(
         r2_score(y_true_states, y_pred_states, multioutput="raw_values")
     )
@@ -231,9 +242,11 @@ def evaluate(data_loader, data, tag="val", show=0):
         explained_variance_score(y_true_states, y_pred_states, multioutput="raw_values")
     )
 
+    # Calculate overall metrics
     y_true_flat = np.reshape(y_true_states, (-1))
     y_pred_flat = np.reshape(y_pred_states, (-1))
     rmse = sqrt(mean_squared_error(y_true_flat, y_pred_flat))
+    
     if show == 1:
         print("x value", x_value_states)
         print("ground true", y_true_flat.shape)
@@ -241,11 +254,13 @@ def evaluate(data_loader, data, tag="val", show=0):
 
     mae = mean_absolute_error(y_true_flat, y_pred_flat)
     mape = np.mean(np.abs((y_pred_flat - y_true_flat) / (y_true_flat + 1e-5))) / 1e7
+    
     if not args.pcc:
         pcc = pearsonr(y_true_flat, y_pred_flat)[0]
     else:
         pcc = 1
         pcc_states = 1
+        
     r2 = r2_score(y_true_flat, y_pred_flat, multioutput="uniform_average")
     var = explained_variance_score(
         y_true_flat, y_pred_flat, multioutput="uniform_average"
@@ -275,6 +290,7 @@ def evaluate(data_loader, data, tag="val", show=0):
 
 
 def train_epoch(data_loader, data):
+    """Train model for one epoch"""
     model.train()
     total_loss = 0.0
     n_samples = 0.0
@@ -283,16 +299,23 @@ def train_epoch(data_loader, data):
     for inputs in data_loader.get_batches(data, batch_size, True):
         X, Y = inputs[0], inputs[1]
         index = inputs[2]
+        
+        if args.cuda:
+            X, Y = X.cuda(), Y.cuda()
+            
         optimizer.zero_grad()
         output, attn_reg_loss = model(X, index)
         y_expanded = Y.unsqueeze(1).expand(-1, args.horizon, -1)
         loss = nn.MSELoss()(output, y_expanded) + attn_reg_loss
         total_loss += loss.item()
         loss.backward()
-        # Add gradient clipping
+        
+        # Add gradient clipping for stability
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
+        
         n_samples += output.size(0) * data_loader.m
+        
     return float(total_loss / n_samples)
 
 
@@ -301,10 +324,12 @@ print("Begin training")
 os.makedirs(args.save_dir, exist_ok=True)
 train_losses, val_losses = [], []
 bad_counter, best_epoch, best_val = 0, 0, float("inf")
+
 for epoch in range(1, args.epochs + 1):
     epoch_start_time = time.time()
     train_loss = train_epoch(data_loader, data_loader.train)
-    # Capture all metrics from the evaluate call during the training loop for logging
+    
+    # Evaluate on validation set
     (
         val_loss,
         mae,
@@ -331,6 +356,7 @@ for epoch in range(1, args.epochs + 1):
         )
     )
 
+    # Log metrics to tensorboard
     if args.mylog:
         writer.add_scalars("data/loss", {"train": train_loss, "val": val_loss}, epoch)
         writer.add_scalars("data/mae", {"val": mae}, epoch)
@@ -344,17 +370,22 @@ for epoch in range(1, args.epochs + 1):
         writer.add_scalars("data/var_states", {"val": var_states}, epoch)
         writer.add_scalars("data/peak_mae", {"val": peak_mae}, epoch)
 
+    # Check if this is the best model so far
     if val_loss < best_val:
         best_val = val_loss
         best_epoch = epoch
         bad_counter = 0
+        
+        # Save model
         model_path = os.path.join(args.save_dir, "{}.pt".format(log_token))
         torch.save(model.state_dict(), model_path)
+        
         # Backup the best model checkpoint
         best_model_path = os.path.join(args.save_dir, "best_model.pt")
         shutil.copy(model_path, best_model_path)
         print("Best validation epoch:", epoch, time.ctime())
-        # Capture all metrics from the evaluate call when a new best model is found
+        
+        # Evaluate on test set
         (
             test_loss,
             test_mae,
@@ -391,6 +422,7 @@ for epoch in range(1, args.epochs + 1):
     else:
         bad_counter += 1
 
+    # Early stopping
     if bad_counter == args.patience:
         break
 
@@ -404,11 +436,12 @@ matrices_fig_path = os.path.join(FIGURES_DIR, f"matrices_{log_token}.png")
 visualize_matrices(data_loader, model, matrices_fig_path, device)
 logger.info("Matrices comparison figure saved to %s", matrices_fig_path)
 
-# Load the best model for final evaluation and print final metrics
+# Load the best model for final evaluation
 model.load_state_dict(
-    torch.load(os.path.join(args.save_dir, f"{log_token}.pt"), map_location="cpu")
+    torch.load(os.path.join(args.save_dir, f"{log_token}.pt"), map_location=device)
 )
-# Capture metrics AND predictions from the final evaluation
+
+# Final evaluation on test set
 (
     test_loss,
     mae,
@@ -426,6 +459,7 @@ model.load_state_dict(
     y_true_final,
     y_pred_final,
 ) = evaluate(data_loader, data_loader.test, tag="test")
+
 print(
     "Final TEST MAE {:5.4f} std {:5.4f} RMSE {:5.4f} RMSEs {:5.4f} PCC {:5.4f} PCCs {:5.4f} MAPE {:5.4f} R2 {:5.4f} R2s {:5.4f} Var {:5.4f} Vars {:5.4f} Peak {:5.4f}".format(
         mae,
@@ -474,10 +508,9 @@ predictions_fig_path = os.path.join(FIGURES_DIR, f"predictions_{log_token}.png")
 visualize_predictions(y_true_final, y_pred_final, predictions_fig_path, logger=logger)
 logger.info("Predictions visualization saved to %s", predictions_fig_path)
 
-
+# Record results if requested
 if args.record != "":
     with open("result/result.txt", "a", encoding="utf-8") as f:
-        # Updated result logging format
         f.write(
             f"{args.dataset} {args.window} {args.horizon} {args.train} {args.val} {args.test} "
             f"{mae:.4f} {std_mae:.4f} {rmse:.4f} {rmse_states:.4f} "
