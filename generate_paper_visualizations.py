@@ -65,15 +65,15 @@ METRICS = {
 
 ABLATION_NAMES = {
     'none': 'Full Model',
-    'no_eagam': 'No LR‑AGAM',
-    'no_dmtm': 'No DMTFM',
-    'no_ppm': 'No PPRM'
+    'no_agam': 'No LR‑AGAM',
+    'no_mtfm': 'No DMTFM',
+    'no_pprm': 'No PPRM'
 }
 
 COMPONENT_FULL_NAMES = {
-    'eagam': 'Low‑Rank Adaptive Graph\nAttention Module',
-    'dmtm': 'Dilated Multi‑scale Temporal\nFusion Module',
-    'ppm': 'Progressive Multi‑step\nPrediction Refinement Module'
+    'agam': 'Low‑Rank Adaptive Graph\nAttention Module',
+    'mtfm': 'Dilated Multi‑scale Temporal\nFusion Module',
+    'pprm': 'Progressive Multi‑step\nPrediction Refinement Module'
 }
 
 # Update COMPONENT_COLORS to use the full names as keys
@@ -84,7 +84,7 @@ COMPONENT_COLORS = {    'Low‑Rank Adaptive Graph\nAttention Module': '#1f77b4'
 
 # Paper-quality plot settings
 plt.rcParams.update({
-    'font.size': 11,
+    'font.size': 12,
     'font.family': 'serif',
     'font.serif': ['Times New Roman'],
     'mathtext.fontset': 'stix',
@@ -251,7 +251,7 @@ def generate_component_importance_comparison(results_dir, datasets, window, hori
             if summary is None:
                 continue
             
-            for ablation in ['no_eagam', 'no_dmtm', 'no_ppm']:
+            for ablation in ['no_agam', 'no_mtfm', 'no_pprm']:
                 if ablation in summary.index and 'RMSE_change' in summary.columns:
                     component_name = ablation.replace('no_', '')
                     rmse_change = summary.loc[ablation, 'RMSE_change']
@@ -367,7 +367,7 @@ def generate_ablation_impact_grid(results_dir, dataset, window, horizons, output
 def generate_performance_comparison_grid(results_dir, dataset, window, horizons, output_dir):
     """Generate grid of performance comparison bar charts across horizons and metrics."""
     metrics_to_plot = ['RMSE', 'MAE', 'PCC', 'R2']
-    ablation_types = ['none', 'no_eagam', 'no_dmtm', 'no_ppm']
+    ablation_types = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
     
     # Create a figure with subplots for each metric and horizon
     fig, axes = plt.subplots(len(metrics_to_plot), len(horizons), 
@@ -377,9 +377,9 @@ def generate_performance_comparison_grid(results_dir, dataset, window, horizons,
     # Define colors and better labels
     ablation_colors = {
         'none': '#2ca02c',      # Green for full model
-        'no_eagam': '#d62728',   # Red for EAGAM ablation
-        'no_dmtm': '#ff7f0e',   # Orange for DMTM ablation
-        'no_ppm': '#1f77b4'    # Blue for PPM ablation
+        'no_agam': '#d62728',   # Red for LR-AGAM ablation
+        'no_mtfm': '#ff7f0e',   # Orange for DMTFM ablation
+        'no_pprm': '#1f77b4'    # Blue for PPRM ablation
     }
     
     # Loop through metrics and horizons to create each subplot

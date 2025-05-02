@@ -7,12 +7,13 @@ from torch.nn import Parameter
 # Model hyperparameters with descriptive names
 HIDDEN_DIM = 32
 ATTENTION_HEADS = 4
-ATTENTION_REG_WEIGHT = 1e-05
+# Initial value for adaptive attention regularization weight
+ATTENTION_REG_WEIGHT_INIT = 1e-05
 DROPOUT = 0.2
 NUM_TEMPORAL_SCALES = 4
 KERNEL_SIZE = 3
 FEATURE_CHANNELS = 16
-BOTTLENECK_DIM = 8
+BOTTLENECK_DIM = 16
 
 class SpatialAttentionModule(nn.Module):
     """
@@ -31,14 +32,16 @@ class SpatialAttentionModule(nn.Module):
         bottleneck_dim (int): Dimension of the low-rank projection
     """
     def __init__(self, hidden_dim, num_nodes, dropout=DROPOUT, attention_heads=ATTENTION_HEADS, 
-                 attention_regularization_weight=ATTENTION_REG_WEIGHT, bottleneck_dim=BOTTLENECK_DIM):
+                 attention_regularization_weight=ATTENTION_REG_WEIGHT_INIT, bottleneck_dim=BOTTLENECK_DIM):
         super(SpatialAttentionModule, self).__init__()
         self.hidden_dim = hidden_dim
         self.heads = attention_heads
         self.head_dim = hidden_dim // self.heads
         self.num_nodes = num_nodes
-        self.attention_regularization_weight = attention_regularization_weight
         self.bottleneck_dim = bottleneck_dim
+
+        # Make attention regularization weight a learnable parameter (log-domain for positivity)
+        self.log_attention_reg_weight = nn.Parameter(torch.tensor(math.log(attention_regularization_weight), dtype=torch.float32))
 
         # Low-rank projections for query, key, value
         self.qkv_proj_low = nn.Linear(hidden_dim, 3 * bottleneck_dim)
@@ -115,8 +118,9 @@ class SpatialAttentionModule(nn.Module):
         # Calculate attention scores with graph bias
         self.attn = F.softmax(torch.einsum('bhnd,bhmd->bhnm', q, k) / math.sqrt(self.head_dim) + adj_bias, dim=-1)
         
-        # Compute regularization loss on attention weights
-        attn_reg_loss = self.attention_regularization_weight * torch.mean(torch.abs(self.attn))
+        # Compute regularization loss on attention weights using learned parameter
+        attention_reg_weight = torch.exp(self.log_attention_reg_weight)
+        attn_reg_loss = attention_reg_weight * torch.mean(torch.abs(self.attn))
         
         # Reshape output to original dimensions
         output = output.transpose(1, 2).contiguous().view(B, N, H)

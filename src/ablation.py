@@ -23,7 +23,7 @@ import math
 from model import (
     HIDDEN_DIM,
     ATTENTION_HEADS,
-    ATTENTION_REG_WEIGHT,
+    ATTENTION_REG_WEIGHT_INIT,  # Updated from ATTENTION_REG_WEIGHT to ATTENTION_REG_WEIGHT_INIT
     DROPOUT,
     NUM_TEMPORAL_SCALES,
     KERNEL_SIZE,
@@ -36,7 +36,7 @@ from model import (
 )
 
 # =============================================================================
-# 1. Simple Graph Convolutional Layer (for EAGAM ablation)
+# 1. Simple Graph Convolutional Layer (for LR-AGAM ablation)
 # =============================================================================
 class SimpleGraphConvolutionalLayer(nn.Module):
     """Standard GCN layer with fixed adjacency matrix.
@@ -104,7 +104,7 @@ class SimpleGraphConvolutionalLayer(nn.Module):
         return x, 0.0
 
 # =============================================================================
-# 2. Single-scale Temporal Module (for DMTM ablation)
+# 2. Single-scale Temporal Module (for DMTFM ablation)
 # =============================================================================
 class SingleScaleTemporalModule(nn.Module):
     """Single-scale temporal convolution for ablation study.
@@ -163,7 +163,7 @@ class SingleScaleTemporalModule(nn.Module):
         return out
 
 # =============================================================================
-# 3. Direct Prediction Module (for PPM ablation)
+# 3. Direct Prediction Module (for PPRM ablation)
 # =============================================================================
 class DirectPredictionModule(nn.Module):
     """Direct multi-step prediction for ablation study.
@@ -252,7 +252,7 @@ class MSAGATNet_Ablation(nn.Module):
         self.feature_act = nn.ReLU()
         
         # Spatial component: choose full attention or GCN
-        if self.ablation == 'no_eagam':
+        if self.ablation == 'no_agam':
             # Replace Efficient Adaptive Graph Attention with simple GCN
             self.graph_attention = SimpleGraphConvolutionalLayer(
                 self.hidden_dim,
@@ -269,7 +269,7 @@ class MSAGATNet_Ablation(nn.Module):
                 num_nodes=self.m,
                 dropout=getattr(args, 'dropout', DROPOUT),
                 attention_heads=getattr(args, 'attention_heads', ATTENTION_HEADS),
-                attention_regularization_weight=getattr(args, 'attention_regularization_weight', ATTENTION_REG_WEIGHT),
+                attention_regularization_weight=getattr(args, 'attention_regularization_weight', ATTENTION_REG_WEIGHT_INIT),
                 bottleneck_dim=self.low_rank_dim
             )
         
