@@ -101,80 +101,96 @@ This formulation presents several challenges:
 
 Our proposed MSTGAT architecture specifically addresses these challenges through its novel components and design principles.
 
+Algorithm \ref{alg:msagatnet_training} outlines the overall training procedure employed for optimizing the MSTGAT model parameters. It follows a standard supervised learning paradigm with mini-batch gradient descent, incorporating validation-based early stopping and learning rate scheduling to ensure robust convergence and prevent overfitting.
+
 \begin{algorithm}[h]
     \caption{MSAGATNet Training Algorithm}
     \label{alg:msagatnet_training}
     \begin{algorithmic}[1]
     \REQUIRE 
-        Dataset $\{X,Y\}$, optional adjacency $A$, hyperparams $(\eta,\lambda,p,\gamma,E)$  
+        Dataset $\{X,Y\}$ (Input sequences $X$, Target sequences $Y$),
+        optional initial Adjacency $A_0$, 
+        hyperparameters $(\eta,\lambda,p,\gamma,E)$ (learning rate, weight decay, patience, LR factor, epochs)
     \ENSURE 
-        Best parameters $\Theta^*$
-    \STATE $\Theta\!\sim\!{\rm init},\ \mathrm{OPT}\!=\!\mathrm{Adam}(\eta,\lambda),\ \mathrm{SCH}\!=\!\mathrm{ReduceLROnPlateau}(p,\gamma)$  
-    \FOR{$e=1,2,\dots,E$}  
-      \STATE $L_{\rm tr}\gets0$  
-      \FOR{each batch $(X_b,Y_b)$}  
-        \STATE $(\hat Y_b,L_{\rm att})\gets\mathrm{MSAGATNet}(X_b,A;\Theta)$  
-        \STATE $L_b\gets\mathrm{MSE}(\hat Y_b,Y_b)+L_{\rm att}$  
-        \STATE $\Theta\gets\Theta-\eta\,\nabla_\Theta L_b$\quad;\quad $L_{\rm tr}\mathrel{+}=L_b$  
-      \ENDFOR  
-      \STATE $L_{\rm tr}\gets L_{\rm tr}/|\mathrm{train}|$  
-      \STATE $L_{\rm val}\gets\mathrm{Eval}(\mathrm{valid},\Theta)$;\quad $\mathrm{SCH}.step(L_{\rm val})$  
-      \IF{$L_{\rm val}<L_{\rm val}^*$}  
-        \STATE $\Theta^*\gets\Theta,\ L_{\rm val}^*\gets L_{\rm val},\ \mathrm{patience}\gets0$  
-        \STATE $\mathrm{Eval}(\mathrm{test},\Theta^*)$  
-      \ELSE  
-        \STATE $\mathrm{patience}\mathrel{+}=1$  
-      \ENDIF  
-      \IF{$\mathrm{patience}\ge p$} \STATE \textbf{break} \ENDIF  
-    \ENDFOR  
-    \RETURN $\Theta^*$  
+        Best model parameters $\Theta^*$ based on validation performance
+    \STATE Initialize model parameters $\Theta\!\sim\!{\rm init}$
+    \STATE Initialize Optimizer $\mathrm{OPT}\!=\!\mathrm{Adam}(\eta,\lambda)$
+    \STATE Initialize LR Scheduler $\mathrm{SCH}\!=\!\mathrm{ReduceLROnPlateau}(p,\gamma)$
+    \STATE Initialize best validation loss $L_{\rm val}^* \gets \infty$, patience counter $\mathrm{patience} \gets 0$
+    \FOR{$e=1,2,\dots,E$} \hfill\COMMENT{Loop over training epochs}
+      \STATE $L_{\rm tr}\gets0$ \hfill\COMMENT{Initialize total training loss for the epoch}
+      \FOR{each batch $(X_b,Y_b)$ in training set}
+        \STATE $(\hat Y_b,L_{\rm att})\gets\mathrm{MSAGATNet}(X_b,A_0;\Theta)$ \hfill\COMMENT{Forward pass: get predictions and attention loss}
+        \STATE $L_b\gets\mathrm{MSE}(\hat Y_b,Y_b)+L_{\rm att}$ \hfill\COMMENT{Compute batch loss (MSE + attention regularization)}
+        \STATE Perform backpropagation: Compute gradients $\nabla_\Theta L_b$
+        \STATE Update parameters using optimizer: $\Theta\gets\mathrm{OPT.step}(\Theta, \nabla_\Theta L_b)$ \hfill\COMMENT{Gradient descent step}
+        \STATE $L_{\rm tr}\mathrel{+}=L_b$ \hfill\COMMENT{Accumulate batch loss}
+      \ENDFOR
+      \STATE $L_{\rm tr}\gets L_{\rm tr}/|\mathrm{train}|$ \hfill\COMMENT{Calculate average training loss for the epoch}
+      \STATE $L_{\rm val}\gets\mathrm{Eval}(\mathrm{valid}, \Theta)$ \hfill\COMMENT{Evaluate model on validation set}
+      \STATE $\mathrm{SCH}.step(L_{\rm val})$ \hfill\COMMENT{Update learning rate based on validation loss}
+      \IF{$L_{\rm val}<L_{\rm val}^*$} \hfill\COMMENT{Check if validation performance improved}
+        \STATE $\Theta^*\gets\Theta$ \hfill\COMMENT{Save best parameters}
+        \STATE $L_{\rm val}^*\gets L_{\rm val}$ \hfill\COMMENT{Update best validation loss}
+        \STATE $\mathrm{patience}\gets0$ \hfill\COMMENT{Reset patience counter}
+        \STATE $\mathrm{Eval}(\mathrm{test},\Theta^*)$ \hfill\COMMENT{Optional: Evaluate best model on test set}
+      \ELSE
+        \STATE $\mathrm{patience}\mathrel{+}=1$ \hfill\COMMENT{Increment patience counter}
+      \ENDIF
+      \IF{$\mathrm{patience}\ge p$} \hfill\COMMENT{Check for early stopping condition}
+        \STATE \textbf{break} \hfill\COMMENT{Stop training if no improvement for $p$ epochs}
+      \ENDIF
+    \ENDFOR
+    \RETURN $\Theta^*$ \hfill\COMMENT{Return the best performing model parameters}
     \end{algorithmic}
 \end{algorithm}
 
+Algorithm \ref{alg:msagatnet_math} provides a detailed mathematical breakdown of the forward pass within the MSTGAT model, illustrating the sequence of operations from input processing to final prediction generation as described conceptually in Section \ref{sec:architecture}.
+
 \begin{algorithm}[h]
-  \caption{MSAGATNet: Mathematical Formulation}
+  \caption{MSAGATNet: Mathematical Formulation of Forward Pass}
   \label{alg:msagatnet_math}
   \begin{algorithmic}[1]
     \REQUIRE 
-      $X\in\mathbb{R}^{B\times T\times N}$,\quad optional $A_0\in\mathbb{R}^{N\times N}$
+      Input batch $X\in\mathbb{R}^{B\times T\times N}$,\quad optional initial Adjacency $A_0\in\mathbb{R}^{N\times N}$
     \ENSURE 
-      $\hat{Y}\in\mathbb{R}^{B\times h\times N},\;L_{\rm att}$
+      Predicted batch $\hat{Y}\in\mathbb{R}^{B\times h\times N},\;$ Attention Regularization Loss $L_{\rm att}$
       
-    \STATE $\tilde{X}\!=\!{\rm reshape}(X)\in\mathbb{R}^{BN\times1\times T}$ \hfill\COMMENT{Reshape for temporal convolution}
-    
-    \STATE $Z_{\rm dep}=\mathrm{DWConv}(\tilde{X})$,\ 
-           $Z=\mathrm{PWConv}(\sigma\,{\rm BN}(Z_{\rm dep}))$ \hfill\COMMENT{Depthwise separable convolution}
+    \STATE \textbf{// Feature Extraction Module}
+    \STATE $\tilde{X}\!=\!{\rm reshape}(X)\in\mathbb{R}^{BN\times1\times T}$ \hfill\COMMENT{Reshape input for 1D convolution over time}
+    \STATE $Z_{\rm dep}=\mathrm{DWConv}(\tilde{X})$ \hfill\COMMENT{Apply depthwise convolution along time}
+    \STATE $Z=\mathrm{PWConv}(\sigma\,{\rm BN}(Z_{\rm dep}))$ \hfill\COMMENT{Apply pointwise convolution, BN, activation}
+    \STATE $H=\sigma\bigl({\rm LN}( (\text{Flatten}(Z)) W_L W_H+b)\bigr)\in\mathbb{R}^{BN\times D}$ \hfill\COMMENT{Flatten, apply low-rank projection, LN, activation}
+    \STATE $H \leftarrow {\rm reshape}(H)\in\mathbb{R}^{B\times N\times D}$ \hfill\COMMENT{Reshape features per node}
+    \STATE $X_L=X_{:,-1,:}\in\mathbb{R}^{B\times N}$ \hfill\COMMENT{Extract last observation for prediction refinement}
            
-    \STATE $H=\sigma\bigl({\rm LN}(ZW_L W_H+b)\bigr)\in\mathbb{R}^{BN\times D}$ \hfill\COMMENT{Low-rank feature processing}
+    \STATE \textbf{// Spatial Dependency Module (Simplified Single Head)}
+    \STATE $[Q,K,V]=\mathrm{split}(H\,W_{qkv}^L\,W_{qkv}^H+b_{qkv})$ \hfill\COMMENT{Project H to Q, K, V using low-rank layers}
+    \STATE $\widetilde{Q}=\mathrm{ELU}(Q)+1,\;\widetilde{K}=\mathrm{ELU}(K)+1$ \hfill\COMMENT{Apply positive mapping (e.g., ELU+1) for linear attention}
+    \STATE $A_{\rm bias} = UV^T$ \hfill\COMMENT{Compute low-rank learnable graph bias}
+    \STATE $A_{\rm scores} = \frac{\widetilde{Q}\widetilde{K}^T}{\sqrt{D}} + A_{\rm bias} + \lambda A_0$ \hfill\COMMENT{Compute attention scores (content + bias + initial adj.)}
+    \STATE $A = \mathrm{softmax}(A_{\rm scores})$ \hfill\COMMENT{Compute final attention matrix}
+    \STATE $O = A V$ \hfill\COMMENT{Standard attention: Aggregate values based on attention (can be replaced by linear approx.)}
+    % \STATE $O=\dfrac{\widetilde{Q}\,( \widetilde{K}^T V )}{\sum_j\widetilde{K}_j+\epsilon}$ \hfill\COMMENT{Optional: Linear attention computation for efficiency}
+    \STATE $H_s = \mathrm{LN}( (OW_o^L\,W_o^H + b_o) + H )$ \hfill\COMMENT{Low-rank output projection, add residual, apply LayerNorm}
+    \STATE $L_{\rm att}=\lambda_{\rm att}\|A\|_1$ \hfill\COMMENT{Calculate attention regularization loss (e.g., L1 norm)}
     
-    \STATE reshape $H\to H^{(B,N,D)}$, \ 
-           $X_L=X_{:,-1,:}\in\mathbb{R}^{B\times N}$ \hfill\COMMENT{Extract last observation}
-           
-    \STATE $[Q,K,V]=\mathrm{split}(H\,W_{qkv}^L\,W_{qkv}^H+b_{qkv})$ \hfill\COMMENT{Low-rank QKV projection}
-    
-    \STATE $\widetilde{Q}=\mathrm{ELU}(Q)+1,\;\widetilde{K}=\mathrm{ELU}(K)+1$ \hfill\COMMENT{Positive mapping for linearization}
-    
-    \STATE $A=\mathrm{softmax}\bigl(\tfrac{\widetilde{Q}\widetilde{K}^T}{\sqrt{D}}+UV^T+\lambda A_0\bigr)$ \hfill\COMMENT{Attention with factorized adjacency}
-    
-    \STATE $O=\dfrac{\widetilde{Q}\,( \widetilde{K}^T V )}{\sum_j\widetilde{K}_j+\epsilon}$ \hfill\COMMENT{Linear attention computation}
-    
-    \STATE $H_s=OW_o^L\,W_o^H + H$ \hfill\COMMENT{Low-rank output projection with residual}
-    
-    \STATE $L_{\rm att}=\lambda_{\rm att}\|A\|_1$ \hfill\COMMENT{Attention regularization loss}
-    
+    \STATE \textbf{// Multi-Scale Temporal Module}
+    \STATE Initialize list $Z_{scales} = []$
     \FOR{$s=1,\dots,S$}
-      \STATE $Z_s=\mathrm{Drop}\bigl(\sigma\,{\rm BN}(\mathrm{Conv1D}(H_s^T,\,d=2^{s-1}))\bigr)$ \hfill\COMMENT{Multi-scale dilated convolutions}
+      \STATE $Z_s=\mathrm{Drop}\bigl(\sigma\,{\rm BN}(\mathrm{Conv1D}(H_s^T,\,d=2^{s-1}))\bigr)$ \hfill\COMMENT{Apply dilated Conv1D for scale $s$}
+      \STATE Append $Z_s$ to $Z_{scales}$
     \ENDFOR
+    \STATE $\alpha=\mathrm{softmax}(w)$ \hfill\COMMENT{Compute adaptive fusion weights for scales}
+    \STATE $Z = \sum_{s=1}^S \alpha_s Z_{scales}[s]$ \hfill\COMMENT{Weighted sum fusion of scale features}
+    \STATE $H_t=\mathrm{LN}( (Z^T W_f^L\,W_f^H + b_f) + H_s )$ \hfill\COMMENT{Low-rank fusion projection, add residual, apply LayerNorm}
     
-    \STATE $\alpha=\mathrm{softmax}(w),\quad Z=\sum_s\alpha_sZ_s$ \hfill\COMMENT{Adaptive scale fusion}
-    
-    \STATE $H_t=\mathrm{LN}(ZW_f^L\,W_f^H+Z)$ \hfill\COMMENT{Low-rank fusion with residual}
-    
-    \STATE $P=\mathrm{pred}(H_t),\quad G=\mathrm{sigmoid}(\mathrm{gate}(H_t))$ \hfill\COMMENT{Initial prediction and gate}
-    
-    \STATE $E=X_L\odot\exp(-\beta\,[1:h])$ \hfill\COMMENT{Time-decayed last observation}
-    
-    \STATE $\hat{Y}=G\odot P+(1-G)\odot E$ \hfill\COMMENT{Progressive prediction with gating}
+    \STATE \textbf{// Horizon Prediction Module}
+    \STATE $P=\mathrm{Predictor}(H_t)$ \hfill\COMMENT{Generate initial prediction using bottleneck MLP}
+    \STATE $G=\mathrm{sigmoid}(\mathrm{GateMLP}(H_t))$ \hfill\COMMENT{Compute adaptive gate values using MLP}
+    \STATE $E=X_L\odot\exp(-\beta\,[1:h])$ \hfill\COMMENT{Compute time-decayed extrapolation from last observation}
+    \STATE $\hat{Y}_{B,N,h}=G\odot P+(1-G)\odot E$ \hfill\COMMENT{Combine prediction and extrapolation using gate}
+    \STATE $\hat{Y} = \text{Transpose}(\hat{Y}_{B,N,h})$ \hfill\COMMENT{Transpose to final shape $\mathbb{R}^{B\times h\times N}$}
   \end{algorithmic}
 \end{algorithm}
     
@@ -184,7 +200,7 @@ Our proposed MSTGAT architecture specifically addresses these challenges through
 
 \subsection{Architectural Overview} % Changed from \section to \subsection
 
-The Multi-Scale Temporal Graph Attention Network (MSTGAT) is designed as an end-to-end deep learning architecture for spatiotemporal forecasting. Figure \ref{fig:architecture} illustrates the overall framework of the proposed model.
+The Multi-Scale Temporal Graph Attention Network (MSTGAT) is conceived as a modular, end-to-end deep learning architecture specifically tailored for the complexities of spatiotemporal forecasting. Its design focuses on effectively capturing both spatial dependencies between entities (e.g., geographical regions) and temporal dynamics within their time series data, while maintaining computational efficiency. Figure \ref{fig:architecture} provides a high-level schematic of the model's structure and information flow.
 
 \begin{figure}[htbp]
     \centering
@@ -230,7 +246,7 @@ The Multi-Scale Temporal Graph Attention Network (MSTGAT) is designed as an end-
     \label{fig:architecture}
 \end{figure}
 
-At a high level, MSTGAT processes the input data $\mathbf{X} \in \mathbb{R}^{B \times T \times N}$ through four sequential stages:
+At its core, MSTGAT processes the input tensor $\mathbf{X} \in \mathbb{R}^{B \times T \times N}$ (Batch Size $\times$ Time Steps $\times$ Nodes) through four primary, sequential modules, each designed to address a specific aspect of the spatiotemporal forecasting problem:
 
 \begin{enumerate}
     \item \textbf{Feature Extraction}: Transforms raw time series into latent representations that capture relevant patterns.
@@ -239,7 +255,7 @@ At a high level, MSTGAT processes the input data $\mathbf{X} \in \mathbb{R}^{B \
     \item \textbf{Horizon Prediction}: Generates forecasts for future time steps with an adaptive refinement mechanism.
 \end{enumerate}
 
-The architecture incorporates several design principles:
+The architecture is underpinned by several key design principles aimed at enhancing performance and practicality:
 \begin{itemize}
     \item \textbf{Parameter Efficiency}: We employ low-rank decompositions and separable convolutions to reduce the number of parameters and computational complexity.
     \item \textbf{Adaptive Learning}: Rather than relying on fixed graph structures or pre-specified temporal dependencies, the model learns and adapts these relationships during training.
@@ -247,44 +263,12 @@ The architecture incorporates several design principles:
     \item \textbf{Residual Learning}: Skip connections throughout the architecture facilitate gradient flow and information propagation.
 \end{itemize}
 
-We now describe each component in detail.
+We now delve into the specifics of each module, detailing its function, underlying mechanisms, and contribution to the overall model.
 
 \subsection{Feature Extraction Module} % Changed from \section to \subsection
 \label{sec:feature_extraction}
 
-% Add figure for Feature Extraction Module
-\begin{figure}[htbp]
-\centering
-% Replace includegraphics with TikZ diagram
-\begin{tikzpicture}[node distance=1cm and 1.5cm, >=Latex, 
-    block/.style={rectangle, draw, thick, text centered, rounded corners, minimum height=1cm, text width=3cm},
-    op/.style={rectangle, draw, thick, text centered, minimum height=0.8cm, text width=2.5cm},
-    point/.style={coordinate}]
-    
-    \node (input) [block] {Input $\mathbf{X} \in \mathbb{R}^{B \times T \times N}$};
-    \node (reshape1) [op, below=of input] {Reshape $\mathbb{R}^{BN \times 1 \times T}$};
-    \node (dsconv) [block, below=of reshape1] {Depthwise Separable Conv (DW + PW)};
-    \node (bn_relu) [op, below=of dsconv] {BN + ReLU};
-    \node (flatten) [op, below=of bn_relu] {Flatten};
-    \node (lr_proj) [block, below=of flatten] {Low-Rank Projection ($D_{low}$ bottleneck)};
-    \node (ln_relu) [op, below=of lr_proj] {LN + ReLU};
-    \node (reshape2) [op, below=of ln_relu] {Reshape $\mathbb{R}^{B \times N \times D}$};
-    \node (output) [block, below=of reshape2] {Output $\mathbf{H}_{reshaped}$};
-
-    \draw [->] (input) -- (reshape1);
-    \draw [->] (reshape1) -- (dsconv);
-    \draw [->] (dsconv) -- (bn_relu);
-    \draw [->] (bn_relu) -- (flatten);
-    \draw [->] (flatten) -- (lr_proj);
-    \draw [->] (lr_proj) -- (ln_relu);
-    \draw [->] (ln_relu) -- (reshape2);
-    \draw [->] (reshape2) -- (output);
-\end{tikzpicture}
-\caption{Diagram of the Feature Extraction Module}
-\label{fig:feature_extraction}
-\end{figure}
-
-The feature extraction module transforms raw time series data into latent representations that capture relevant temporal patterns while maintaining computational efficiency. This module addresses several key challenges in spatiotemporal forecasting:
+The primary role of the feature extraction module is to transform the raw input time series data for each node into a more informative and compact latent representation. This initial stage is crucial for preparing the data for the subsequent, more complex spatial and temporal modeling steps. It aims to:
 
 \begin{itemize}
     \item Extract meaningful features from potentially noisy time series data
@@ -403,10 +387,12 @@ The feature extraction module can be understood from several theoretical perspec
 \textbf{Information Bottleneck Perspective}: The low-rank projection can be viewed through the lens of the information bottleneck principle \cite{tishby2000information}. By compressing the representation to a lower-dimensional space, the model is forced to retain only the most predictive features, discarding irrelevant information. This leads to representations that are both minimal and sufficient for the forecasting task.
 
 \textbf{Manifold Learning Perspective}: Epidemiological data often lies on a low-dimensional manifold within the high-dimensional observation space. The bottleneck projection can be seen as learning this manifold, with $D_{low}$ representing its intrinsic dimensionality.
+
 \subsection{Spatial Dependency Modeling} % Changed from \section to \subsection
 \label{sec:spatial_modeling}
 
-% Add figure for Spatial Dependency Modeling Module
+Following feature extraction, the spatial dependency module focuses on capturing and modeling the relationships *between* different nodes (regions) at a given time step. A critical aspect of MSTGAT is its ability to learn these spatial relationships adaptively from the data, rather than relying solely on predefined, static graph structures (like geographical adjacency). This adaptivity is vital in domains like epidemiology where interactions can be complex and dynamic.
+
 \begin{figure}[htbp]
 \centering
 % Replace includegraphics with improved TikZ diagram
@@ -487,7 +473,7 @@ For multi-head attention with $H$ heads, we reshape these tensors:
 
 \subsubsection{Learnable Graph Structure} % Changed from \subsection to \subsubsection
 
-A key innovation in our approach is the incorporation of a learnable graph structure. Rather than computing attention scores based solely on the query-key interactions, we introduce a low-rank bias term that encodes the underlying graph structure:
+A key innovation in our approach is the incorporation of a learnable graph structure, complementing the content-based attention. Rather than computing attention scores based solely on the query-key interactions, we introduce a learnable bias term that encodes underlying graph structural information. This bias is parameterized efficiently using a low-rank factorization:
 
 \begin{equation}
 \mathbf{U}_h \in \mathbb{R}^{N \times D_{low}}, \mathbf{V}_h \in \mathbb{R}^{D_{low} \times N}
@@ -497,7 +483,7 @@ A key innovation in our approach is the incorporation of a learnable graph struc
 \mathbf{A}_{bias,h} = \mathbf{U}_h\mathbf{V}_h \in \mathbb{R}^{N \times N}
 \end{equation}
 
-where $\mathbf{U}_h$ and $\mathbf{V}_h$ are learnable parameters for each attention head $h$. This low-rank formulation reduces the number of parameters from $\mathcal{O}(N^2)$ to $\mathcal{O}(N \cdot D_{low})$, making it feasible to learn the graph structure even for large numbers of nodes.
+where $\mathbf{U}_h$ and $\mathbf{V}_h$ are learnable embedding matrices for each attention head $h$. This low-rank formulation is crucial for parameter efficiency, reducing the number of parameters required to represent the graph structure from $\mathcal{O}(N^2)$ (for a full matrix) to $\mathcal{O}(N \cdot D_{low})$. This makes it feasible to learn meaningful graph structures even for large numbers of nodes, capturing potentially complex, non-local relationships that might be missed by predefined graphs.
 
 The attention scores are then computed as:
 
@@ -590,10 +576,12 @@ By visualizing these attention weights, we can:
 \end{itemize}
 
 This interpretability is particularly valuable in epidemiological applications, where understanding the spatial patterns of disease spread is crucial for intervention planning.
+
 \subsection{Multi-Scale Temporal Modeling} % Changed from \section to \subsection
 \label{sec:temporal_modeling}
 
-% Add figure for Multi-Scale Temporal Modeling Module
+Once spatial dependencies have been incorporated into the node representations, the multi-scale temporal module processes the sequence of representations along the time dimension. Its primary goal is to capture temporal patterns and dependencies occurring at various time scales, ranging from short-term fluctuations to longer-term trends. This is achieved efficiently through the use of dilated convolutions.
+
 \begin{figure}[h!]
 \centering
 % Improved multi-scale diagram with spacing and scale
@@ -738,6 +726,18 @@ Similar to previous modules, we apply a low-rank projection to maintain computat
 \end{equation}
 
 We then apply layer normalization and a residual connection:
+
+\begin{equation}
+\mathbf{H}_{temporal} = \text{LayerNorm}(\mathbf{Z}_{high} + \mathbf{Z}_{fused}^T) \in \mathbb{R}^{B \times N \times D}
+\end{equation}
+
+The residual connection helps maintain gradient flow during training, while the layer normalization stabilizes the training process.
+
+\subsubsection{Theoretical Insights on Multi-Scale Temporal Modeling} % Changed from \subsection to \subsubsection
+
+The multi-scale temporal module can be understood from several theoretical perspectives:
+
+\textbf{Wavelet Transform Perspective}: The dilated convolutions can be viewed as analogous to a learnable wavelet transform, which decomposes the signal into components at different scales. The adaptive fusion then reconstructs the signal by combining these components with learned weights.
 
 \begin{equation}
 \mathbf{H}_{temporal} = \text{LayerNorm}(\mathbf{Z}_{high} + \mathbf{Z}_{fused}^T) \in \mathbb{R}^{B \times N \times D}
@@ -1206,98 +1206,48 @@ The memory requirements of MSTGAT can be substantial, especially for large graph
     \end{itemize}
 \end{itemize}
 
-\section{Model Variants and Ablations} % Changed from \chapter to \section
+\section{Model Variants and Ablation Studies} % Changed from \chapter to \section
 \label{sec:variants}
 
-To better understand the contribution of each component in MSTGAT, we propose several model variants and ablation studies:
+To systematically evaluate the contribution of each key component within the MSTGAT architecture, we conduct a series of ablation studies. These studies involve creating model variants where specific modules are replaced with simpler alternatives. This process allows us to isolate and quantify the impact of each sophisticated component on the overall model performance. The `MSAGATNet_Ablation` class in `src/ablation.py` facilitates these experiments by allowing component substitution via configuration arguments.
 
-\subsection{Feature Extraction Variants} % Changed from \section to \subsection
+\subsection{MSTGAT without Adaptive Graph Attention (MSTGAT-no-AGAM)}
+\label{sec:ablation_no_agam}
 
-\subsubsection{Standard Convolution vs. Depthwise Separable Convolution} % Changed from \subsection to \subsubsection
+This variant investigates the importance of the adaptive graph learning mechanism. We replace the `SpatialAttentionModule`, which implements the Adaptive Graph Attention Module (AGAM), with a `SimpleGraphConvolutionalLayer`. The objective is to assess the performance gain achieved by dynamically learning spatial dependencies compared to using a standard Graph Convolutional Network (GCN) layer, which typically operates on a fixed or predefined graph structure.
 
-To assess the impact of depthwise separable convolutions, we can replace them with standard convolutions:
-
+The `SimpleGraphConvolutionalLayer` implements a standard GCN operation involving linear transformations, a non-linear activation (ReLU), and aggregation based on an adjacency matrix $\mathbf{A}$:
 \begin{equation}
-\mathbf{Z} = \text{Conv1D}(\mathbf{X}', \text{kernel\_size}=K, \text{out\_channels}=C_{out})
+\mathbf{H}' = \text{LayerNorm}(\sigma(\mathbf{A} (\sigma(\mathbf{H} \mathbf{W}_1)) \mathbf{W}_2))
 \end{equation}
+where $\mathbf{H}$ is the input node representation, $\mathbf{W}_1$ and $\mathbf{W}_2$ are learnable weight matrices, and $\sigma$ is the ReLU activation function. The adjacency matrix $\mathbf{A}$ is treated as fixed during inference (it defaults to the identity matrix if no prior graph structure is provided). Consequently, this variant loses the ability to adapt the spatial relationships based on the input features and context, relying solely on the static connections defined by $\mathbf{A}$. Furthermore, the attention regularization loss $L_{att}$, designed to encourage sparsity or specific structures in the learned attention, becomes irrelevant and is set to zero in this configuration.
 
-This variant would have higher computational complexity but potentially improved representational capacity.
+\subsection{MSTGAT without Multi-Scale Temporal Modeling (MSTGAT-no-DMTM)}
+\label{sec:ablation_no_dmtm}
 
-\subsubsection{Direct Projection vs. Low-Rank Projection} % Changed from \subsection to \subsubsection
+This ablation study focuses on the contribution of the multi-scale temporal processing capability. The `MultiScaleTemporalModule`, which utilizes dilated convolutions to capture patterns across different temporal ranges (Dilated Multi-Scale Temporal Module - DMTM), is replaced by a `SingleScaleTemporalModule`. The aim is to evaluate how crucial capturing temporal patterns at multiple scales simultaneously is for forecasting accuracy compared to using a more conventional single-scale temporal convolution.
 
-To evaluate the impact of the low-rank projection, we can replace it with a direct projection:
-
+The `SingleScaleTemporalModule` employs a standard 1D convolution followed by normalization, activation, and dropout, but crucially, it operates only at a single temporal scale with a fixed kernel size $K$ and *without* employing dilation:
 \begin{equation}
-\mathbf{H} = \sigma(\text{LN}(\mathbf{Z}_{flat}\mathbf{W}_{direct} + \mathbf{b}_{direct}))
+\mathbf{Z} = \text{Dropout}(\sigma(\text{BN}(\text{Conv1D}(\mathbf{H}_s^T, \text{kernel\_size}=K, \text{dilation}=1))))
 \end{equation}
-
-where $\mathbf{W}_{direct} \in \mathbb{R}^{(C_{out} \cdot T) \times D}$.
-
-\subsection{Spatial Modeling Variants} % Changed from \section to \subsection
-
-\subsubsection{Predefined Graph vs. Learned Graph} % Changed from \subsection to \subsubsection
-
-To assess the value of learning the graph structure, we can replace the low-rank graph attention with a graph convolution based on a predefined adjacency matrix:
-
 \begin{equation}
-\mathbf{H}_{spatial} = \text{GCN}(\mathbf{H}_{reshaped}, \mathbf{A}_{predefined})
+\mathbf{H}_t = \sigma(\text{LN}(\text{Fusion}(\mathbf{Z}^T)))
 \end{equation}
+where $\mathbf{H}_s$ is the output from the spatial module, Conv1D performs the single-scale convolution, BN is Batch Normalization, $\sigma$ is ReLU, LN is Layer Normalization, and Fusion represents subsequent linear projection layers. By removing the dilated convolutions and the adaptive fusion across scales, this variant lacks the capacity to efficiently capture long-range temporal dependencies and adaptively weigh the importance of different temporal patterns, which is a key feature of the original DMTM.
 
-where $\mathbf{A}_{predefined}$ could be based on geographical proximity, transportation networks, or other domain knowledge.
+\subsection{MSTGAT without Progressive Prediction (MSTGAT-no-PPM)}
+\label{sec:ablation_no_ppm}
 
-\subsubsection{Full-Rank Graph Attention vs. Low-Rank Graph Attention} % Changed from \subsection to \subsubsection
+This variant assesses the effectiveness of the adaptive refinement mechanism in the final prediction stage. We replace the `HorizonPredictor`, which implements the Progressive Prediction Module (PPM), with a simpler `DirectPredictionModule`. The goal is to compare the performance of the progressive approach, which combines model predictions with recent observations via a learned gate, against a straightforward direct multi-step prediction.
 
-To evaluate the impact of the low-rank formulation in the graph attention, we can replace it with a full-rank attention mechanism:
-
+The `DirectPredictionModule` utilizes a feed-forward network (typically composed of linear layers, normalization, activations, and dropout) to directly map the final hidden representation $\mathbf{H}_t$ from the temporal module to the entire prediction horizon $h$ in a single step:
 \begin{equation}
-\mathbf{A}_{bias,h} = \mathbf{W}_{full} \in \mathbb{R}^{N \times N}
+\hat{\mathbf{Y}} = \text{Predictor}(\mathbf{H}_t) \in \mathbb{R}^{B \times N \times h}
 \end{equation}
+This direct approach contrasts with the PPM, which generates an initial prediction $\mathbf{P}_{initial}$ and then adaptively combines it with a time-decayed extrapolation $\mathbf{E}$ of the last observation using a learned gate $\mathbf{G}$ ($\hat{\mathbf{Y}} = \mathbf{G} \odot \mathbf{P}_{initial} + (1 - \mathbf{G}) \odot \mathbf{E}$). By omitting this gating mechanism and the explicit incorporation of the most recent observation for refinement, the `DirectPredictionModule` variant may be less adaptive to sudden changes or shifts in the time series dynamics compared to the progressive approach employed in the full MSTGAT model.
 
-where $\mathbf{W}_{full}$ is a learnable parameter matrix.
-
-\subsection{Temporal Modeling Variants} % Changed from \section to \subsection
-
-\subsubsection{Single-Scale vs. Multi-Scale} % Changed from \subsection to \subsubsection
-
-To assess the impact of multi-scale temporal modeling, we can replace the multi-scale dilated convolutions with a single-scale convolution:
-
-\begin{equation}
-\mathbf{Z}_{single} = \text{Conv1D}(\mathbf{H}_{temp}, \text{kernel\_size}=K, \text{dilation}=1, \text{padding}=(K-1)/2)
-\end{equation}
-
-\subsubsection{Fixed Fusion vs. Adaptive Fusion} % Changed from \subsection to \subsubsection
-
-To evaluate the impact of adaptive fusion, we can replace the learnable fusion weights with fixed weights:
-
-\begin{equation}
-\mathbf{Z}_{fused} = \frac{1}{S} \sum_{s=1}^{S} \mathbf{Z}_{s,drop}
-\end{equation}
-
-\subsection{Prediction Variants} % Changed from \section to \subsection
-
-\subsubsection{Direct Prediction vs. Adaptive Refinement} % Changed from \subsection to \subsubsection
-
-To assess the impact of the adaptive refinement mechanism, we can use the model's predictions directly:
-
-\begin{equation}
-\hat{\mathbf{Y}} = \mathbf{P}_{initial}
-\end{equation}
-
-\subsubsection{Alternative Refinement Approaches} % Changed from \subsection to \subsubsection
-
-We can also explore alternative refinement mechanisms, such as linear extrapolation:
-
-\begin{equation}
-\mathbf{X}_{trend} = \mathbf{X}[:, -1, :] - \mathbf{X}[:, -2, :]
-\end{equation}
-
-\begin{equation}
-\mathbf{E}_{linear} = \mathbf{X}_{last\_expanded} + \mathbf{X}_{trend}.unsqueeze(-1) \cdot \mathbf{T}
-\end{equation}
-
-\begin{equation}
-\hat{\mathbf{Y}} = \mathbf{G} \odot \mathbf{P}_{initial} + (1 - \mathbf{G}) \odot \mathbf{E}_{linear}
-\end{equation}
+By comparing the performance metrics (e.g., MAE, RMSE, MAPE) of the full MSTGAT model against these three ablated variants (MSTGAT-no-AGAM, MSTGAT-no-DMTM, MSTGAT-no-PPM) on benchmark datasets, we can quantitatively determine the specific contributions of the adaptive graph attention, multi-scale temporal modeling, and progressive prediction components to the overall forecasting accuracy and robustness of the proposed architecture.
 
 \section{Limitations and Future Directions} % Changed from \chapter to \section
 \label{sec:limitations}
