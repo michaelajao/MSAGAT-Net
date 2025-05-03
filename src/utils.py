@@ -158,7 +158,22 @@ def visualize_matrices(
 
     # Any model with graph_attention
     elif hasattr(model, "graph_attention") and hasattr(model.graph_attention, "attn"):
-        attn = model.graph_attention.attn.detach().cpu().numpy()
+        attn_obj = model.graph_attention.attn
+        # If attn is a list of tensors, process each
+        if isinstance(attn_obj, list):
+            # Convert each tensor to numpy and stack/average as needed
+            attn_list = [a.detach().cpu().numpy() for a in attn_obj if hasattr(a, 'detach')]
+            if len(attn_list) == 1:
+                attn = attn_list[0]
+            elif len(attn_list) > 1:
+                # Average over the list (e.g., heads or layers)
+                attn = np.mean(np.stack(attn_list), axis=0)
+            else:
+                attn = None
+        elif hasattr(attn_obj, 'detach'):
+            attn = attn_obj.detach().cpu().numpy()
+        else:
+            attn = None
 
     # Fallback to zeros if no attention found
     if attn is None:

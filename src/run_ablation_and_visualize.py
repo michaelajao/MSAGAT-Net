@@ -37,7 +37,7 @@ METRICS_DIR = os.path.join(BASE_DIR, 'report', 'results')
 SAVE_DIR    = 'save_all'
 
 # Folders for our visual outputs
-FIG_DIR     = 'figures'
+FIG_DIR     = 'paper_figures'
 OUT_DIR     = os.path.join('report', 'paper_figures')
 
 # Updated training script path
