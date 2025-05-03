@@ -16,6 +16,7 @@ Full pipeline script that:
 import os
 import subprocess
 import logging
+import argparse
 from itertools import product
 
 import numpy as np
@@ -29,7 +30,7 @@ import matplotlib.gridspec as gridspec
 # =============================================================================
 
 # Where `train.py` writes its final CSV metrics
-BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 METRICS_DIR = os.path.join(BASE_DIR, 'report', 'results')
 
 # We still point at your checkpoint folder, but do not create it here
@@ -37,14 +38,14 @@ SAVE_DIR    = 'save_all'
 
 # Folders for our visual outputs
 FIG_DIR     = 'figures'
-OUT_DIR     = 'paper_figures'
+OUT_DIR     = os.path.join('report', 'paper_figures')
 
 # Updated training script path
 TRAIN_SCRIPT    = os.path.join('src', 'train.py')
 DATASET_CONFIGS = [
     ('japan',           'japan-adj',      [3, 5, 10, 15]),
     ('region785',       'region-adj',     [3, 5, 10, 15]),
-    ('state360',        'state-adj-50',   [3, 5, 10, 15]),
+    ('state360',        'state-adj-49',   [3, 5, 10, 15]),
     ('australia-covid', 'australia-adj',  [3, 7, 14]),
     ('spain-covid',     'spain-adj',      [3, 7, 14]),
     ('nhs_timeseries',  'nhs-adj',        [3, 7, 14]),
@@ -113,8 +114,62 @@ def load_summary(dataset: str, window: int, horizon: int) -> pd.DataFrame:
     path     = os.path.join(METRICS_DIR, filename)
     if not os.path.exists(path):
         logger.warning(f"Missing summary file: {path}")
+        # Try to compute the summary on the fly
+        summary = compute_ablation_summary(dataset, window, horizon)
+        if summary is not None:
+            logger.info(f"Generated and saved summary: {path}")
+            return summary
         return None
     return pd.read_csv(path, index_col=0)
+
+def compute_ablation_summary(dataset: str, window: int, horizon: int) -> pd.DataFrame:
+    """Compute summary of ablation results by comparing metrics across variants."""
+    metrics = {}
+    
+    # Load metrics for each ablation variant
+    for ablation in ABLATIONS:
+        df = load_metrics(dataset, window, horizon, ablation)
+        if df is not None:
+            metrics[ablation] = df
+    
+    if not metrics or 'none' not in metrics:
+        logger.warning(f"Insufficient data to compute ablation summary for {dataset}, w={window}, h={horizon}")
+        return None
+    
+    # Organize performance metrics
+    metric_cols = ['mae', 'rmse', 'pcc', 'r2']
+    baseline_metrics = {col: metrics['none'][col][0] for col in metric_cols}
+    
+    # Build summary DataFrame
+    summary_data = {}
+    for ablation, df in metrics.items():
+        row_data = {}
+        
+        # Add raw metrics
+        for col in metric_cols:
+            if col in df.columns:
+                row_data[col.upper()] = df[col][0]
+        
+        # Compute percentage changes for non-baseline models
+        if ablation != 'none':
+            for col in metric_cols:
+                if col in df.columns and col in baseline_metrics:
+                    baseline = baseline_metrics[col]
+                    value = df[col][0]
+                    if baseline != 0:  # Avoid division by zero
+                        pct_change = 100 * (value - baseline) / baseline
+                        row_data[f"{col.upper()}_change"] = pct_change
+        
+        summary_data[ablation] = row_data
+    
+    summary_df = pd.DataFrame(summary_data).T
+    
+    # Save summary to CSV
+    filename = f"ablation_summary_{dataset}.w-{window}.h-{horizon}.csv"
+    path = os.path.join(METRICS_DIR, filename)
+    summary_df.to_csv(path)
+    
+    return summary_df
 
 # =============================================================================
 #  VISUALIZATION FUNCTIONS
@@ -233,8 +288,147 @@ def generate_performance_comparison_grid(dataset, window, horizons, output_dir):
     plt.close()
     logger.info("Saved performance-comparison grid")
 
+def generate_single_horizon_metrics(dataset, window, horizon, output_dir):
+    """Generate individual performance comparison charts for a specific horizon."""
+    metrics = ['rmse', 'mae', 'pcc', 'r2']
+    abs_    = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
+    colmap  = {'none': '#2ca02c', 'no_agam': '#d62728', 'no_mtfm': '#ff7f0e', 'no_pprm': '#1f77b4'}
+    
+    for metr in metrics:
+        vs, ls, cs = [], [], []
+        for ab in abs_:
+            df = load_metrics(dataset, window, horizon, ab)
+            if df is not None:
+                vs.append(df[metr][0]); ls.append(ABL_NAMES[ab]); cs.append(colmap[ab])
+        
+        if not vs:
+            logger.warning(f"No data for {dataset}, h={horizon}, metric={metr}")
+            continue
+            
+        plt.figure(figsize=(10, 6))
+        bars = plt.bar(ls, vs, color=cs)
+        plt.ylabel(METRICS_NAMES[metr.upper()])
+        plt.title(f"{METRICS_NAMES[metr.upper()]} Comparison - {dataset} ({horizon}-day Horizon)")
+        plt.grid(alpha=0.3, linestyle='--')
+        
+        # Add value labels on bars
+        for bar in bars:
+            height = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2., height,
+                    f"{height:.3f}", ha='center', va='bottom')
+        
+        plt.savefig(os.path.join(output_dir, f"{metr}_comparison_{dataset}_h{horizon}_w{window}.png"),
+                    dpi=300, bbox_inches='tight')
+        plt.close()
+        logger.info(f"Saved {metr} comparison for {dataset} h={horizon}")
+
+def generate_component_contribution_charts(datasets, window, horizon, output_dir):
+    """Generate bar charts showing relative contribution of components for specific horizons."""
+    metrics = ['rmse', 'pcc']
+    data = {}
+    
+    for metric in metrics:
+        metric_data = []
+        for ds in datasets:
+            summary = load_summary(ds, window, horizon)
+            if summary is None:
+                continue
+                
+            for ab in ['no_agam', 'no_mtfm', 'no_pprm']:
+                if ab in summary.index and f"{metric.upper()}_change" in summary.columns:
+                    comp = ab.replace('no_', '')
+                    metric_data.append({
+                        'Dataset': ds,
+                        'Component': COMP_FULL[comp],
+                        'Contribution': abs(summary.loc[ab, f"{metric.upper()}_change"])
+                    })
+        
+        if not metric_data:
+            logger.warning(f"No component contribution data for h={horizon}, metric={metric}")
+            continue
+            
+        data[metric] = pd.DataFrame(metric_data)
+    
+    # Create visualizations for each metric
+    for metric, df in data.items():
+        if df.empty:
+            continue
+            
+        plt.figure(figsize=(12, 8))
+        sns.barplot(x='Component', y='Contribution', hue='Dataset', data=df)
+        plt.title(f"Component Contribution to {METRICS_NAMES[metric.upper()]} - {horizon}-day Forecast")
+        plt.ylabel(f"% {metric.upper()} Change")
+        plt.xticks(rotation=0)
+        plt.legend(title="Dataset")
+        
+        plt.savefig(os.path.join(output_dir, f"component_contribution_{metric}_{horizon}day_w{window}.png"),
+                    dpi=300, bbox_inches='tight')
+        plt.close()
+        logger.info(f"Saved component contribution chart for {metric}, h={horizon}")
+
+def generate_relative_contribution_chart(datasets, window, horizon, output_dir):
+    """Generate visualization of relative contribution of each component at specific horizon."""
+    all_data = []
+    for ds in datasets:
+        summary = load_summary(ds, window, horizon)
+        if summary is None:
+            continue
+            
+        for ab in ['no_agam', 'no_mtfm', 'no_pprm']:
+            if ab in summary.index and 'RMSE_change' in summary.columns:
+                comp = ab.replace('no_', '')
+                all_data.append({
+                    'Dataset': ds,
+                    'Component': COMP_FULL[comp],
+                    'Color': COMP_COLORS[COMP_FULL[comp]],
+                    'Contribution': abs(summary.loc[ab, 'RMSE_change'])
+                })
+    
+    if not all_data:
+        logger.warning(f"No relative contribution data for h={horizon}")
+        return
+        
+    df = pd.DataFrame(all_data)
+    
+    plt.figure(figsize=(14, 8))
+    
+    # Create a grouped bar chart
+    ax = plt.subplot(1, 2, 1)
+    sns.barplot(x='Dataset', y='Contribution', hue='Component', data=df, 
+                palette=list(COMP_COLORS.values()))
+    plt.title(f"Component Contributions - {horizon}-day Forecast")
+    plt.ylabel("% RMSE Degradation")
+    plt.legend(title="Component")
+    
+    # Create a pie chart of average contributions
+    ax2 = plt.subplot(1, 2, 2)
+    avg_contribution = df.groupby('Component')['Contribution'].mean().reset_index()
+    colors = [row['Color'] for _, row in avg_contribution.iterrows()]
+    
+    # Calculate the average contribution percentage for each component
+    total = avg_contribution['Contribution'].sum()
+    percentages = [100 * val / total for val in avg_contribution['Contribution']]
+    
+    # Create labels with component name and percentage
+    labels = [f"{comp}\n({pct:.1f}%)" for comp, pct in zip(avg_contribution['Component'], percentages)]
+    
+    ax2.pie(avg_contribution['Contribution'], labels=labels, colors=colors,
+           autopct='', startangle=90, wedgeprops={'edgecolor': 'w'})
+    ax2.set_title(f"Average Relative Contribution - {horizon}-day")
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, f"relative_contribution_{horizon}day_w{window}.png"),
+                dpi=300, bbox_inches='tight')
+    plt.close()
+    logger.info(f"Saved relative contribution chart for h={horizon}")
+
 def enhance_existing_figures(source_dir, output_dir):
     count = 0
+    # Check if source directory exists
+    if not os.path.exists(source_dir):
+        logger.warning(f"Source figure directory {source_dir} does not exist")
+        return count
+    
     for fname in os.listdir(source_dir):
         if not fname.endswith('.png'):
             continue
@@ -254,8 +448,11 @@ def generate_ablation_report(dataset, window, horizon, output_dir):
     if summary is None:
         logger.warning(f"No summary data for {dataset}, w={window}, h={horizon}")
         return None
-        
-    report_path = os.path.join(output_dir, f"ablation_report_{dataset}.w-{window}.h-{horizon}.txt")
+    
+    # Save reports to the report/results directory instead of figures directory
+    report_dir = os.path.join(BASE_DIR, 'report', 'results')
+    os.makedirs(report_dir, exist_ok=True)
+    report_path = os.path.join(report_dir, f"ablation_report_{dataset}.w-{window}.h-{horizon}.txt")
     
     with open(report_path, 'w') as f:
         f.write(f"MSAGAT-Net Ablation Study Report\n")
@@ -339,21 +536,33 @@ def generate_overview_figure(output_dir):
 # =============================================================================
 
 if __name__ == '__main__':
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Run ablation studies and generate visualizations')
+    parser.add_argument('--only_visualize', action='store_true',
+                        help='Skip training and only generate visualizations')
+    args = parser.parse_args()
+
     # 1) TRAIN (directories created by src/train.py)
-    for dataset, sim_mat, horizons in DATASET_CONFIGS:
-        for h in horizons:
-            for ab, dev in product(ABLATIONS, DEVICES):
-                cmd = [
-                    'python', TRAIN_SCRIPT,
-                    '--dataset',  dataset,
-                    '--sim_mat',  sim_mat,
-                    '--window',   '20',
-                    '--horizon',  str(h),
-                    '--ablation', ab,
-                    '--save_dir', SAVE_DIR
-                ] + dev['flags']
-                logger.info(f"Running training: {' '.join(cmd)}")
-                subprocess.run(cmd, check=True)
+    if not args.only_visualize:
+        for dataset, sim_mat, horizons in DATASET_CONFIGS:
+            for h in horizons:
+                for ab, dev in product(ABLATIONS, DEVICES):
+                    cmd = [
+                        'python', TRAIN_SCRIPT,
+                        '--dataset',  dataset,
+                        '--sim_mat',  sim_mat,
+                        '--window',   '20',
+                        '--horizon',  str(h),
+                        '--ablation', ab,
+                        '--save_dir', SAVE_DIR
+                    ] + dev['flags']
+                    logger.info(f"Running training: {' '.join(cmd)}")
+                    subprocess.run(cmd, check=True)
+    else:
+        logger.info("Skipping training, generating visualizations only")
+
+    # Make sure output directory exists
+    os.makedirs(OUT_DIR, exist_ok=True)
 
     # 2) VISUALIZE
     generate_performance_table(
@@ -365,6 +574,8 @@ if __name__ == '__main__':
     generate_component_importance_comparison(
         DATASETS_FOR_PLOTS, 20, HORIZONS_FOR_PLOTS, OUT_DIR
     )
+    
+    # Process each dataset and horizon to create visualizations and reports
     for ds in DATASETS_FOR_PLOTS:
         generate_ablation_impact_grid(
             ds, 20, HORIZONS_FOR_PLOTS, OUT_DIR
@@ -372,6 +583,24 @@ if __name__ == '__main__':
         generate_performance_comparison_grid(
             ds, 20, HORIZONS_FOR_PLOTS, OUT_DIR
         )
+        
+        # Generate individual horizon metric charts
+        for h in HORIZONS_FOR_PLOTS:
+            generate_single_horizon_metrics(ds, 20, h, OUT_DIR)
+            generate_ablation_report(ds, 20, h, OUT_DIR)
+    
+    # Generate component contribution charts for 5-day and 10-day horizons
+    for h in [5, 10]:
+        # Only generate if this horizon is in our plots
+        if h in HORIZONS_FOR_PLOTS:
+            generate_component_contribution_charts(DATASETS_FOR_PLOTS, 20, h, OUT_DIR)
+            generate_relative_contribution_chart(DATASETS_FOR_PLOTS, 20, h, OUT_DIR)
+    
+    # Also generate reports for other datasets if metrics are available
+    for dataset, _, horizons in DATASET_CONFIGS:
+        if dataset not in DATASETS_FOR_PLOTS:
+            for h in horizons:
+                generate_ablation_report(dataset, 20, h, OUT_DIR)
     enhance_existing_figures(FIG_DIR, OUT_DIR)
     generate_overview_figure(OUT_DIR)
 
