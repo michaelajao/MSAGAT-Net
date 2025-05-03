@@ -9,7 +9,6 @@ Full pipeline script that:
     - Component importance bar charts
     - Ablation-impact heatmap grids
     - Performance-comparison bar-chart grids
-    - Enhanced versions of saved figures
     - A final overview figure
 """
 
@@ -17,6 +16,7 @@ import os
 import subprocess
 import logging
 import argparse
+import glob
 from itertools import product
 
 import numpy as np
@@ -54,11 +54,11 @@ DATASET_CONFIGS = [
 ABLATIONS = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
 DEVICES   = [
     {'flags': ['--cuda', '--gpu', '0'], 'name': 'gpu'},
-    {'flags': [],                      'name': 'cpu'}
+    # {'flags': [],                      'name': 'cpu'}
 ]
 
 # For paper figures
-DATASETS_FOR_PLOTS = ['japan', 'region785', 'state360']
+DATASETS_FOR_PLOTS = ['japan', 'region785', 'nhs_timeseries', 'ltla_timeseries']
 HORIZONS_FOR_PLOTS = [3, 5, 10, 15]
 
 METRICS_NAMES = {
@@ -71,19 +71,19 @@ METRICS_NAMES = {
 ABL_NAMES = {
     'none':    'Full Model',
     'no_agam': 'No LR‑AGAM',
-    'no_mtfm': 'No DMTFM',
+    'no_mtfm': 'No MTFM',
     'no_pprm': 'No PPRM'
 }
 
 COMP_FULL = {
     'agam': 'Low‑Rank Adaptive Graph\nAttention Module',
-    'mtfm': 'Dilated Multi‑scale Temporal\nFusion Module',
+    'mtfm': 'Multi‑scale Temporal\nFusion Module',
     'pprm': 'Progressive Multi‑step\nPrediction Refinement Module'
 }
 
 COMP_COLORS = {
     'Low‑Rank Adaptive Graph\nAttention Module': '#1f77b4',  # Blue
-    'Dilated Multi‑scale Temporal\nFusion Module': '#ff7f0e',  # Orange
+    'Multi‑scale Temporal\nFusion Module': '#ff7f0e',  # Orange
     'Progressive Multi‑step\nPrediction Refinement Module': '#2ca02c'  # Green
 }
 
@@ -101,26 +101,79 @@ logger = logging.getLogger('ablation_pipeline')
 #  METRICS LOADING HELPERS
 # =============================================================================
 
+def get_metric_value(df, col_name):
+    """Helper function to safely get a metric value with case-insensitive lookup"""
+    if df is None:
+        return np.nan
+        
+    # Create a lowercase mapping to handle case-insensitive matching
+    col_map = {col.lower(): col for col in df.columns}
+    
+    # Try lowercase version of the requested column
+    if col_name.lower() in col_map:
+        return df[col_map[col_name.lower()]][0]
+    
+    # Check for common variations
+    variants = [
+        col_name,              # Original
+        col_name.upper(),      # Uppercase 
+        col_name.lower(),      # Lowercase
+        col_name.title(),      # Title case
+        col_name.replace('_', ' ')  # Replace underscores with spaces
+    ]
+    
+    for variant in variants:
+        if variant in df.columns:
+            return df[variant][0]
+    
+    # If not found, log this for debugging
+    logger.debug(f"Column {col_name} not found in DataFrame with columns: {list(df.columns)}")
+    return np.nan
+
 def load_metrics(dataset: str, window: int, horizon: int, ablation: str = 'none') -> pd.DataFrame:
-    filename = f"final_metrics_{dataset}.w-{window}.h-{horizon}.{ablation}.csv"
-    path     = os.path.join(METRICS_DIR, filename)
-    if not os.path.exists(path):
-        logger.warning(f"Missing metrics file: {path}")
+    # Use glob pattern to find the right file regardless of naming convention
+    pattern = f"final_metrics_*{dataset}*w-{window}*h-{horizon}*{ablation}.csv"
+    paths = glob.glob(os.path.join(METRICS_DIR, pattern))
+    
+    # Also try with periods instead of dashes in case filenames use different format
+    if not paths:
+        pattern = f"final_metrics_*{dataset}*w-{window}*h-{horizon}*{ablation}.csv"
+        paths = glob.glob(os.path.join(METRICS_DIR, pattern))
+    
+    if paths:
+        path = paths[0]  # Take the first matching file
+        logger.info(f"Found metrics file: {os.path.basename(path)}")
+        df = pd.read_csv(path)
+        if len(df) > 1:
+            logger.info(f"Metrics file has {len(df)} rows, using first row (index 0)")
+        return df
+    else:
+        # Fall back to the specific names we expect for better error messages
+        filename1 = f"final_metrics_{dataset}.w-{window}.h-{horizon}.{ablation}.csv"
+        filename2 = f"final_metrics_MSTAGAT-Net.{dataset}.w-{window}.h-{horizon}.{ablation}.csv"
+        logger.warning(f"Missing metrics file: tried patterns like {filename1} and {filename2}")
         return None
-    return pd.read_csv(path)
 
 def load_summary(dataset: str, window: int, horizon: int) -> pd.DataFrame:
-    filename = f"ablation_summary_{dataset}.w-{window}.h-{horizon}.csv"
-    path     = os.path.join(METRICS_DIR, filename)
-    if not os.path.exists(path):
-        logger.warning(f"Missing summary file: {path}")
+    # Try both naming patterns: with and without "MSAGAT-Net" prefix
+    filename1 = f"ablation_summary_{dataset}.w-{window}.h-{horizon}.csv"
+    filename2 = f"ablation_summary_MSAGAT-Net.{dataset}.w-{window}.h-{horizon}.csv"
+    
+    path1 = os.path.join(METRICS_DIR, filename1)
+    path2 = os.path.join(METRICS_DIR, filename2)
+    
+    if os.path.exists(path1):
+        return pd.read_csv(path1, index_col=0)
+    elif os.path.exists(path2):
+        return pd.read_csv(path2, index_col=0)
+    else:
+        logger.warning(f"Missing summary file: {path1}")
         # Try to compute the summary on the fly
         summary = compute_ablation_summary(dataset, window, horizon)
         if summary is not None:
-            logger.info(f"Generated and saved summary: {path}")
+            logger.info(f"Generated and saved summary: {path1}")
             return summary
         return None
-    return pd.read_csv(path, index_col=0)
 
 def compute_ablation_summary(dataset: str, window: int, horizon: int) -> pd.DataFrame:
     """Compute summary of ablation results by comparing metrics across variants."""
@@ -136,9 +189,37 @@ def compute_ablation_summary(dataset: str, window: int, horizon: int) -> pd.Data
         logger.warning(f"Insufficient data to compute ablation summary for {dataset}, w={window}, h={horizon}")
         return None
     
+    # Check for duplicated data (identical metrics files)
+    identical_files = []
+    for ablation in ABLATIONS:
+        if ablation == 'none' or ablation not in metrics:
+            continue
+            
+        # Compare key metrics to baseline
+        all_identical = True
+        for col in ['mae', 'rmse', 'pcc', 'r2']:
+            abl_val = get_metric_value(metrics[ablation], col)
+            base_val = get_metric_value(metrics['none'], col)
+            if abs(abl_val - base_val) > 1e-10:  # Allow for floating point precision
+                all_identical = False
+                break
+                
+        if all_identical:
+            identical_files.append(ablation)
+            logger.warning(f"⚠️ The metrics for '{ablation}' are identical to 'none' for {dataset}, h={horizon}!")
+            logger.warning(f"This suggests the ablation might not be working correctly.")
+            
+    if identical_files:
+        logger.warning(f"Identical metrics were found for components: {', '.join(identical_files)}")
+        # Provide more guidance about the likely issue
+        logger.warning(f"This is likely due to a mismatch between CLI argument names and code implementation:")
+        logger.warning(f"  - Check if 'no_mtfm' in CLI corresponds to 'no_dmtm' in ablation.py")
+        logger.warning(f"  - Check if 'no_pprm' in CLI corresponds to 'no_ppm' in ablation.py") 
+        logger.warning(f"Recommendation: Verify parameter names in ablation.py match those in train.py and run_ablation_and_visualize.py")
+            
     # Organize performance metrics
     metric_cols = ['mae', 'rmse', 'pcc', 'r2']
-    baseline_metrics = {col: metrics['none'][col][0] for col in metric_cols}
+    baseline_metrics = {col: get_metric_value(metrics['none'], col) for col in metric_cols}
     
     # Build summary DataFrame
     summary_data = {}
@@ -147,27 +228,41 @@ def compute_ablation_summary(dataset: str, window: int, horizon: int) -> pd.Data
         
         # Add raw metrics
         for col in metric_cols:
-            if col in df.columns:
-                row_data[col.upper()] = df[col][0]
+            row_data[col.upper()] = get_metric_value(df, col)
         
         # Compute percentage changes for non-baseline models
         if ablation != 'none':
             for col in metric_cols:
-                if col in df.columns and col in baseline_metrics:
-                    baseline = baseline_metrics[col]
-                    value = df[col][0]
-                    if baseline != 0:  # Avoid division by zero
-                        pct_change = 100 * (value - baseline) / baseline
-                        row_data[f"{col.upper()}_change"] = pct_change
+                value = get_metric_value(df, col)
+                baseline = baseline_metrics[col]
+                if not np.isnan(value) and not np.isnan(baseline) and baseline != 0:
+                    pct_change = 100 * (value - baseline) / baseline
+                    row_data[f"{col.upper()}_change"] = pct_change
+                    
+                    # Log very small changes that might be numerical errors
+                    if abs(pct_change) < 1e-10:
+                        logger.debug(f"Very small change detected for {dataset}, {ablation}, {col}: {pct_change}")
+                    logger.info(f"{dataset}, h={horizon}, {ablation}, {col}: {value:.6f} vs baseline {baseline:.6f} = {pct_change:.2f}%")
         
         summary_data[ablation] = row_data
     
     summary_df = pd.DataFrame(summary_data).T
     
     # Save summary to CSV
-    filename = f"ablation_summary_{dataset}.w-{window}.h-{horizon}.csv"
+    # Use the same format as metrics files - check which format was used for metrics
+    first_ablation = list(metrics.keys())[0]
+    first_file = metrics[first_ablation].iloc[0]['model'] if 'model' in metrics[first_ablation].columns else "MSTAGAT-Net"
+    
+    if first_file.startswith("MSAGAT-Net"):
+        # Use format with model name
+        filename = f"ablation_summary_MSAGAT-Net.{dataset}.w-{window}.h-{horizon}.csv"
+    else:
+        # Use standard format
+        filename = f"ablation_summary_{dataset}.w-{window}.h-{horizon}.csv"
+    
     path = os.path.join(METRICS_DIR, filename)
     summary_df.to_csv(path)
+    logger.info(f"Saved ablation summary to {path}")
     
     return summary_df
 
@@ -181,13 +276,14 @@ def generate_performance_table(datasets, window, horizons, output_dir):
         for h in horizons:
             df = load_metrics(ds, window, h)
             if df is None: continue
+            
             rows.append({
                 'Dataset': ds,
                 'Horizon': h,
-                'RMSE':    df['rmse'][0],
-                'MAE':     df['mae'][0],
-                'PCC':     df['pcc'][0],
-                'R2':      df['r2'][0],
+                'RMSE':    get_metric_value(df, 'rmse'),
+                'MAE':     get_metric_value(df, 'mae'),
+                'PCC':     get_metric_value(df, 'pcc'),
+                'R2':      get_metric_value(df, 'r2'),
             })
     if not rows:
         logger.warning("No performance data available.")
@@ -198,12 +294,11 @@ def generate_performance_table(datasets, window, horizons, output_dir):
     logger.info("Saved performance table")
 
 def generate_cross_horizon_performance(datasets, window, horizons, output_dir):
+    
     for metric in ['rmse', 'pcc']:
         plt.figure()
         for ds in datasets:
-            vals = [ (load_metrics(ds, window, h)[metric][0]
-                      if load_metrics(ds, window, h) is not None else np.nan)
-                    for h in horizons ]
+            vals = [get_metric_value(load_metrics(ds, window, h), metric) for h in horizons]
             plt.plot(horizons, vals, 'o-', label=ds)
         plt.title(f"{METRICS_NAMES[metric.upper()]} vs Horizon")
         plt.xlabel("Horizon (days)"); plt.ylabel(METRICS_NAMES[metric.upper()])
@@ -250,10 +345,45 @@ def generate_ablation_impact_grid(dataset, window, horizons, output_dir):
             axes[i].text(0.5, 0.5, f"No data h={h}", ha='center')
             axes[i].axis('off')
             continue
+            
+        # Log the summary data to help with debugging
+        logger.info(f"Summary data for {dataset}, h={h}:\n{summary}")
+        
         heat = summary.filter(regex='change$').drop('none_change', errors='ignore')
         heat.index = [ABL_NAMES[idx] for idx in heat.index]
-        sns.heatmap(heat.T, annot=True, fmt='.1f', cmap='RdYlGn_r',
-                    ax=axes[i], cbar=(i == len(horizons)-1))
+        
+        # Check if all changes are zero for any components and log this
+        zero_components = []
+        for idx, row in heat.iterrows():
+            if (abs(row) < 1e-10).all():
+                zero_components.append(idx)
+        
+        if zero_components:
+            logger.warning(f"⚠️ The following components show no impact (all zeros) for {dataset}, h={h}: {', '.join(zero_components)}")
+            logger.warning(f"This suggests the ablation is not working correctly - metrics are identical to baseline.")
+            
+            # Add a special marker for zero impact components 
+            # We'll create a mask to highlight zero-impact cells
+            mask = np.zeros_like(heat.T.values, dtype=bool)
+            for comp_idx, comp_name in enumerate(heat.index):
+                if comp_name in zero_components:
+                    mask[:, heat.index.get_loc(comp_name)] = True
+            
+            # Create the heatmap with the mask for highlighting
+            ax = axes[i]
+            sns.heatmap(heat.T, annot=True, fmt='.1f', cmap='RdYlGn_r',
+                      ax=ax, cbar=(i == len(horizons)-1))
+            
+            # Add warning text for components with zero impact
+            for comp_name in zero_components:
+                comp_col = heat.index.get_loc(comp_name)
+                for metric_idx in range(len(heat.columns)):
+                    ax.text(comp_col + 0.5, metric_idx + 0.5, 'ZERO IMPACT!\nNeeds fixing',
+                           ha='center', va='center', color='red', fontweight='bold', fontsize=8)
+        else:
+            sns.heatmap(heat.T, annot=True, fmt='.1f', cmap='RdYlGn_r',
+                      ax=axes[i], cbar=(i == len(horizons)-1))
+            
         axes[i].set_title(f"{h}-day")
     plt.suptitle(f"Ablation Impact ({dataset})")
     plt.savefig(os.path.join(output_dir, f"ablation_impact_{dataset}_w{window}.png"),
@@ -262,6 +392,7 @@ def generate_ablation_impact_grid(dataset, window, horizons, output_dir):
     logger.info("Saved ablation-impact grid")
 
 def generate_performance_comparison_grid(dataset, window, horizons, output_dir):
+    
     metrics = ['rmse','mae','pcc','r2']
     abs_    = ['none','no_agam','no_mtfm','no_pprm']
     colmap  = {'none':'#2ca02c','no_agam':'#d62728','no_mtfm':'#ff7f0e','no_pprm':'#1f77b4'}
@@ -275,7 +406,11 @@ def generate_performance_comparison_grid(dataset, window, horizons, output_dir):
             for ab in abs_:
                 df = load_metrics(dataset, window, h, ab)
                 if df is not None:
-                    vs.append(df[metr][0]); ls.append(ABL_NAMES[ab]); cs.append(colmap[ab])
+                    value = get_metric_value(df, metr)
+                    if not np.isnan(value):
+                        vs.append(value)
+                        ls.append(ABL_NAMES[ab])
+                        cs.append(colmap[ab])
             ax.bar(ls, vs, color=cs)
             if j==0: ax.set_ylabel(METRICS_NAMES[metr.upper()])
             if i==0: ax.set_title(f"{h}-day")
@@ -290,6 +425,7 @@ def generate_performance_comparison_grid(dataset, window, horizons, output_dir):
 
 def generate_single_horizon_metrics(dataset, window, horizon, output_dir):
     """Generate individual performance comparison charts for a specific horizon."""
+    
     metrics = ['rmse', 'mae', 'pcc', 'r2']
     abs_    = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
     colmap  = {'none': '#2ca02c', 'no_agam': '#d62728', 'no_mtfm': '#ff7f0e', 'no_pprm': '#1f77b4'}
@@ -299,7 +435,11 @@ def generate_single_horizon_metrics(dataset, window, horizon, output_dir):
         for ab in abs_:
             df = load_metrics(dataset, window, horizon, ab)
             if df is not None:
-                vs.append(df[metr][0]); ls.append(ABL_NAMES[ab]); cs.append(colmap[ab])
+                value = get_metric_value(df, metr)
+                if not np.isnan(value):
+                    vs.append(value)
+                    ls.append(ABL_NAMES[ab])
+                    cs.append(colmap[ab])
         
         if not vs:
             logger.warning(f"No data for {dataset}, h={horizon}, metric={metr}")
@@ -422,25 +562,7 @@ def generate_relative_contribution_chart(datasets, window, horizon, output_dir):
     plt.close()
     logger.info(f"Saved relative contribution chart for h={horizon}")
 
-def enhance_existing_figures(source_dir, output_dir):
-    count = 0
-    # Check if source directory exists
-    if not os.path.exists(source_dir):
-        logger.warning(f"Source figure directory {source_dir} does not exist")
-        return count
-    
-    for fname in os.listdir(source_dir):
-        if not fname.endswith('.png'):
-            continue
-        img = plt.imread(os.path.join(source_dir, fname))
-        fig = plt.figure(figsize=(10,6), dpi=300)
-        plt.imshow(img); plt.axis('off')
-        plt.title(fname.replace('_',' ').replace('.png','').title(), pad=20)
-        dst = os.path.join(output_dir, f"enh_{fname}")
-        plt.savefig(dst, bbox_inches='tight'); plt.close()
-        logger.info(f"Enhanced figure: {dst}")
-        count += 1
-    return count
+# Function enhance_existing_figures removed as requested
 
 def generate_ablation_report(dataset, window, horizon, output_dir):
     """Generate a detailed text report of the ablation study results."""
@@ -448,6 +570,13 @@ def generate_ablation_report(dataset, window, horizon, output_dir):
     if summary is None:
         logger.warning(f"No summary data for {dataset}, w={window}, h={horizon}")
         return None
+    
+    # Check for zero impact components
+    heat = summary.filter(regex='change$').drop('none_change', errors='ignore')
+    zero_components = []
+    for idx, row in heat.iterrows():
+        if (abs(row) < 1e-10).all():
+            zero_components.append(ABL_NAMES[idx])
     
     # Save reports to the report/results directory instead of figures directory
     report_dir = os.path.join(BASE_DIR, 'report', 'results')
@@ -479,7 +608,7 @@ def generate_ablation_report(dataset, window, horizon, output_dir):
         # Map ablation types to component descriptions
         component_desc = {
             'no_agam': "Low‑Rank Adaptive Graph Attention Module (LR‑AGAM): Captures spatial dependencies between regions with linear complexity",
-            'no_mtfm': "Dilated Multi‑scale Temporal Fusion Module (DMTFM): Processes time-series patterns at different temporal resolutions",
+            'no_mtfm': "Multi‑scale Temporal Fusion Module (MTFM): Processes time-series patterns at different temporal resolutions",
             'no_pprm': "Progressive Multi‑step Prediction Refinement Module (PPRM): Enables region-aware multi-step forecasting with refinement"
         }
         
@@ -500,19 +629,32 @@ def generate_ablation_report(dataset, window, horizon, output_dir):
         
         f.write(f"Conclusion\n")
         f.write(f"----------\n")
+        
+        # Check if we have ablation problems
+        if zero_components:
+            f.write(f"⚠️ ABLATION STUDY INCOMPLETE: Some components ({', '.join(zero_components)}) show no impact\n")
+            f.write(f"when ablated, which suggests those ablations are not being properly implemented.\n")
+            f.write(f"The ablation parameter names in train.py may not match those in ablation.py.\n")
+            f.write(f"Please fix the ablation implementation and re-run the evaluation.\n\n")
+        
         # Automatically generate conclusion
         if 'RMSE_change' in summary.columns and importance:
-            most_important = sorted_components[0][0].replace('no_', '')
-            least_important = sorted_components[-1][0].replace('no_', '')
-            f.write(f"The {COMP_FULL[most_important]} has the most significant impact on model performance.\n")
-            f.write(f"Removing this component causes a {importance[sorted_components[0][0]]:.2f}% degradation in RMSE.\n\n")
+            # Get the most important non-zero component if possible
+            valid_components = [(abl, imp) for abl, imp in sorted_components if abl not in zero_components]
             
-            if any(imp < 0 for _, imp in sorted_components):
-                better_ablations = [(abl, imp) for abl, imp in importance.items() if imp < 0]
-                if better_ablations:
-                    better_abl, better_imp = sorted(better_ablations, key=lambda x: x[1])[0]
-                    f.write(f"Interestingly, removing the {better_abl.replace('no_', '')} component slightly improves performance by {abs(better_imp):.2f}%.\n")
-                    f.write(f"This suggests potential optimization opportunities or redundancy in this component.\n\n")
+            if valid_components:
+                most_important = valid_components[0][0].replace('no_', '')
+                f.write(f"The {COMP_FULL[most_important]} has the most significant impact on model performance.\n")
+                f.write(f"Removing this component causes a {importance[valid_components[0][0]]:.2f}% degradation in RMSE.\n\n")
+                
+                if any(imp < 0 for abl, imp in valid_components):
+                    better_ablations = [(abl, imp) for abl, imp in valid_components if imp < 0]
+                    if better_ablations:
+                        better_abl, better_imp = sorted(better_ablations, key=lambda x: x[1])[0]
+                        f.write(f"Interestingly, removing the {better_abl.replace('no_', '')} component slightly improves performance by {abs(better_imp):.2f}%.\n")
+                        f.write(f"This suggests potential optimization opportunities or redundancy in this component.\n\n")
+            else:
+                f.write(f"⚠️ Unable to draw meaningful conclusions due to issues with the ablation implementation.\n\n")
     
     logger.info(f"Generated ablation report: {report_path}")
     return report_path
@@ -601,7 +743,7 @@ if __name__ == '__main__':
         if dataset not in DATASETS_FOR_PLOTS:
             for h in horizons:
                 generate_ablation_report(dataset, 20, h, OUT_DIR)
-    enhance_existing_figures(FIG_DIR, OUT_DIR)
+    # enhance_existing_figures function removed
     generate_overview_figure(OUT_DIR)
 
     logger.info("Pipeline complete!")

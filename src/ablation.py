@@ -274,7 +274,7 @@ class MSAGATNet_Ablation(nn.Module):
             )
         
         # Temporal component: choose multi-scale or single-scale
-        if self.ablation == 'no_dmtm':
+        if self.ablation == 'no_mtfm':
             # Replace Dilated Multi-Scale Temporal with single-scale
             self.temporal_module = SingleScaleTemporalModule(
                 self.hidden_dim,
@@ -291,7 +291,7 @@ class MSAGATNet_Ablation(nn.Module):
             )
         
         # Prediction component: choose progressive or direct
-        if self.ablation == 'no_ppm':
+        if self.ablation == 'no_pprm':
             # Replace Progressive Prediction with direct multi-step
             self.prediction_module = DirectPredictionModule(
                 hidden_dim=self.hidden_dim,
