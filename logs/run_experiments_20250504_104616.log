@@ -1,0 +1,146 @@
+2025-05-04 10:46:16,950 INFO: Logging to /home/olarinoyem/Project/MSAGAT-Net/logs/run_experiments_20250504_104616.log
+2025-05-04 10:46:16,951 INFO: Skipping existing: japan h=3 ab=none
+2025-05-04 10:46:16,952 INFO: Skipping existing: japan h=3 ab=no_agam
+2025-05-04 10:46:16,952 INFO: Skipping existing: japan h=3 ab=no_mtfm
+2025-05-04 10:46:16,953 INFO: Skipping existing: japan h=3 ab=no_pprm
+2025-05-04 10:46:16,953 INFO: Skipping existing: japan h=5 ab=none
+2025-05-04 10:46:16,954 INFO: Skipping existing: japan h=5 ab=no_agam
+2025-05-04 10:46:16,954 INFO: Skipping existing: japan h=5 ab=no_mtfm
+2025-05-04 10:46:16,955 INFO: Skipping existing: japan h=5 ab=no_pprm
+2025-05-04 10:46:16,955 INFO: Skipping existing: japan h=10 ab=none
+2025-05-04 10:46:16,956 INFO: Skipping existing: japan h=10 ab=no_agam
+2025-05-04 10:46:16,957 INFO: Skipping existing: japan h=10 ab=no_mtfm
+2025-05-04 10:46:16,957 INFO: Skipping existing: japan h=10 ab=no_pprm
+2025-05-04 10:46:16,958 INFO: Skipping existing: japan h=15 ab=none
+2025-05-04 10:46:16,958 INFO: Skipping existing: japan h=15 ab=no_agam
+2025-05-04 10:46:16,959 INFO: Skipping existing: japan h=15 ab=no_mtfm
+2025-05-04 10:46:16,959 INFO: Skipping existing: japan h=15 ab=no_pprm
+2025-05-04 10:46:16,960 INFO: Skipping existing: region785 h=3 ab=none
+2025-05-04 10:46:16,960 INFO: Skipping existing: region785 h=3 ab=no_agam
+2025-05-04 10:46:16,961 INFO: Skipping existing: region785 h=3 ab=no_mtfm
+2025-05-04 10:46:16,961 INFO: Skipping existing: region785 h=3 ab=no_pprm
+2025-05-04 10:46:16,962 INFO: Skipping existing: region785 h=5 ab=none
+2025-05-04 10:46:16,962 INFO: Skipping existing: region785 h=5 ab=no_agam
+2025-05-04 10:46:16,963 INFO: Skipping existing: region785 h=5 ab=no_mtfm
+2025-05-04 10:46:16,963 INFO: Skipping existing: region785 h=5 ab=no_pprm
+2025-05-04 10:46:16,964 INFO: Skipping existing: region785 h=10 ab=none
+2025-05-04 10:46:16,964 INFO: Skipping existing: region785 h=10 ab=no_agam
+2025-05-04 10:46:16,965 INFO: Skipping existing: region785 h=10 ab=no_mtfm
+2025-05-04 10:46:16,965 INFO: Skipping existing: region785 h=10 ab=no_pprm
+2025-05-04 10:46:16,966 INFO: Skipping existing: region785 h=15 ab=none
+2025-05-04 10:46:16,967 INFO: Skipping existing: region785 h=15 ab=no_agam
+2025-05-04 10:46:16,967 INFO: Skipping existing: region785 h=15 ab=no_mtfm
+2025-05-04 10:46:16,968 INFO: Skipping existing: region785 h=15 ab=no_pprm
+2025-05-04 10:46:16,968 INFO: Skipping existing: state360 h=3 ab=none
+2025-05-04 10:46:16,969 INFO: Skipping existing: state360 h=3 ab=no_agam
+2025-05-04 10:46:16,969 INFO: Skipping existing: state360 h=3 ab=no_mtfm
+2025-05-04 10:46:16,970 INFO: Skipping existing: state360 h=3 ab=no_pprm
+2025-05-04 10:46:16,970 INFO: Skipping existing: state360 h=5 ab=none
+2025-05-04 10:46:16,971 INFO: Skipping existing: state360 h=5 ab=no_agam
+2025-05-04 10:46:16,971 INFO: Skipping existing: state360 h=5 ab=no_mtfm
+2025-05-04 10:46:16,972 INFO: Skipping existing: state360 h=5 ab=no_pprm
+2025-05-04 10:46:16,972 INFO: Skipping existing: state360 h=10 ab=none
+2025-05-04 10:46:16,973 INFO: Skipping existing: state360 h=10 ab=no_agam
+2025-05-04 10:46:16,973 INFO: Skipping existing: state360 h=10 ab=no_mtfm
+2025-05-04 10:46:16,974 INFO: Skipping existing: state360 h=10 ab=no_pprm
+2025-05-04 10:46:16,974 INFO: Skipping existing: state360 h=15 ab=none
+2025-05-04 10:46:16,975 INFO: Skipping existing: state360 h=15 ab=no_agam
+2025-05-04 10:46:16,976 INFO: Skipping existing: state360 h=15 ab=no_mtfm
+2025-05-04 10:46:16,976 INFO: Skipping existing: state360 h=15 ab=no_pprm
+2025-05-04 10:46:16,977 INFO: Skipping existing: australia-covid h=3 ab=none
+2025-05-04 10:46:16,977 INFO: Skipping existing: australia-covid h=3 ab=no_agam
+2025-05-04 10:46:16,978 INFO: Skipping existing: australia-covid h=3 ab=no_mtfm
+2025-05-04 10:46:16,978 INFO: Skipping existing: australia-covid h=3 ab=no_pprm
+2025-05-04 10:46:16,979 INFO: Skipping existing: australia-covid h=7 ab=none
+2025-05-04 10:46:16,979 INFO: Skipping existing: australia-covid h=7 ab=no_agam
+2025-05-04 10:46:16,980 INFO: Skipping existing: australia-covid h=7 ab=no_mtfm
+2025-05-04 10:46:16,980 INFO: Skipping existing: australia-covid h=7 ab=no_pprm
+2025-05-04 10:46:16,981 INFO: Skipping existing: australia-covid h=14 ab=none
+2025-05-04 10:46:16,981 INFO: Skipping existing: australia-covid h=14 ab=no_agam
+2025-05-04 10:46:16,982 INFO: Skipping existing: australia-covid h=14 ab=no_mtfm
+2025-05-04 10:46:16,982 INFO: Skipping existing: australia-covid h=14 ab=no_pprm
+2025-05-04 10:46:16,983 INFO: Skipping existing: spain-covid h=3 ab=none
+2025-05-04 10:46:16,983 INFO: Skipping existing: spain-covid h=3 ab=no_agam
+2025-05-04 10:46:16,984 INFO: Skipping existing: spain-covid h=3 ab=no_mtfm
+2025-05-04 10:46:16,985 INFO: Skipping existing: spain-covid h=3 ab=no_pprm
+2025-05-04 10:46:16,985 INFO: Skipping existing: spain-covid h=7 ab=none
+2025-05-04 10:46:16,986 INFO: Skipping existing: spain-covid h=7 ab=no_agam
+2025-05-04 10:46:16,986 INFO: Skipping existing: spain-covid h=7 ab=no_mtfm
+2025-05-04 10:46:16,987 INFO: Skipping existing: spain-covid h=7 ab=no_pprm
+2025-05-04 10:46:16,987 INFO: Skipping existing: spain-covid h=14 ab=none
+2025-05-04 10:46:16,988 INFO: Skipping existing: spain-covid h=14 ab=no_agam
+2025-05-04 10:46:16,988 INFO: Skipping existing: spain-covid h=14 ab=no_mtfm
+2025-05-04 10:46:16,989 INFO: Skipping existing: spain-covid h=14 ab=no_pprm
+2025-05-04 10:46:16,989 INFO: Skipping existing: nhs_timeseries h=3 ab=none
+2025-05-04 10:46:16,990 INFO: Skipping existing: nhs_timeseries h=3 ab=no_agam
+2025-05-04 10:46:16,990 INFO: Skipping existing: nhs_timeseries h=3 ab=no_mtfm
+2025-05-04 10:46:16,991 INFO: Skipping existing: nhs_timeseries h=3 ab=no_pprm
+2025-05-04 10:46:16,992 INFO: Skipping existing: nhs_timeseries h=7 ab=none
+2025-05-04 10:46:16,992 INFO: Skipping existing: nhs_timeseries h=7 ab=no_agam
+2025-05-04 10:46:16,993 INFO: Skipping existing: nhs_timeseries h=7 ab=no_mtfm
+2025-05-04 10:46:16,993 INFO: Skipping existing: nhs_timeseries h=7 ab=no_pprm
+2025-05-04 10:46:16,994 INFO: Skipping existing: nhs_timeseries h=14 ab=none
+2025-05-04 10:46:16,994 INFO: Skipping existing: nhs_timeseries h=14 ab=no_agam
+2025-05-04 10:46:16,995 INFO: Skipping existing: nhs_timeseries h=14 ab=no_mtfm
+2025-05-04 10:46:16,995 INFO: Skipping existing: nhs_timeseries h=14 ab=no_pprm
+2025-05-04 10:46:16,996 INFO: Skipping existing: ltla_timeseries h=3 ab=none
+2025-05-04 10:46:16,996 INFO: Skipping existing: ltla_timeseries h=3 ab=no_agam
+2025-05-04 10:46:16,997 INFO: Skipping existing: ltla_timeseries h=3 ab=no_mtfm
+2025-05-04 10:46:16,997 INFO: Skipping existing: ltla_timeseries h=3 ab=no_pprm
+2025-05-04 10:46:16,998 INFO: Skipping existing: ltla_timeseries h=7 ab=none
+2025-05-04 10:46:16,998 INFO: Skipping existing: ltla_timeseries h=7 ab=no_agam
+2025-05-04 10:46:16,999 INFO: Skipping existing: ltla_timeseries h=7 ab=no_mtfm
+2025-05-04 10:46:17,000 INFO: Skipping existing: ltla_timeseries h=7 ab=no_pprm
+2025-05-04 10:46:17,000 INFO: Skipping existing: ltla_timeseries h=14 ab=none
+2025-05-04 10:46:17,001 INFO: Skipping existing: ltla_timeseries h=14 ab=no_agam
+2025-05-04 10:46:17,001 INFO: Skipping existing: ltla_timeseries h=14 ab=no_mtfm
+2025-05-04 10:46:17,002 INFO: Skipping existing: ltla_timeseries h=14 ab=no_pprm
+2025-05-04 10:46:17,013 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_japan.w-20.h-3.csv
+2025-05-04 10:46:17,015 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_japan.w-20.h-3.txt
+2025-05-04 10:46:17,024 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_japan.w-20.h-5.csv
+2025-05-04 10:46:17,027 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_japan.w-20.h-5.txt
+2025-05-04 10:46:17,036 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_japan.w-20.h-10.csv
+2025-05-04 10:46:17,038 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_japan.w-20.h-10.txt
+2025-05-04 10:46:17,047 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_japan.w-20.h-15.csv
+2025-05-04 10:46:17,049 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_japan.w-20.h-15.txt
+2025-05-04 10:46:17,058 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_region785.w-20.h-3.csv
+2025-05-04 10:46:17,061 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_region785.w-20.h-3.txt
+2025-05-04 10:46:17,070 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_region785.w-20.h-5.csv
+2025-05-04 10:46:17,072 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_region785.w-20.h-5.txt
+2025-05-04 10:46:17,081 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_region785.w-20.h-10.csv
+2025-05-04 10:46:17,084 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_region785.w-20.h-10.txt
+2025-05-04 10:46:17,093 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_region785.w-20.h-15.csv
+2025-05-04 10:46:17,095 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_region785.w-20.h-15.txt
+2025-05-04 10:46:17,104 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_state360.w-20.h-3.csv
+2025-05-04 10:46:17,106 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_state360.w-20.h-3.txt
+2025-05-04 10:46:17,115 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_state360.w-20.h-5.csv
+2025-05-04 10:46:17,117 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_state360.w-20.h-5.txt
+2025-05-04 10:46:17,126 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_state360.w-20.h-10.csv
+2025-05-04 10:46:17,129 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_state360.w-20.h-10.txt
+2025-05-04 10:46:17,138 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_state360.w-20.h-15.csv
+2025-05-04 10:46:17,140 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_state360.w-20.h-15.txt
+2025-05-04 10:46:17,149 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_australia-covid.w-20.h-3.csv
+2025-05-04 10:46:17,151 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_australia-covid.w-20.h-3.txt
+2025-05-04 10:46:17,160 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_australia-covid.w-20.h-7.csv
+2025-05-04 10:46:17,163 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_australia-covid.w-20.h-7.txt
+2025-05-04 10:46:17,172 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_australia-covid.w-20.h-14.csv
+2025-05-04 10:46:17,174 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_australia-covid.w-20.h-14.txt
+2025-05-04 10:46:17,183 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_spain-covid.w-20.h-3.csv
+2025-05-04 10:46:17,185 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_spain-covid.w-20.h-3.txt
+2025-05-04 10:46:17,194 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_spain-covid.w-20.h-7.csv
+2025-05-04 10:46:17,197 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_spain-covid.w-20.h-7.txt
+2025-05-04 10:46:17,206 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_spain-covid.w-20.h-14.csv
+2025-05-04 10:46:17,208 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_spain-covid.w-20.h-14.txt
+2025-05-04 10:46:17,217 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_nhs_timeseries.w-20.h-3.csv
+2025-05-04 10:46:17,220 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_nhs_timeseries.w-20.h-3.txt
+2025-05-04 10:46:17,229 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_nhs_timeseries.w-20.h-7.csv
+2025-05-04 10:46:17,231 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_nhs_timeseries.w-20.h-7.txt
+2025-05-04 10:46:17,240 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_nhs_timeseries.w-20.h-14.csv
+2025-05-04 10:46:17,242 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_nhs_timeseries.w-20.h-14.txt
+2025-05-04 10:46:17,251 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_ltla_timeseries.w-20.h-3.csv
+2025-05-04 10:46:17,253 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_ltla_timeseries.w-20.h-3.txt
+2025-05-04 10:46:17,262 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_ltla_timeseries.w-20.h-7.csv
+2025-05-04 10:46:17,265 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_ltla_timeseries.w-20.h-7.txt
+2025-05-04 10:46:17,274 INFO: Saved summary CSV: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_summary_ltla_timeseries.w-20.h-14.csv
+2025-05-04 10:46:17,276 INFO: Saved report TXT: /home/olarinoyem/Project/MSAGAT-Net/report/results/ablation_report_ltla_timeseries.w-20.h-14.txt
+2025-05-04 10:46:17,276 INFO: All experiments complete.
