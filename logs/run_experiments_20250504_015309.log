@@ -1,1 +1,4 @@
 2025-05-04 01:53:09,557 INFO: Logging to /home/olarinoyem/Project/MSAGAT-Net/logs/run_experiments_20250504_015309.log
+2025-05-04 01:55:10,799 INFO: Trained: /home/olarinoyem/miniconda3/envs/tf/bin/python /home/olarinoyem/Project/MSAGAT-Net/src/train.py --dataset japan --sim_mat japan-adj --window 20 --horizon 3 --ablation none --save_dir /home/olarinoyem/Project/MSAGAT-Net/save_all --cuda --gpu 0
+2025-05-04 01:57:17,924 INFO: Trained: /home/olarinoyem/miniconda3/envs/tf/bin/python /home/olarinoyem/Project/MSAGAT-Net/src/train.py --dataset japan --sim_mat japan-adj --window 20 --horizon 3 --ablation no_agam --save_dir /home/olarinoyem/Project/MSAGAT-Net/save_all --cuda --gpu 0
+2025-05-04 01:57:43,656 INFO: Trained: /home/olarinoyem/miniconda3/envs/tf/bin/python /home/olarinoyem/Project/MSAGAT-Net/src/train.py --dataset japan --sim_mat japan-adj --window 20 --horizon 3 --ablation no_mtfm --save_dir /home/olarinoyem/Project/MSAGAT-Net/save_all --cuda --gpu 0
