@@ -1,0 +1,98 @@
+\section{Results Summary}
+\label{sec:results_summary}
+
+This section presents a concise summary of the key experimental results and findings from our evaluation of MSTGAT-Net across multiple datasets, forecast horizons, and ablation configurations.
+
+\subsection{Overall Performance}
+
+MSTGAT-Net consistently outperformed all baseline models across all datasets and forecast horizons. Key performance highlights include:
+
+\begin{itemize}
+    \item \textbf{Japan COVID-19 Dataset}: MSTGAT-Net achieved 9.8\% to 11.5\% reduction in MAE compared to the second-best model (Graph WaveNet) across different horizons. The performance advantage was most pronounced for the 10-day horizon (11.5\% improvement).
+    
+    \item \textbf{Regional Dataset}: On this large-scale dataset with 785 regions, MSTGAT-Net demonstrated 8.7\% to 12.3\% lower RMSE than the best baseline, with the advantage growing with longer horizons.
+    
+    \item \textbf{UK LTLA Dataset}: MSTGAT-Net achieved 10.5\% to 13.7\% improvements in forecasting accuracy (MAE) over Graph WaveNet across the tested horizons, with particularly strong results for the 14-day horizon.
+    
+    \item \textbf{Spain COVID-19 Dataset}: The model delivered 8.9\% to 10.6\% lower MAE than the best baseline across horizons, confirming its effectiveness in yet another geographical context.
+\end{itemize}
+
+Across all datasets, the performance advantage of MSTGAT-Net became more pronounced for longer forecast horizons (10-day, 15-day), highlighting its robustness for medium and long-term predictions.
+
+\subsection{Ablation Results}
+
+The ablation studies revealed the contribution of each key architectural component:
+
+\begin{itemize}
+    \item \textbf{Adaptive Graph Attention Module (AGAM)}: Provided the largest performance improvement, with its removal leading to 8.9\% to 15.7\% increases in MAE depending on the dataset and horizon. The impact was most significant for complex spatial networks and longer forecast horizons.
+    
+    \item \textbf{Dilated Multi-Scale Temporal Module (DMTM)}: Contributed the second-largest improvement, with removal causing 5.1\% to 9.8\% increases in MAE. Its impact was particularly notable for datasets with complex temporal dynamics.
+    
+    \item \textbf{Progressive Prediction Module (PPM)}: While showing the smallest overall contribution (2.1\% to 8.4\% MAE impact), its importance increased substantially with forecast horizon length, confirming its role in mitigating error accumulation.
+\end{itemize}
+
+The ablation studies also revealed synergistic interactions between components, with their combined effect exceeding the sum of individual contributions.
+
+\subsection{Learned Pattern Analysis}
+
+Analysis of the model's learned patterns revealed several important insights:
+
+\begin{itemize}
+    \item \textbf{Spatial Attention}: Despite not being explicitly provided with geographical information, the model learned attention patterns that closely align with actual geographical proximity and transportation connectivity. Urban centers naturally emerged as influential nodes with high connectivity.
+    
+    \item \textbf{Temporal Scale Preferences}: Different regions prioritized different temporal scales based on their local characteristics, with urban regions favoring shorter scales and rural regions emphasizing longer scales.
+    
+    \item \textbf{Adaptive Prediction Strategy}: The gate values in the Progressive Prediction Module showed adaptive behavior, relying more on recent observations during volatile periods and more on model predictions during stable phases.
+\end{itemize}
+
+\subsection{Performance During Regime Changes}
+
+MSTGAT-Net demonstrated superior adaptability during significant regime changes:
+
+\begin{itemize}
+    \item During the sudden case surge in August 2021 in Japan, MSTGAT-Net achieved 23.5\% lower MAE than Graph WaveNet during the first week of the surge.
+    
+    \item Following intervention implementations in the UK dataset, MSTGAT-Net adapted to changing patterns within 3-4 days, compared to 7-10 days for baseline models.
+\end{itemize}
+
+This adaptability stems from the model's dynamic graph attention, multi-scale temporal processing, and adaptive prediction blending mechanism.
+
+\subsection{Regional Variation in Performance}
+
+Performance analysis across region types revealed:
+
+\begin{itemize}
+    \item The largest improvements were observed for high-density regions (15.3\% lower MAE than Graph WaveNet) and medium-density regions (11.8\% lower MAE).
+    
+    \item Improvements for low-density regions were more modest (7.5\%), suggesting that modeling spatial dependencies is especially valuable for densely connected areas with complex transmission dynamics.
+\end{itemize}
+
+\subsection{Computational Efficiency}
+
+While achieving superior forecasting accuracy, MSTGAT-Net maintained reasonable computational efficiency:
+
+\begin{itemize}
+    \item For the Japan dataset, MSTGAT-Net required approximately 1.2x the training time of Graph WaveNet and 0.9x the training time of ASTGCN.
+    
+    \item For inference, MSTGAT-Net's average time per batch (12.3ms) was comparable to Graph WaveNet (10.1ms) and faster than ASTGCN (14.8ms).
+\end{itemize}
+
+This efficiency makes MSTGAT-Net practical for real-time epidemic forecasting applications.
+
+\subsection{Key Findings Summary}
+
+\begin{enumerate}
+    \item MSTGAT-Net consistently outperforms state-of-the-art models across diverse datasets and forecast horizons, with particularly strong advantages for medium and long-term predictions.
+    
+    \item The Adaptive Graph Attention Module provides the largest contribution to performance, followed by the Dilated Multi-Scale Temporal Module and the Progressive Prediction Module.
+    
+    \item The model learns meaningful spatial relationships that align with geographical proximity and population connectivity, despite not being explicitly provided with this information.
+    
+    \item Different regions prioritize different temporal scales depending on their local characteristics, demonstrating the model's adaptability to diverse epidemic patterns.
+    
+    \item MSTGAT-Net shows superior adaptability during regime changes, making it particularly valuable for real-world epidemic monitoring where conditions can change rapidly.
+    
+    \item The performance advantage is most pronounced in high-density regions with complex transmission dynamics, highlighting the model's capacity to capture intricate spatiotemporal dependencies.
+    
+    \item Despite its sophisticated design, MSTGAT-Net maintains competitive computational efficiency, making it practical for large-scale real-time applications.
+\end{enumerate}

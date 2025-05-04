@@ -1,0 +1,114 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{subcaption}
+\usepackage[left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}
+
+\title{MSTGAT-Net: Results Analysis and Discussion}
+\author{MSAGAT-Net Research Team}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document provides a comprehensive analysis of the experimental results for MSTGAT-Net, a novel deep learning architecture for spatiotemporal forecasting that combines adaptive graph attention, multi-scale temporal modeling, and progressive prediction. Through detailed evaluation on multiple real-world epidemic datasets, we demonstrate that MSTGAT-Net consistently outperforms state-of-the-art baselines across various forecast horizons, with particularly strong performance for medium and long-term predictions. Our ablation studies quantify the contributions of each key architectural innovation, revealing that the Adaptive Graph Attention Module provides the largest performance improvement, followed by the Dilated Multi-Scale Temporal Module and the Progressive Prediction Module. The visualization of learned attention patterns shows that the model captures meaningful spatial relationships that align with geographical proximity and population connectivity, despite not being explicitly provided with this information. This report presents the detailed results, figures, and insights from our comprehensive evaluation.
+\end{abstract}
+
+\tableofcontents
+
+\section{Introduction}
+\label{sec:intro}
+
+MSTGAT-Net is a novel deep learning architecture designed for spatiotemporal forecasting, with a particular focus on epidemic prediction. The model combines three key innovations:
+
+\begin{enumerate}
+    \item \textbf{Adaptive Graph Attention Module}: Dynamically models spatial dependencies between regions without requiring pre-defined graph structures.
+    
+    \item \textbf{Dilated Multi-Scale Temporal Module}: Captures temporal patterns at multiple scales simultaneously through dilated convolutions.
+    
+    \item \textbf{Progressive Prediction Module}: Mitigates error accumulation in multi-step forecasting through an adaptive blending mechanism.
+\end{enumerate}
+
+This report provides a detailed analysis of the model's performance across multiple datasets, forecast horizons, and ablation configurations. We present visualizations of the learned patterns, quantitative performance metrics, and in-depth discussion of the results and their implications.
+
+\section{Datasets and Evaluation Setup}
+\label{sec:datasets}
+
+\subsection{Datasets}
+
+Our evaluation leverages several real-world epidemic datasets that provide diverse geographical contexts and varying scales of spatial granularity:
+
+\begin{itemize}
+    \item \textbf{Japan COVID-19 Dataset}: Daily COVID-19 confirmed cases for 47 prefectures in Japan spanning 18 months, capturing multiple waves of infections.
+    
+    \item \textbf{UK LTLA Dataset}: COVID-19 case data for 380 Lower-Tier Local Authority (LTLA) regions in the UK, offering a fine-grained view of epidemic dynamics.
+    
+    \item \textbf{Regional Dataset}: A large-scale epidemic dataset covering 785 regions, presenting a more challenging scenario for modeling spatial dependencies.
+    
+    \item \textbf{Spain COVID-19 Dataset}: Daily confirmed cases across Spanish provinces, providing another geographical context with different mobility patterns.
+\end{itemize}
+
+\subsection{Evaluation Metrics}
+
+We evaluate model performance using four complementary metrics:
+
+\begin{itemize}
+    \item \textbf{Mean Absolute Error (MAE)}: $\text{MAE} = \frac{1}{N} \sum_{i=1}^{N} |y_i - \hat{y}_i|$
+    
+    \item \textbf{Root Mean Square Error (RMSE)}: $\text{RMSE} = \sqrt{\frac{1}{N} \sum_{i=1}^{N} (y_i - \hat{y}_i)^2}$
+    
+    \item \textbf{Pearson Correlation Coefficient (PCC)}: Measures the linear correlation between predictions and ground truth
+    
+    \item \textbf{R-squared (R²)}: Indicates the proportion of variance in the dependent variable explained by the model
+\end{itemize}
+
+\subsection{Baseline Models}
+
+We compare MSTGAT-Net against several state-of-the-art spatiotemporal forecasting models:
+
+\begin{itemize}
+    \item \textbf{Historical Average (HA)}: A simple baseline that predicts future values based on historical averages.
+    
+    \item \textbf{Vector Autoregression (VAR)}: A multivariate time series forecasting model that captures linear interdependencies.
+    
+    \item \textbf{LSTM}: A recurrent neural network architecture that models temporal dependencies.
+    
+    \item \textbf{GRU-GCN}: Combines Gated Recurrent Units with graph convolutional networks.
+    
+    \item \textbf{ASTGCN}: An attention-based spatiotemporal graph convolutional network.
+    
+    \item \textbf{STGCN}: A spatiotemporal graph convolutional network that models correlations using graph convolutions.
+    
+    \item \textbf{Graph WaveNet}: A model that combines graph convolution with dilated causal convolution.
+\end{itemize}
+
+\input{results_summary}
+
+\input{ablation_analysis}
+
+\input{figure_analysis}
+
+\input{discussion}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+Our comprehensive evaluation demonstrates that MSTGAT-Net represents a significant advancement in spatiotemporal forecasting, particularly for epidemic prediction. The model consistently outperforms state-of-the-art baselines across diverse datasets and forecast horizons, with its advantage growing for longer-term predictions.
+
+The ablation studies confirm the value of each key architectural innovation, with the Adaptive Graph Attention Module providing the largest contribution to performance, followed by the Dilated Multi-Scale Temporal Module and the Progressive Prediction Module. These components work synergistically to enable more accurate and adaptable forecasting.
+
+Analysis of the model's learned patterns reveals its ability to capture meaningful spatial relationships without explicit geographical information, adapt to changing dynamics during regime changes, and adjust its temporal processing to the specific characteristics of each region. These capabilities make MSTGAT-Net particularly valuable for epidemic monitoring and response planning.
+
+By addressing several limitations of existing approaches, MSTGAT-Net contributes to more accurate and reliable spatiotemporal forecasting, which is crucial for informed decision-making in public health and resource allocation. The model's combination of forecasting accuracy and computational efficiency makes it practical for real-world applications requiring regular updates and medium to long-term projections.
+
+Future work will focus on extending the model to handle multivariate data, incorporate external covariates, provide uncertainty estimates, and scale efficiently to even larger spatial networks. These advancements will further enhance the model's utility across diverse forecasting scenarios and application domains.
+
+\end{document}
