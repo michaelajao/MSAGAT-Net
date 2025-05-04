@@ -268,10 +268,10 @@ The final operation reshapes the features back to a form suitable for spatial mo
 
 This low-rank projection serves multiple critical purposes:
 \begin{itemize}
-    \item \textbf{Memory Efficiency}: Reduces memory requirements by compressing temporal features into a lower-dimensional representation
-    \item \textbf{Information Distillation}: Forces the network to retain only the most essential information through the bottleneck
-    \item \textbf{Regularization}: The dimensional constraint acts as implicit regularization, helping prevent overfitting
-    \item \textbf{Computational Efficiency}: Significantly reduces the computational cost of subsequent operations, particularly the attention mechanism in the spatial module
+    \item \textbf{Memory Efficiency}: Reduces memory requirements by compressing temporal features into a lower-dimensional representation.
+    \item \textbf{Information Distillation}: Forces the network to retain only the most essential information through the bottleneck.
+    \item \textbf{Regularization}: The dimensional constraint acts as implicit regularization, helping prevent overfitting.
+    \item \textbf{Computational Efficiency}: Significantly reduces the computational cost of subsequent operations, particularly the attention mechanism in the spatial module.
 \end{itemize}
 
 The output of this module, $\mathbf{H}_{reshaped}$, contains rich latent representations of the input time series that capture temporal patterns while being efficiently structured for subsequent processing by the Spatial Dependency Module.
@@ -339,9 +339,9 @@ We compute attention scores with three components: (1) content-based attention, 
 
 where $\mathbf{A}_0$ is an optional initial adjacency matrix based on prior knowledge (e.g., geographic proximity), and $\lambda$ is a hyperparameter controlling its influence. The attention mechanism adaptively balances:
 \begin{itemize}
-    \item Content-based relationships derived from node features
-    \item Structural patterns learned during training
-    \item Prior knowledge when available
+    \item Content-based relationships derived from node features.
+    \item Structural patterns learned during training.
+    \item Prior knowledge when available.
 \end{itemize}
 
 \paragraph{Linear Attention for Computational Efficiency}
@@ -380,10 +380,10 @@ Real-world spatial dependencies are typically sparseâ€”each region strongly inte
 
 where $\lambda_{att}$ is a hyperparameter controlling the strength of regularization. This regularization offers multiple benefits:
 \begin{itemize}
-    \item Promotes interpretability by highlighting the most important spatial connections
-    \item Reduces overfitting by constraining the model's capacity
-    \item Enhances computational efficiency by focusing on important connections
-    \item Better aligns with real-world spatial dependency structures
+    \item Promotes interpretability by highlighting the most important spatial connections.
+    \item Reduces overfitting by constraining the model's capacity.
+    \item Enhances computational efficiency by focusing on important connections.
+    \item Better aligns with real-world spatial dependency structures.
 \end{itemize}
 
 \subsubsection{Theoretical Advantages}
@@ -422,9 +422,9 @@ We then apply a series of parallel 1D convolutions with increasing dilation rate
 
 where $s \in \{1,2,...,S\}$ indexes the scale, and the dilation rate increases exponentially with $s$ (typically, $S=3$ in our implementation). For example:
 \begin{itemize}
-    \item Scale 1: Dilation = 1, capturing immediate local patterns (receptive field of $K$)
-    \item Scale 2: Dilation = 2, capturing medium-range patterns (receptive field of $2K-1$)
-    \item Scale 3: Dilation = 4, capturing longer-range patterns (receptive field of $4K-3$)
+    \item Scale 1: Dilation = 1, capturing immediate local patterns (receptive field of $K$).
+    \item Scale 2: Dilation = 2, capturing medium-range patterns (receptive field of $2K-1$).
+    \item Scale 3: Dilation = 4, capturing longer-range patterns (receptive field of $4K-3$).
 \end{itemize}
 
 This design allows the model to efficiently cover a large temporal receptive field with few parameters. For instance, with $K=3$ and $S=3$, we achieve a receptive field of 9 time steps using only 9 parameters (3 per scale), compared to 9 parameters required by a standard convolution with kernel size 9.
@@ -451,13 +451,13 @@ Different regions and time periods may exhibit varying temporal characteristicsâ
 \mathbf{Z} = \sum_{s=1}^{S} \alpha_s \mathbf{Z}_s \in \mathbb{R}^{B \times D \times N}
 \end{equation}
 
-The softmax ensures that $\sum_{s=1}^{S} \alpha_s = 1, creating a proper weighted combination. The scale weights $\boldsymbol{\alpha}$ are learned during training and can adapt to different datasets and forecasting scenarios. This approach offers several advantages:
+The softmax ensures that $\sum_{s=1}^{S} \alpha_s = 1$, creating a proper weighted combination. The scale weights $\boldsymbol{\alpha}$ are learned during training and can adapt to different datasets and forecasting scenarios. This approach offers several advantages:
 
 \begin{itemize}
-    \item Allows the model to automatically determine the most relevant temporal scales for a given dataset
-    \item Enables different regions to emphasize different temporal scales implicitly through their feature representations
-    \item Provides interpretable insights into which temporal scales are most important for forecasting
-    \item Maintains computational efficiency by sharing the same weights across all spatial nodes
+    \item Allows the model to automatically determine the most relevant temporal scales for a given dataset.
+    \item Enables different regions to emphasize different temporal scales implicitly through their feature representations.
+    \item Provides interpretable insights into which temporal scales are most important for forecasting.
+    \item Maintains computational efficiency by sharing the same weights across all spatial nodes.
 \end{itemize}
 
 \subsubsection{Feature Enhancement and Residual Connection}
@@ -511,8 +511,8 @@ The Horizon Prediction Module addresses one of the most challenging aspects of e
 
 In multi-step time series forecasting, two main approaches exist:
 \begin{itemize}
-    \item \textbf{Recursive forecasting}: Predicts one step at a time and feeds predictions back as inputs for subsequent steps, often leading to error accumulation
-    \item \textbf{Direct multi-step forecasting}: Generates all future steps simultaneously, maintaining independence but potentially sacrificing temporal coherence
+    \item \textbf{Recursive forecasting}: Predicts one step at a time and feeds predictions back as inputs for subsequent steps, often leading to error accumulation.
+    \item \textbf{Direct multi-step forecasting}: Generates all future steps simultaneously, maintaining independence but potentially sacrificing temporal coherence.
 \end{itemize}
 
 Our Horizon Prediction Module takes a hybrid approach, combining the strengths of both methods through a progressive prediction strategy with an adaptive blending mechanism.
@@ -763,11 +763,9 @@ For each dataset, we use a time window of 20 days for inputs and predict future 
 We evaluate model performance using three complementary metrics that capture different aspects of forecasting accuracy:
 
 \begin{itemize}
-    \item \textbf{Mean Absolute Error (MAE)}: $\text{MAE} = \frac{1}{N} \sum_{i=1}^{N} |y_i - \hat{y}_i|$
-    
-    \item \textbf{Root Mean Square Error (RMSE)}: $\text{RMSE} = \sqrt{\frac{1}{N} \sum_{i=1}^{N} (y_i - \hat{y}_i)^2}$
-    
-    \item \textbf{Mean Absolute Percentage Error (MAPE)}: $\text{MAPE} = \frac{100\%}{N} \sum_{i=1}^{N} \left| \frac{y_i - \hat{y}_i}{y_i + \epsilon} \right|$
+    \item \textbf{Mean Absolute Error (MAE)}: $\text{MAE} = \frac{1}{N} \sum_{i=1}^{N} |y_i - \hat{y}_i|$.
+    \item \textbf{Root Mean Square Error (RMSE)}: $\text{RMSE} = \sqrt{\frac{1}{N} \sum_{i=1}^{N} (y_i - \hat{y}_i)^2}$.
+    \item \textbf{Mean Absolute Percentage Error (MAPE)}: $\text{MAPE} = \frac{100\%}{N} \sum_{i=1}^{N} \left| \frac{y_i - \hat{y}_i}{y_i + \epsilon} \right|$.
 \end{itemize}
 
 where $y_i$ represents the ground truth, $\hat{y}_i$ represents the predicted value, $N$ is the number of samples, and $\epsilon$ is a small constant (1.0) added to avoid division by zero and to stabilize the metric for small case counts.
@@ -777,18 +775,12 @@ We compare MSTGAT-Net against several state-of-the-art spatiotemporal forecastin
 
 \begin{itemize}
     \item \textbf{Historical Average (HA)}: A simple baseline that predicts future values based on historical averages of corresponding periods.
-    
     \item \textbf{Vector Autoregression (VAR)}: A multivariate time series forecasting model that captures linear interdependencies among multiple time series.
-    
     \item \textbf{LSTM}: A recurrent neural network architecture that models temporal dependencies but treats each region independently.
-    
     \item \textbf{GRU-GCN}: Combines Gated Recurrent Units with graph convolutional networks to model both temporal dynamics and spatial dependencies.
-    
     \item \textbf{ASTGCN}: An attention-based spatiotemporal graph convolutional network with both spatial and temporal attention mechanisms.
-    
-    \item \textbf{STGCN}: A spatiotemporal graph convolutional network that models spatial-temporal correlations using graph convolutions and 1D convolutions.
-    
-    \item \textbf{Graph WaveNet}: A model that combines graph convolution with dilated causal convolution for spatial-temporal modeling.
+    \item \textbf{STGCN}: A spatiotemporal graph convolutional network that models spatiotemporal correlations using graph convolutions and 1D convolutions.
+    \item \textbf{Graph WaveNet}: A model that combines graph convolution with dilated causal convolution for spatiotemporal modeling.
 \end{itemize}
 
 \subsubsection{Implementation Details}
@@ -909,9 +901,9 @@ This adaptive weighting mechanism enables MSTGAT-Net to capture region-specific 
 We examined model performance during significant regime changes, such as the onset of new COVID-19 waves or the implementation of intervention measures. Fig. \ref{fig:regime_change} compares MSTGAT-Net against Graph WaveNet and ASTGCN during a sudden case surge in Japan (August 2021). MSTGAT-Net adapts more quickly to the changing dynamics, with a 23.5\% lower MAE during the first week of the surge compared to the next best model. This improved performance can be attributed to:
 
 \begin{itemize}
-    \item The Progressive Prediction Module's adaptive blending of model predictions with recent observations
-    \item The Multi-Scale Temporal Module's ability to capture patterns at different time horizons simultaneously
-    \item The dynamic nature of the Spatial Dependency Module, which can rapidly adjust to changes in inter-regional transmission patterns
+    \item The Progressive Prediction Module's adaptive blending of model predictions with recent observations.
+    \item The Multi-Scale Temporal Module's ability to capture patterns at different time horizons simultaneously.
+    \item The dynamic nature of the Spatial Dependency Module, which can rapidly adjust to changes in inter-regional transmission patterns.
 \end{itemize}
 
 \subsubsection{Performance Across Different Region Types}
