@@ -40,9 +40,9 @@ parser.add_argument('--val', type=float, default=0.2)
 parser.add_argument('--test', type=float, default=0.3)
 parser.add_argument('--epochs', type=int, default=1500)
 parser.add_argument('--batch', type=int, default=32)
-parser.add_argument('--lr', type=float, default=1e-3)
+parser.add_argument('--lr', type=float, default=5e-3)
 parser.add_argument('--weight_decay', type=float, default=5e-4)
-parser.add_argument('--dropout', type=float, default=0.2)
+parser.add_argument('--dropout', type=float, default=0.25)
 parser.add_argument('--seed', type=int, default=42)
 parser.add_argument('--gpu', type=int, default=None,
                     help='GPU device id to use; omit to run on CPU')
@@ -60,7 +60,7 @@ parser.add_argument('--start_date', type=str, default='2020-01-01', help='Start 
 # Add ablation parameter
 parser.add_argument('--ablation', type=str, default='none', 
                    choices=['none', 'no_agam', 'no_mtfm', 'no_pprm'],
-                   help='Ablation study type: none, no_agam (LR‑AGAM: Low-rank Adaptive Graph Attention Module), no_mtfm (DMTFM: Dilated Multi-scale Temporal Feature Module), no_pprm (PPRM: Progressive Multi-step Prediction Refinement Module)')
+                   help='Ablation study type: none, no_agam (LR‑AGAM: Low-rank Adaptive Graph Attention Module), no_mtfm (MTFM: Multi-scale Temporal Feature Module), no_pprm (PPRM: Progressive Multi-step Prediction Refinement Module)')
 args = parser.parse_args()
 print('--------Parameters--------')
 print(args)

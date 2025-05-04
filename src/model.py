@@ -9,11 +9,11 @@ HIDDEN_DIM = 32
 ATTENTION_HEADS = 4
 # Initial value for adaptive attention regularization weight
 ATTENTION_REG_WEIGHT_INIT = 1e-05
-DROPOUT = 0.2
+DROPOUT = 0.25
 NUM_TEMPORAL_SCALES = 4
 KERNEL_SIZE = 3
 FEATURE_CHANNELS = 16
-BOTTLENECK_DIM = 16
+BOTTLENECK_DIM = 8
 
 class SpatialAttentionModule(nn.Module):
     """
