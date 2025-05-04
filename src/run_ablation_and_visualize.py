@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Full pipeline script that:
  1) Invokes your existing `train_ablation.py` to train MSTAGAT-Net and ablations
@@ -36,8 +35,7 @@ METRICS_DIR = os.path.join(BASE_DIR, 'report', 'results')
 # We still point at your checkpoint folder, but do not create it here
 SAVE_DIR    = 'save_all'
 
-# Folders for our visual outputs
-FIG_DIR     = 'paper_figures'
+# Folder for our visual outputs
 OUT_DIR     = os.path.join('report', 'paper_figures')
 
 # Updated training script path
@@ -659,19 +657,7 @@ def generate_ablation_report(dataset, window, horizon, output_dir):
     logger.info(f"Generated ablation report: {report_path}")
     return report_path
 
-def generate_overview_figure(output_dir):
-    texts = ["Architecture", "Performance", "Component Importance", "Ablation Impact"]
-    fig = plt.figure(figsize=(12,10))
-    gs  = gridspec.GridSpec(2,2)
-    for idx, txt in enumerate(texts):
-        ax = fig.add_subplot(gs[idx//2, idx%2])
-        ax.text(0.5,0.5, txt, ha='center', va='center', fontsize=14)
-        ax.axis('off')
-    plt.suptitle("Study Overview", y=0.95, fontsize=16)
-    out = os.path.join(output_dir, "overview.png")
-    plt.savefig(out, dpi=300, bbox_inches='tight')
-    plt.close()
-    logger.info("Saved overview figure")
+# Overview figure generation function removed as requested
 
 # =============================================================================
 #  MAIN
@@ -744,6 +730,6 @@ if __name__ == '__main__':
             for h in horizons:
                 generate_ablation_report(dataset, 20, h, OUT_DIR)
     # enhance_existing_figures function removed
-    generate_overview_figure(OUT_DIR)
+    # overview figure generation removed
 
     logger.info("Pipeline complete!")
