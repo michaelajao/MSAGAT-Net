@@ -33,7 +33,7 @@ if parent_dir not in sys.path:
 
 # Import the model module
 from utils import *
-from model import MSTAGAT_Net
+from model1 import MSTAGAT_Net
 
 # ----------------- Argument Parsing -----------------
 def parse_arguments():

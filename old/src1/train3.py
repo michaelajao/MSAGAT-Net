@@ -21,7 +21,7 @@ import pandas as pd
 
 # project modules
 from data import DataBasicLoader
-from model import MSTAGAT_Net
+from model1 import MSTAGAT_Net
 from utils import (
     visualize_matrices,
     visualize_predictions,

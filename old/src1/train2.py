@@ -38,7 +38,7 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 # Import model
-from model import MSTAGAT_Net
+from model1 import MSTAGAT_Net
 
 # Command line argument parsing
 ap = argparse.ArgumentParser(description='Training script for MSTAGAT_Net model')

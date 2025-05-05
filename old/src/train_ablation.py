@@ -17,7 +17,7 @@ import pandas as pd
 # project modules
 from data import DataBasicLoader
 from ablation import MSAGATNet_Ablation
-from model import MSTAGAT_Net
+from model1 import MSTAGAT_Net
 from utils import visualize_matrices, visualize_predictions, plot_loss_curves, save_metrics, peak_error
 
 logger = logging.getLogger(__name__)

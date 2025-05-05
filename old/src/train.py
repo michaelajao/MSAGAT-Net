@@ -20,7 +20,7 @@ import pandas as pd
 
 # project modules
 from data import DataBasicLoader
-from model import MSTAGAT_Net
+from model1 import MSTAGAT_Net
 
 # Import the new models
 from location_aware_model import LocationAwareMSAGAT_Net

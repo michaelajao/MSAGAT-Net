@@ -35,9 +35,9 @@ if not os.path.exists(data_path):
 
 # Import our model and ablation models
 try:
-    from model import MSAGATNet
+    from model1 import MSAGATNet
     from ablation import MSAGATNet_Ablation
-    from model import MSTAGAT_Net  # Renamed from MSTGAT to MSTAGAT_Net
+    from model1 import MSTAGAT_Net  # Renamed from MSTGAT to MSTAGAT_Net
     print("Successfully imported MSAGATNet, MSTAGAT-Net, and ablation modules")
 except ImportError as e:
     print(f"ERROR importing modules: {e}")
@@ -45,9 +45,9 @@ except ImportError as e:
     # Try alternative import paths
     try:
         sys.path.append(os.path.join(current_dir))
-        from src.model import MSAGATNet
+        from model1 import MSAGATNet
         from src.ablation import MSAGATNet_Ablation
-        from model import MSTAGAT_Net  # Renamed from MSTGAT to MSTAGAT_Net
+        from model1 import MSTAGAT_Net  # Renamed from MSTGAT to MSTAGAT_Net
         print("Successfully imported modules using alternative path")
     except ImportError as e2:
         print(f"ERROR with alternative import: {e2}")

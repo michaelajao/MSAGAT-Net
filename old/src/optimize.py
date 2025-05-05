@@ -17,7 +17,7 @@ import json  # Added import for json
 
 # Project modules
 from data import DataBasicLoader
-from model import MSTAGAT_Net
+from model1 import MSTAGAT_Net
 from utils import save_metrics, peak_error
 
 # Setup logging

@@ -20,7 +20,7 @@ from torch.nn import Parameter
 import math
 
 # import model constants and modules directly
-from model import (
+from model1 import (
     HIDDEN_DIM,
     ATTENTION_HEADS,
     ATTENTION_REG_WEIGHT,
