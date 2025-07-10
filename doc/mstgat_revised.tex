@@ -28,7 +28,7 @@
    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
 % ---------- TITLE & AUTHOR ----------
-\title{\textbf{MSTGAT-Net: A Multi-Scale Temporal Graph Attention Network for Robust Spatiotemporal Forecasting}}
+\title{\textbf{MSTGAT-Net: A Multi-Scale Temporal Graph Attention Network for Spatiotemporal Forecasting}}
 
 \author{
     \IEEEauthorblockN{Author Names}
@@ -44,61 +44,61 @@
 
 % ---------- ABSTRACT ----------
 \begin{abstract}
-Spatiotemporal forecasting presents significant challenges in machine learning research, requiring models that can simultaneously capture complex spatial relationships and temporal dynamics. This problem is particularly crucial in domains such as epidemiology, where disease spread exhibits intricate patterns across both geographical regions and time periods. We present MSTGAT-Net (Multi-Scale Temporal Graph Attention Network), a novel deep learning architecture that combines adaptive graph attention mechanisms with multi-scale temporal analysis to address these challenges. The model incorporates three key innovations: (1) an Efficient Adaptive Graph Attention Module that dynamically captures evolving spatial relationships between regions with low-rank approximations, (2) a Dilated Multi-Scale Temporal Module that processes patterns at different timescales through parallel dilated convolutions, and (3) a Progressive Prediction Module that mitigates error accumulation in long-horizon forecasts. Our comprehensive ablation studies demonstrate that each component significantly contributes to the overall forecasting performance. MSTGAT-Net offers robust performance across diverse forecasting horizons while maintaining computational efficiency, making it particularly valuable for epidemiological forecasting and healthcare resource planning applications.
+% Spatiotemporal forecasting presents significant challenges in machine learning research, requiring models that can simultaneously capture complex spatial relationships and temporal dynamics. This problem is particularly crucial in domains such as epidemiology, where disease spread exhibits intricate patterns across both geographical regions and time periods. We present MSTGAT-Net (Multi-Scale Temporal Graph Attention Network), a novel deep learning architecture that combines adaptive graph attention mechanisms with multi-scale temporal analysis to address these challenges. The model incorporates three key innovations: (1) an Efficient Adaptive Graph Attention Module that dynamically captures evolving spatial relationships between regions with low-rank approximations, (2) a Dilated Multi-Scale Temporal Module that processes patterns at different timescales through parallel dilated convolutions, and (3) a Progressive Prediction Module that mitigates error accumulation in long-horizon forecasts. Our comprehensive ablation studies demonstrate that each component significantly contributes to the overall forecasting performance. MSTGAT-Net offers robust performance across diverse forecasting horizons while maintaining computational efficiency, making it particularly valuable for epidemiological forecasting and healthcare resource planning applications.
 \end{abstract}
 
 % ---------- INDEX TERMS ----------
 \begin{IEEEkeywords}
-Deep Learning, Graph Neural Networks, Multi-head Attention, Time Series Analysis, Epidemic Forecasting, Adaptive Graph Learning, Multi-scale Feature Fusion, Spatiotemporal Prediction
+% Deep Learning, Graph Neural Networks, Multi-head Attention, Time Series Analysis, Epidemic Forecasting, Adaptive Graph Learning, Multi-scale Feature Fusion, Spatiotemporal Prediction
 \end{IEEEkeywords}
 
 % ---------- SECTION I: INTRODUCTION ----------
 \section{Introduction}
 
-\IEEEPARstart{S}{patiotemporal} forecasting presents one of the most significant challenges in machine learning research, requiring models that can simultaneously capture complex spatial relationships and temporal dynamics. This problem is particularly crucial in domains such as epidemiology, where disease spread exhibits intricate patterns across both geographical regions and time periods. Traditional approaches often treat spatial and temporal components separately, failing to model their interdependence and leading to suboptimal predictions. Furthermore, many existing methods rely on predefined graph structures that may not accurately reflect the true underlying relationships in the data.
+% \IEEEPARstart{S}{patiotemporal} forecasting presents one of the most significant challenges in machine learning research, requiring models that can simultaneously capture complex spatial relationships and temporal dynamics. This problem is particularly crucial in domains such as epidemiology, where disease spread exhibits intricate patterns across both geographical regions and time periods. Traditional approaches often treat spatial and temporal components separately, failing to model their interdependence and leading to suboptimal predictions. Furthermore, many existing methods rely on predefined graph structures that may not accurately reflect the true underlying relationships in the data.
 
-In this paper, we introduce the Multi-Scale Temporal Graph Attention Network (MSTGAT-Net), a novel deep learning architecture specifically designed to address these limitations. MSTGAT-Net integrates several innovative components: (1) efficient feature extraction using depthwise separable convolutions, (2) adaptive graph learning through a low-rank attention mechanism, (3) multi-scale temporal modeling via dilated convolutions, and (4) horizon prediction with an adaptive refinement mechanism.
+% In this paper, we introduce the Multi-Scale Temporal Graph Attention Network (MSTGAT-Net), a novel deep learning architecture specifically designed to address these limitations. MSTGAT-Net integrates several innovative components: (1) efficient feature extraction using depthwise separable convolutions, (2) adaptive graph learning through a low-rank attention mechanism, (3) multi-scale temporal modeling via dilated convolutions, and (4) horizon prediction with an adaptive refinement mechanism.
 
-Our contributions can be summarized as follows:
-\begin{itemize}
-    \item We propose a comprehensive end-to-end architecture that jointly models spatial dependencies and temporal dynamics at multiple scales.
-    \item We introduce a low-rank graph attention mechanism that learns and adapts spatial relationships during training without relying on a predefined adjacency matrix.
-    \item We develop a multi-scale temporal module that efficiently captures patterns across different time horizons through dilated convolutions with adaptive fusion.
-    \item We design an adaptive refinement mechanism that combines model predictions with recent observations, improving forecasting accuracy particularly during regime changes.
-    \item We optimize computational efficiency through strategic use of low-rank approximations and separable convolutions, enabling application to large-scale spatiotemporal forecasting problems.
-\end{itemize}
+% Our contributions can be summarized as follows:
+% \begin{itemize}
+%     \item We propose a comprehensive end-to-end architecture that jointly models spatial dependencies and temporal dynamics at multiple scales.
+%     \item We introduce a low-rank graph attention mechanism that learns and adapts spatial relationships during training without relying on a predefined adjacency matrix.
+%     \item We develop a multi-scale temporal module that efficiently captures patterns across different time horizons through dilated convolutions with adaptive fusion.
+%     \item We design an adaptive refinement mechanism that combines model predictions with recent observations, improving forecasting accuracy particularly during regime changes.
+%     \item We optimize computational efficiency through strategic use of low-rank approximations and separable convolutions, enabling application to large-scale spatiotemporal forecasting problems.
+% \end{itemize}
 
-The remainder of this paper is organized as follows: Section II discusses related work. Section III formalizes the spatiotemporal forecasting problem. Section IV presents the proposed MSTGAT-Net architecture in detail. Section V presents our ablation studies. Section VI discusses experiments and results, and Section VII addresses limitations and future research directions.
+% The remainder of this paper is organized as follows: Section II discusses related work. Section III formalizes the spatiotemporal forecasting problem. Section IV presents the proposed MSTGAT-Net architecture in detail. Section V presents our ablation studies. Section VI discusses experiments and results, and Section VII addresses limitations and future research directions.
 
 % ---------- SECTION II: LITERATURE REVIEW ----------
 \section{Literature Review}
-Spatiotemporal sequence forecasting has emerged as a critical challenge across multiple domains, particularly in epidemic modeling and healthcare resource management. Traditional epidemiological approaches like compartmental models and statistical methods have provided valuable frameworks but often struggle with complex spatial dependencies and non-linear temporal dynamics inherent in real-world scenarios.
+% Spatiotemporal sequence forecasting has emerged as a critical challenge across multiple domains, particularly in epidemic modeling and healthcare resource management. Traditional epidemiological approaches like compartmental models and statistical methods have provided valuable frameworks but often struggle with complex spatial dependencies and non-linear temporal dynamics inherent in real-world scenarios.
 
-The advent of deep learning has revolutionized this field. Recurrent Neural Networks (RNNs) and their variants such as Long Short-Term Memory (LSTM) networks were among the first approaches to effectively model temporal dependencies in sequential data. However, these models typically disregard spatial structures, treating each spatial unit independently, which severely limits their ability to capture inter-regional dynamics crucial for epidemic forecasting.
+% The advent of deep learning has revolutionized this field. Recurrent Neural Networks (RNNs) and their variants such as Long Short-Term Memory (LSTM) networks were among the first approaches to effectively model temporal dependencies in sequential data. However, these models typically disregard spatial structures, treating each spatial unit independently, which severely limits their ability to capture inter-regional dynamics crucial for epidemic forecasting.
 
-Graph Neural Networks (GNNs) have subsequently emerged as a powerful framework for explicitly modeling spatial relationships. Seminal works such as Graph Convolutional Networks (GCN) and subsequent variants established the foundation for incorporating structural information into neural network architectures. More recent advancements in attention mechanisms, particularly graph attention networks (GAT), have enhanced the ability to model complex dependencies by dynamically assigning importance weights to different nodes within the graph structure.
+% Graph Neural Networks (GNNs) have subsequently emerged as a powerful framework for explicitly modeling spatial relationships. Seminal works such as Graph Convolutional Networks (GCN) and subsequent variants established the foundation for incorporating structural information into neural network architectures. More recent advancements in attention mechanisms, particularly graph attention networks (GAT), have enhanced the ability to model complex dependencies by dynamically assigning importance weights to different nodes within the graph structure.
 
-For spatiotemporal forecasting specifically, several specialized architectures have been proposed. STGCN and DCRNN pioneered the combination of graph convolutions with sequence modeling for traffic forecasting. In epidemic forecasting, models have incorporated various spatial-attention techniques for regional outbreak prediction, demonstrating significant improvements over traditional statistical approaches.
+% For spatiotemporal forecasting specifically, several specialized architectures have been proposed. STGCN and DCRNN pioneered the combination of graph convolutions with sequence modeling for traffic forecasting. In epidemic forecasting, models have incorporated various spatial-attention techniques for regional outbreak prediction, demonstrating significant improvements over traditional statistical approaches.
 
-Recent innovations have further refined spatiotemporal modeling capabilities. Multi-scale approaches have demonstrated the value of processing temporal information at different granularities, capturing both short-term fluctuations and long-term trends. Progressive forecasting strategies have shown promise in mitigating error accumulation for longer-horizon predictions, a persistent challenge in planning applications. Graph attention mechanisms have been enhanced through learnable adjacency structures, allowing models to discover and adapt to evolving spatial dependencies that characterize disease transmission patterns.
+% Recent innovations have further refined spatiotemporal modeling capabilities. Multi-scale approaches have demonstrated the value of processing temporal information at different granularities, capturing both short-term fluctuations and long-term trends. Progressive forecasting strategies have shown promise in mitigating error accumulation for longer-horizon predictions, a persistent challenge in planning applications. Graph attention mechanisms have been enhanced through learnable adjacency structures, allowing models to discover and adapt to evolving spatial dependencies that characterize disease transmission patterns.
 
-Despite these advances, existing models often struggle with balancing model expressiveness and computational efficiency. Many state-of-the-art architectures employ complex recurrent structures or deep convolutional networks, making them challenging to deploy in resource-constrained environments. Furthermore, most models lack mechanisms to adaptively integrate information across different temporal scales and spatial structures, limiting their effectiveness for applications where patterns may emerge at multiple granularities simultaneously.
+% Despite these advances, existing models often struggle with balancing model expressiveness and computational efficiency. Many state-of-the-art architectures employ complex recurrent structures or deep convolutional networks, making them challenging to deploy in resource-constrained environments. Furthermore, most models lack mechanisms to adaptively integrate information across different temporal scales and spatial structures, limiting their effectiveness for applications where patterns may emerge at multiple granularities simultaneously.
 
-Our proposed MSTGAT-Net addresses these limitations through a carefully designed architecture that combines adaptive graph attention with multi-scale temporal fusion and progressive prediction refinement. This integrated approach achieves state-of-the-art performance while maintaining computational efficiency.
+% Our proposed MSTGAT-Net addresses these limitations through a carefully designed architecture that combines adaptive graph attention with multi-scale temporal fusion and progressive prediction refinement. This integrated approach achieves state-of-the-art performance while maintaining computational efficiency.
 
 % ---------- SECTION III: PROBLEM FORMULATION ----------
 \section{Problem Formulation}
 
-Let us consider $N$ geographical regions (e.g., cities, counties, or states) as nodes in a graph. The historical epidemic or resource usage/demand data is represented as $\mathbf{X} = [\mathbf{x}_1, \mathbf{x}_2, \ldots, \mathbf{x}_t]$, where $\mathbf{x}_z \in \mathbb{R}^N$ denotes the observed case counts across all $N$ regions at time step $z$. For each specific region $i$, its temporal sequence is represented as $\mathbf{x}^i = [x_{i,1}, x_{i,2, \ldots, x_{i,t}]$.
+Let us consider $N$ geographical regions (e.g., cities, counties, or states) as nodes in a graph. The historical epidemic or resource usage/demand data is represented as $\mathbf{X} = [\mathbf{x}_1, \mathbf{x}_2, \ldots, \mathbf{x}_t]$, where $\mathbf{x}_z \in \mathbb{R}^N$ denotes the observed case counts across all $N$ regions at time step $z$. For each specific region $i$, its temporal sequence is represented as $\mathbf{x}^i = [x_{i,1}, x_{i,2}, \ldots, x_{i,t}]$.
 
-Our objective is to predict future case values $\mathbf{x}_{t+h}$ for a fixed horizon $h$, which may correspond to different forecasting tasks either short-term or long-term prediction. For any prediction task, we utilize a look-back window of length $T$ to capture relevant historical patterns. Specifically, we use the sequence $[\mathbf{x}_{t-T+1}, \mathbf{x}_{t-T+2, \ldots, \mathbf{x}_t] \in \mathbb{R}^{N \times T}$ to predict $\mathbf{x}_{t+h}$.
+Our objective is to predict future case values $\mathbf{x}_{t+h}$ for a fixed horizon $h$, which may correspond to different forecasting tasks either short-term or long-term prediction. For any prediction task, we utilize a look-back window of length $T$ to capture relevant historical patterns. Specifically, we use the sequence $[\mathbf{x}_{t-T+1}, \mathbf{x}_{t-T+2}, \ldots, \mathbf{x}_t] \in \mathbb{R}^{N \times T}$ to predict $\mathbf{x}_{t+h}$.
 
 The spatial relationships between regions are encoded in a graph structure $\mathcal{G} = (\mathcal{V}, \mathcal{E}, \mathbf{A})$, where $\mathcal{V} = \{v_1, v_2, \ldots, v_N\}$ represents the set of regions, $\mathcal{E}$ denotes the connections between regions, and $\mathbf{A} \in \mathbb{R}^{N \times N}$ is the adjacency matrix. Each element $a_{ij}$ of $\mathbf{A}$ quantifies the relationship strength between regions $v_i$ and $v_j$.
 
 The forecasting task can then be formalized as learning a function $f$ that maps the historical data and graph structure to future predictions:
 
 \begin{equation}
-\hat{\mathbf{x}}_{t+h} = f([\mathbf{x}_{t-T+1}, \mathbf{x}_{t-T+2, \ldots, \mathbf{x}_t]; \mathcal{G})
+\hat{\mathbf{x}}_{t+h} = f([\mathbf{x}_{t-T+1}, \mathbf{x}_{t-T+2}, \ldots, \mathbf{x}_t]; \mathcal{G})
 \end{equation}
 
 where $\hat{\mathbf{x}}_{t+h}$ represents the predicted case counts for all regions at time $t+h$.
@@ -805,33 +805,103 @@ Table \ref{table:overall_performance} presents the performance comparison betwee
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.95\columnwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/paper_figures/rmse_vs_horizon.png}
+\includegraphics[width=0.95\columnwidth]{../report/paper_figures/rmse_vs_horizon.png}
 \caption{RMSE performance comparison across different prediction horizons on multiple datasets. MSTGAT-Net consistently outperforms baseline models, with the performance gap widening for longer forecast horizons.}
 \label{fig:rmse_horizons}
 \end{figure}
 
-\begin{table}[ht]
-\centering
-\caption{Performance comparison on Japan COVID-19 dataset across different forecast horizons. Best results are highlighted in \textbf{bold}, and second-best results are \underline{underlined}.}
-\label{table:overall_performance}
-\begin{tabular}{l|ccc|ccc|ccc}
-\toprule
-\multirow{2}{*}{Model} & \multicolumn{3}{c|}{3-day Forecast} & \multicolumn{3}{c|}{5-day Forecast} & \multicolumn{3}{c}{10-day Forecast} \\
-\cmidrule{2-10}
- & MAE & RMSE & MAPE & MAE & RMSE & MAPE & MAE & RMSE & MAPE \\
-\midrule
-HA & 10.85 & 16.42 & 32.4\% & 12.03 & 18.64 & 36.8\% & 15.86 & 24.51 & 47.2\% \\
-VAR & 8.46 & 13.71 & 28.9\% & 10.62 & 16.52 & 33.5\% & 14.35 & 22.18 & 41.7\% \\
-LSTM & 7.24 & 11.85 & 24.6\% & 8.96 & 14.38 & 29.8\% & 12.76 & 19.74 & 38.3\% \\
-GRU-GCN & 6.53 & 10.42 & 22.8\% & 8.14 & 13.26 & 28.2\% & 11.87 & 18.53 & 36.4\% \\
-ASTGCN & 6.18 & 9.87 & 21.5\% & 7.85 & 12.63 & 26.9\% & 11.42 & 17.85 & 34.8\% \\
-STGCN & 6.29 & 10.03 & 21.9\% & 7.98 & 12.78 & 27.2\% & 11.59 & 18.04 & 35.3\% \\
-Graph WaveNet & \underline{5.94} & \underline{9.52} & \underline{20.6\%} & \underline{7.43} & \underline{12.08} & \underline{25.8\%} & \underline{10.87} & \underline{16.94} & \underline{33.5\%} \\
-\midrule
-MSTGAT-Net & \textbf{5.36} & \textbf{8.64} & \textbf{18.7\%} & \textbf{6.81} & \textbf{11.27} & \textbf{24.2\%} & \textbf{9.75} & \textbf{15.42} & \textbf{30.6\%} \\
-\bottomrule
-\end{tabular}
-\end{table}
+% \begin{table}[ht]
+% \centering
+% \caption{Performance comparison on Japan COVID-19 dataset across different forecast horizons. Best results are highlighted in \textbf{bold}, and second-best results are \underline{underlined}.}
+% \label{table:overall_performance}
+% \begin{tabular}{l|ccc|ccc|ccc}
+% \toprule
+% \multirow{2}{*}{Model} & \multicolumn{3}{c|}{3-day Forecast} & \multicolumn{3}{c|}{5-day Forecast} & \multicolumn{3}{c}{10-day Forecast} \\
+% \cmidrule{2-10}
+%  & MAE & RMSE & MAPE & MAE & RMSE & MAPE & MAE & RMSE & MAPE \\
+% \midrule
+% HA & 10.85 & 16.42 & 32.4\% & 12.03 & 18.64 & 36.8\% & 15.86 & 24.51 & 47.2\% \\
+% VAR & 8.46 & 13.71 & 28.9\% & 10.62 & 16.52 & 33.5\% & 14.35 & 22.18 & 41.7\% \\
+% LSTM & 7.24 & 11.85 & 24.6\% & 8.96 & 14.38 & 29.8\% & 12.76 & 19.74 & 38.3\% \\
+% GRU-GCN & 6.53 & 10.42 & 22.8\% & 8.14 & 13.26 & 28.2\% & 11.87 & 18.53 & 36.4\% \\
+% ASTGCN & 6.18 & 9.87 & 21.5\% & 7.85 & 12.63 & 26.9\% & 11.42 & 17.85 & 34.8\% \\
+% STGCN & 6.29 & 10.03 & 21.9\% & 7.98 & 12.78 & 27.2\% & 11.59 & 18.04 & 35.3\% \\
+% Graph WaveNet & \underline{5.94} & \underline{9.52} & \underline{20.6\%} & \underline{7.43} & \underline{12.08} & \underline{25.8\%} & \underline{10.87} & \underline{16.94} & \underline{33.5\%} \\
+% \midrule
+% MSTGAT-Net & \textbf{5.36} & \textbf{8.64} & \textbf{18.7\%} & \textbf{6.81} & \textbf{11.27} & \textbf{24.2\%} & \textbf{9.75} & \textbf{15.42} & \textbf{30.6\%} \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+
+
+\subsection{Results and Discussion}
+\label{sec:results}
+
+Table~\ref{tab:performance_table} presents a comprehensive comparison of our proposed MSAGAT-Net model against state-of-the-art baseline approaches across three influenza datasets (Japan-Prefectures, US-Regions, and US-States) and four forecast horizons (3, 5, 10, and 15 days ahead). Furthermore, Table~\ref{tab:performance_table_others} shows the performance comparison on four COVID-19 datasets (Australia-COVID, LTLA-TimeSeries, NHS-TimeSeries and Spain-COVID) for horizons of 3, 7, and 14 days ahead.
+
+\begin{table*}[H]
+    \centering
+    \caption{RMSE and PCC performance of different methods on three datasets (horizon = 3, 5, 10, 15). Bold = best, underline = second best.}
+    \label{tab:performance_table}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{llrrrrrrrrrrrr}
+        \toprule
+        \multirow{2}{*}{Method} & \multirow{2}{*}{Metric}
+            & \multicolumn{4}{c}{Japan–Prefectures}
+            & \multicolumn{4}{c}{US–Regions}
+            & \multicolumn{4}{c}{US–States} \\
+        \cmidrule(lr){3-6} \cmidrule(lr){7-10} \cmidrule(lr){11-14}
+         &  & 3 & 5 & 10 & 15 & 3 & 5 & 10 & 15 & 3 & 5 & 10 & 15 \\
+        \midrule
+        DCRNN       & RMSE & 1938 & 2149 & 2150 & 2063 & 1062 & 1363 & 1619 & 1647 & 227 & 281 & 313 & 343 \\
+                    & PCC  & 0.420 & 0.180 & 0.497 & 0.531 & 0.799 & 0.695 & \underline{0.641} & \underline{0.585} & 0.896 & 0.852 & 0.833 & 0.775 \\
+        \midrule
+        LSTNet      & RMSE & 1911 & 2113 & 2078 & 1799 &  909 & 1091 & 1265 & 1374 & 280 & 295 & 315 & 331 \\
+                    & PCC  & 0.443 & 0.220 & 0.347 & 0.585 & 0.785 & 0.660 & 0.568 & 0.437 & 0.825 & 0.796 & 0.793 & 0.782 \\
+        \midrule
+        CNNRNN-Res  & RMSE & 1878 & 2144 & 2200 & 2036 &  914 & 1102 & 1471 & \underline{1270} & 270 & 308 & 285 & 305 \\
+                    & PCC  & 0.455 & 0.155 & 0.267 & 0.480 & 0.784 & 0.654 & 0.525 & 0.527 & 0.825 & 0.786 & 0.818 & 0.794 \\
+        \midrule
+        Cola-GNN    & RMSE & \underline{1177} & 1333 & \underline{1506} & 1771 &  851 & 1162 & 1609 & 1326 & 199 & \underline{226} & \textbf{248} & 245 \\
+                    & PCC  & \underline{0.871} & 0.847 & \underline{0.791} & 0.667 & 0.837 & 0.691 & 0.460 & 0.473 & 0.909 & \underline{0.872} & \textbf{0.874} & \textbf{0.872} \\
+        \midrule
+        EpiGNN      & RMSE & 1327 & \underline{1156} & 1622 & \underline{1507} & \textbf{622} & \textbf{779} & \underline{1098} & \textbf{1076} & \textbf{166} & \textbf{203} & 259 & \textbf{136} \\
+                    & PCC  & 0.802 & \underline{0.871} & 0.628 & \underline{0.701} & \underline{0.902} & \textbf{0.847} & 0.636 & \textbf{0.672} & \underline{0.930} & \textbf{0.907} & \underline{0.851} & \underline{0.851} \\
+        \midrule
+        MSAGAT-Net & RMSE & \textbf{1045} & \textbf{1087} & \textbf{1338} & \textbf{1338} & \underline{650} & \underline{832} & \textbf{999} & 1358 & \underline{168} & 236 & \underline{250} & \underline{243} \\
+                    & PCC  & \textbf{0.885} & \textbf{0.884} & \textbf{0.827} & \textbf{0.778} & \textbf{0.911} & \underline{0.840} & \textbf{0.763} & 0.478 & \textbf{0.931} & 0.860 & 0.841 & 0.838 \\
+        \bottomrule
+    \end{tabular}%
+    }
+\end{table*}
+
+
+\begin{table*}[H]
+    \centering
+    \caption{RMSE performance of different methods on four datasets (horizon = 3, 7, 14). Bold = best, underline = second best.}
+    \label{tab:performance_table_others}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{l l ccc ccc ccc ccc}
+        \toprule
+        \multirow{2}{*}{Method} & \multirow{2}{*}{Metric}
+            & \multicolumn{3}{c}{Australia-COVID}
+            & \multicolumn{3}{c}{LTLA-Timeseries}
+            & \multicolumn{3}{c}{NHS-Timeseries}
+            & \multicolumn{3}{c}{Spain-COVID} \\
+        \cmidrule(lr){3-5}\cmidrule(lr){6-8}\cmidrule(lr){9-11}\cmidrule(lr){12-14}
+         &  & \;3\; & \;7\; & \;14\;  & \;3\; & \;7\; & \;14\;  & \;3\;  & \;7\;  & \;14\;  & \;3\;  & \;7\;  & \;14\; \\
+        \midrule
+        DCRNN       & RMSE & \underline{269} & 521           & 1298          & 121           & \underline{168} & 214           & 7                 & \textbf{11}      & 18 & 144           & \textbf{99}      & \textbf{106} \\
+        LSTNet      & RMSE & \textbf{137}    & \textbf{229}  & \textbf{294}  & \underline{109} & 173            & 220           & 7                 & \underline{12}   & 20            & 177           & 179             & 536          \\
+        CNNRNN-Res  & RMSE & 458             & 437           & 571           & 188            & 202            & 248           & 10                & 14               & 17            & 173           & \underline{109} & 211          \\
+        Cola-GNN    & RMSE & 456             & 399           & 566           & 141            & 256            & 218           & \textbf{4}        & 20               & 16            & \textbf{135}  & 141             & 213          \\
+        EpiGNN      & RMSE & 289             & \underline{370} & \underline{518} & 164            & 184  & \textbf{184}  & 7                 & 16               & \textbf{13}   & 183           & 175             & \underline{187} \\
+        MSAGAT-Net & RMSE & 370             & 579           & 737           & \textbf{106}   & \textbf{163}   & \underline{196} & \underline{6}     & 25               & \underline{15} & \underline{135} & 160             & 191          \\
+        \bottomrule
+    \end{tabular}%
+    }
+\end{table*}
+
 
 Several observations stand out from these results:
 
@@ -846,7 +916,7 @@ Several observations stand out from these results:
 
 Table \ref{table:ablation_results} presents the results of our ablation studies on the Japan COVID-19 and Regional datasets for 5-day forecasting. These results quantify the contribution of each key architectural component to the overall model performance.
 
-\begin{table}[ht]
+\begin{table*}[ht]
 \centering
 \caption{Ablation study results for 5-day forecasting. MSTGAT-no-AGAM removes the adaptive graph attention, MSTGAT-no-DMTM removes multi-scale temporal modeling, and MSTGAT-no-PPM removes progressive prediction. Best results are in \textbf{bold}.}
 \label{table:ablation_results}
@@ -863,18 +933,18 @@ MSTGAT-no-PPM & 7.02 & 11.59 & 24.9\% & 8.76 & 14.23 & 30.9\% \\
 MSTGAT-Net (Full) & \textbf{6.81} & \textbf{11.27} & \textbf{24.2\%} & \textbf{8.42} & \textbf{13.74} & \textbf{29.8\%} \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.95\columnwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/paper_figures/component_importance_comparison.png}
+\includegraphics[width=0.95\columnwidth]{"../report/paper_figures/component_importance_comparison.png"}
 \caption{Component importance comparison across different forecast horizons. The bars represent the percentage increase in RMSE when each component is removed, indicating their relative contribution to model performance. Note how the Adaptive Graph Attention Module (AGAM) becomes increasingly important for longer forecast horizons.}
 \label{fig:component_importance}
 \end{figure}
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.95\columnwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/paper_figures/component_importance_heatmap.png}
+\includegraphics[width=0.95\columnwidth]{"../report/paper_figures/component_importance_heatmap.png"}
 \caption{Component importance heatmap showing the relative contribution of each architectural component across different forecast horizons. Darker colors indicate greater impact on performance when the component is removed. This visualization reveals how different components play varying roles depending on the prediction timeframe.}
 \label{fig:component_importance_heatmap}
 \end{figure}
@@ -894,9 +964,9 @@ Fig. \ref{fig:attention_patterns} illustrates the learned attention patterns fro
 
 \begin{figure*}[!t]
 \centering
-\subfloat[Full model]{\includegraphics[width=0.33\textwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/figures/matrices_MSTAGAT-Net.japan.w-20.h-3.none.png}}
-\subfloat[Without AGAM module]{\includegraphics[width=0.33\textwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/figures/matrices_MSTAGAT-Net.japan.w-20.h-3.no_agam.png}}
-\subfloat[Without DMTM module]{\includegraphics[width=0.33\textwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/figures/matrices_MSTAGAT-Net.japan.w-20.h-3.no_mtfm.png}}
+\subfloat[Full model]{\includegraphics[width=0.33\textwidth]{"../report/figures/matrices_MSTAGAT-Net.japan.w-20.h-3.none.png"}}
+\subfloat[Without AGAM module]{\includegraphics[width=0.33\textwidth]{"../report/figures/matrices_MSTAGAT-Net.japan.w-20.h-3.no_agam.png"}}
+\subfloat[Without DMTM module]{\includegraphics[width=0.33\textwidth]{"../report/figures/matrices_MSTAGAT-Net.japan.w-20.h-3.no_mtfm.png"}}
 \caption{Learned attention patterns (adjacency matrices) for Japan COVID-19 dataset. (a) Full MSTGAT-Net model shows clear, structured patterns that align with geographical adjacency and population connectivity. (b) Removing the Adaptive Graph Attention Module results in less defined spatial relationships. (c) Removing the Multi-Scale Temporal Module affects how the model captures temporal dependencies, which also impacts the spatial attention patterns.}
 \label{fig:attention_patterns}
 \end{figure*}
@@ -916,7 +986,7 @@ Fig. \ref{fig:scale_weights} shows the learned scale weights from the adaptive f
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.95\columnwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/paper_figures/component_contribution_rmse_simple.png}
+\includegraphics[width=0.95\columnwidth]{"../report/paper_figures/component_contribution_rmse_simple.png"}
 \caption{Component contribution to model performance across different datasets. The bars show the relative impact of each architectural component on RMSE performance, demonstrating how different datasets benefit from different aspects of the model architecture.}
 \label{fig:scale_weights}
 \end{figure}
@@ -939,7 +1009,7 @@ We examined model performance during significant regime changes, such as the ons
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.95\columnwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/figures/predictions_MSTAGAT-Net.japan.w-20.h-10.none.png}
+\includegraphics[width=0.95\columnwidth]{"../report//figures/predictions_MSTAGAT-Net.japan.w-20.h-10.none.png"}
 \caption{Forecasting performance during a regime change (case surge) in the Japan COVID-19 dataset. The plot compares actual values (black) with MSTGAT-Net predictions (blue), showing how the model rapidly adapts to the sudden change in epidemic dynamics. The gray area represents the forecast horizon.}
 \label{fig:regime_change}
 \end{figure}
@@ -956,7 +1026,7 @@ We categorized regions in the Japan dataset into high, medium, and low populatio
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.95\columnwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/paper_figures/performance_heatmaps.png}
+\includegraphics[width=0.95\columnwidth]{"../report//paper_figures/performance_heatmaps.png"}
 \caption{Performance heatmaps showing model accuracy across different datasets and prediction horizons. The color intensity represents forecasting accuracy (darker is better), highlighting MSTGAT-Net's consistent performance advantage across different scenarios, particularly for more complex urban regions and longer prediction horizons.}
 \label{fig:performance_heatmaps}
 \end{figure}
