@@ -1071,6 +1071,93 @@ Based on these limitations and our findings, we identify several promising futur
     \item \textbf{Transfer Learning}: Exploring transfer learning approaches to leverage knowledge from one epidemic or geographical region to improve forecasting in new contexts with limited data.
 \end{itemize}
 
+\begin{figure*}[htbp]
+    \centering
+    \begin{tikzpicture}[
+        font=\small,
+        >=Latex,
+        node distance = 0.8cm and 1.2cm,
+        block/.style={rectangle, draw=black!70, thick,
+                      rounded corners, align=center,
+                      minimum height=0.8cm, text width=2.4cm},
+        input/.style={block, fill=orange!25},
+        feat/.style={block, fill=cyan!15},
+        attn/.style={block, fill=blue!15},
+        temp/.style={block, fill=green!15},
+        pred/.style={block, fill=red!15},
+        output/.style={block, fill=teal!20},
+        arrow/.style={->, thick, shorten >=1pt, shorten <=1pt}
+    ]
+    
+    % Input layer
+    \node (input) [input] {Input Data\\$\mathbf{X} \in \mathbb{R}^{N \times W}$};
+    \node (adj) [input, right=of input] {Adjacency\\$\mathbf{A} \in \mathbb{R}^{N \times N}$};
+    
+    % Feature Extraction Module
+    \node (dwconv) [feat, below=of input] {Depthwise\\Convolution};
+    \node (pwconv) [feat, below=of dwconv] {Pointwise\\Convolution};
+    \node (featproj) [feat, below=of pwconv] {Feature\\Projection};
+    
+    % EAGAM Module  
+    \node (qkv) [attn, below=of featproj] {Q,K,V\\Projection};
+    \node (attnmech) [attn, below=of qkv] {Linear\\Attention};
+    \node (graphbias) [attn, below=of attnmech] {Graph\\Bias};
+    
+    % DMTM Module
+    \node (scale1) [temp, below=of graphbias] {Scale 1\\(Dilation=1)};
+    \node (scale2) [temp, right=of scale1] {Scale 2\\(Dilation=2)};
+    \node (scale3) [temp, right=of scale2] {Scale 3\\(Dilation=4)};
+    \node (scale4) [temp, right=of scale3] {Scale 4\\(Dilation=8)};
+    \node (fusion) [temp, below=1.2cm of scale2] {Adaptive\\Fusion};
+    
+    % PPM Module
+    \node (predlow) [pred, below=of fusion] {Prediction\\Low-Rank};
+    \node (predout) [pred, below=of predlow] {Horizon\\Predictor};
+    \node (refgate) [pred, below=of predout] {Refinement\\Gate};
+    
+    % Output
+    \node (output) [output, below=of refgate] {Predictions\\$\hat{\mathbf{Y}} \in \mathbb{R}^{N \times H}$};
+    
+    % Main flow arrows
+    \draw[arrow] (input) -- (dwconv);
+    \draw[arrow] (dwconv) -- (pwconv);
+    \draw[arrow] (pwconv) -- (featproj);
+    \draw[arrow] (featproj) -- (qkv);
+    \draw[arrow] (qkv) -- (attnmech);
+    \draw[arrow] (attnmech) -- (graphbias);
+    \draw[arrow] (graphbias) -- (scale1);
+    
+    % Multi-scale temporal connections
+    \draw[arrow] (graphbias) -| (scale1);
+    \draw[arrow] (graphbias) -| (scale2);
+    \draw[arrow] (graphbias) -| (scale3);
+    \draw[arrow] (graphbias) -| (scale4);
+    \draw[arrow] (scale1) |- (fusion);
+    \draw[arrow] (scale2) -- (fusion);
+    \draw[arrow] (scale3) |- (fusion);
+    \draw[arrow] (scale4) |- (fusion);
+    
+    % Prediction flow
+    \draw[arrow] (fusion) -- (predlow);
+    \draw[arrow] (predlow) -- (predout);
+    \draw[arrow] (predout) -- (refgate);
+    \draw[arrow] (refgate) -- (output);
+    
+    % Side connections
+    \draw[arrow] (adj) |- (graphbias);
+    \draw[arrow] (input) -| ([xshift=-1cm]refgate.west) -- (refgate);
+    
+    % Module labels
+    \node [above=0.2cm of dwconv, font=\footnotesize\bfseries] {Feature Extraction};
+    \node [above=0.2cm of qkv, font=\footnotesize\bfseries] {EAGAM};
+    \node [above=0.2cm of scale2, font=\footnotesize\bfseries] {DMTM};
+    \node [above=0.2cm of predlow, font=\footnotesize\bfseries] {PPM};
+    
+    \end{tikzpicture}
+    \caption{MSTGAT-Net architecture with detailed module breakdown. The model processes input through Feature Extraction (depthwise separable convolutions), EAGAM (efficient graph attention with O(N) complexity), DMTM (multi-scale dilated temporal convolutions), and PPM (progressive prediction with refinement).}
+    \label{fig:msagat_net_architecture}
+\end{figure*}
+
 % ---------- SECTION VIII: CONCLUSION ----------
 \section{Conclusion}
 \label{sec:conclusion}

@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex paper"] 1752766068.55084 "paper.aux" "paper.bbl" "paper" 1752766068.80407 2
-  "./ref.bib" 1752764559 75055 31f38e9520e9f97707e5c1c045daa564 ""
+["bibtex paper"] 1752890979.99768 "paper.aux" "paper.bbl" "paper" 1752890982.82613 0
+  "./ref.bib" 1752842063 75055 31f38e9520e9f97707e5c1c045daa564 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/bibtex/bst/ieeetran/IEEEtran.bst" 1440622569 57748 7c8250ecf02814ce6ddc0cdbb63df1dd ""
-  "paper.aux" 1752766060 32 3985256e7290058c681f74d7a3565a19 "pdflatex"
+  "paper.aux" 1752890982 20500 3398019b01b80304b073ec8d5e0960d3 "pdflatex"
   (generated)
   "paper.bbl"
   "paper.blg"
   (rewritten before read)
-["pdflatex"] 1752766065.72645 "c:/Users/ajaoo/Documents/GitHub/MSAGAT-Net/doc/paper/paper.tex" "paper.pdf" "paper" 1752766068.03513 2
+["pdflatex"] 1752890980.32378 "c:/Users/ajaoo/Documents/GitHub/MSAGAT-Net/doc/paper/paper.tex" "paper.pdf" "paper" 1752890982.82687 0
   "C:/Users/ajaoo/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1752760101 164858 1926c8d7bd1823f0c8393a5c0272d2d9 ""
   "C:/Users/ajaoo/AppData/Local/MiKTeX/fonts/tfm/public/rsfs/rsfs10.tfm" 1749306967 688 37338d6ab346c2f1466b29e195316aa4 ""
   "C:/Users/ajaoo/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1752194385 13235208 6c3d2d3ac36e2e61e8185d19e13c12ac ""
@@ -95,8 +95,10 @@
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/basiclayer/pgfcoretransparency.code.tex" 1673775190 8893 e851de2175338fdf7c17f3e091d94618 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarycalc.code.tex" 1673775190 15929 463535aa2c4268fead6674a75c0e8266 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarychains.code.tex" 1673775190 6816 d02c83dff7646998a96988d92df7f6f4 ""
+  "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryfadings.code.tex" 1673775190 1179 5483d86c1582c569e665c74efab6281f ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryfit.code.tex" 1673775190 3626 2d87dc681257fa32d07a8b3934b10f88 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarypositioning.code.tex" 1673775190 3937 3f208572dd82c71103831da976d74f1a ""
+  "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryshadows.code.tex" 1673775190 2889 d698e3a959304efa342d47e3bb86da5b ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryshapes.arrows.code.tex" 1673775190 410 048d1174dabde96757a5387b8f23d968 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryshapes.callouts.code.tex" 1673775190 1201 8bd51e254d3ecf0cd2f21edd9ab6f1bb ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryshapes.code.tex" 1673775190 494 8de62576191924285b021f4fc4292e16 ""
@@ -107,6 +109,7 @@
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarytopaths.code.tex" 1673775190 11518 738408f795261b70ce8dd47459171309 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/frontendlayer/tikz/tikz.code.tex" 1673775190 186782 af500404a9edec4d362912fe762ded92 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/libraries/pgflibraryarrows.meta.code.tex" 1673775190 58801 1e750fb0692eb99aaac45698bbec96b1 ""
+  "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/libraries/pgflibraryfadings.code.tex" 1673775190 2563 d5b174eb7709fd6bdcc2f70953dbdf8e ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/libraries/pgflibraryplothandlers.code.tex" 1673775190 32995 ac577023e12c0e4bd8aa420b2e852d1a ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/libraries/shapes/pgflibraryshapes.arrows.code.tex" 1673775190 91587 d9b31a3e308b08833e4528a7b4484b4a ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/generic/pgf/libraries/shapes/pgflibraryshapes.callouts.code.tex" 1673775190 33336 427c354e28a4802ffd781da22ae9f383 ""
@@ -160,9 +163,7 @@
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/base/ifthen.sty" 1749467999 5525 1593ca62a2554dd7423fc8a4e5a82125 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/base/inputenc.sty" 1749467999 5048 0270515b828149155424600fd2d58ac5 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/booktabs/booktabs.sty" 1579093635 6253 f1cb470c9199e7110a27851508ed7a5c ""
-  "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/caption/caption.sty" 1696169587 56128 c2ccf1a29d78c33bc553880402e4fb9a ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/caption/caption3.sty" 1696169587 72619 ee90b6612147680fd73c3b1406a74245 ""
-  "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/caption/subcaption.sty" 1696169587 12494 0c0cdb824278a4d51cefeb2e79901315 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/cite/cite.sty" 1425353482 26218 19edeff8cdc2bcb704e8051dc55eb5a7 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/enumitem/enumitem.sty" 1738917170 52272 63d293bc0d496619edb57585740861a2 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/epstopdf-pkg/epstopdf-base.sty" 1623003186 13886 d1306dcf79a944f6988e688c1785f9ce ""
@@ -217,8 +218,7 @@
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/tools/xspace.sty" 1749468414 4545 d7bb86d489a8ad5263e4c34304c03aee ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1729265222 55384 b454dec21c2d9f45ec0b793f0995b992 ""
-  "c:/Users/ajaoo/Documents/GitHub/MSAGAT-Net/doc/paper/paper.tex" 1752766065 108490 15176eda7ca70391dc63dc4027c70a74 ""
-  "figs/MAGAT_FN_architecture.pdf" 1749432512 83508 8370d6239a92346a43d4dd760cb81f9e ""
+  "c:/Users/ajaoo/Documents/GitHub/MSAGAT-Net/doc/paper/paper.tex" 1752890906 123791 26b6652ed37fd1351fee744369f65def ""
   "figs/component_impact_japan_h10.pdf" 1749432512 16010 7ff4a32c8348c70fe5d7e88589d487a3 ""
   "figs/component_impact_japan_h15.pdf" 1749432512 17706 2a5458e19043a5f88856fa6b633333a3 ""
   "figs/component_impact_japan_h3.pdf" 1749432512 17036 723719d78159580bbfa817d7109db009 ""
@@ -234,10 +234,10 @@
   "figs/rmse_only_japan_h3.pdf" 1749432512 17819 df2856f6b687801f28bad8bfa99cf816 ""
   "figs/rmse_only_japan_h5.pdf" 1749432512 16912 e6bbc5d57fd405d63ef3e25af7eafa91 ""
   "figs/rmse_vs_horizon.pdf" 1749432512 19201 074c1510a4cc27b1b42a8a4cbbff8a69 ""
-  "paper.aux" 1752766060 32 3985256e7290058c681f74d7a3565a19 "pdflatex"
-  "paper.bbl" 1752766068 0 d41d8cd98f00b204e9800998ecf8427e "bibtex paper"
-  "paper.out" 0 -1 0 "pdflatex"
-  "paper.tex" 1752766065 108490 15176eda7ca70391dc63dc4027c70a74 ""
+  "paper.aux" 1752890982 20500 3398019b01b80304b073ec8d5e0960d3 "pdflatex"
+  "paper.bbl" 1752890980 5003 77198739c1d4c910715e8b2f30b13256 "bibtex paper"
+  "paper.out" 1752890982 7309 4af93d19861ad1630b65e00934de9223 "pdflatex"
+  "paper.tex" 1752890906 123791 26b6652ed37fd1351fee744369f65def ""
   (generated)
   "paper.aux"
   "paper.log"
