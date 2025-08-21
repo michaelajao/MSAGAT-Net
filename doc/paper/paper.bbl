@@ -21,6 +21,67 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
+\bibitem{ajao2023deep}
+M.~Ajao-Olarinoye, V.~Palade, S.~Mousavi, F.~He, and P.~A. Wark, ``Deep
+  learning based forecasting of covid-19 hospitalisation in england: A
+  comparative analysis,'' in \emph{2023 International Conference on Machine
+  Learning and Applications (ICMLA)}.\hskip 1em plus 0.5em minus 0.4em\relax
+  IEEE, 2023, pp. 1344--1349.
+
+\bibitem{da2021covid}
+C.~C. da~Silva, C.~L. de~Lima, A.~C.~G. da~Silva, E.~L. Silva, G.~S. Marques,
+  L.~J.~B. de~Ara{\'u}jo, L.~A. Albuquerque~J{\'u}nior, S.~B.~J. de~Souza,
+  M.~A. de~Santana, J.~C. Gomes \emph{et~al.}, ``Covid-19 dynamic monitoring
+  and real-time spatio-temporal forecasting,'' \emph{Frontiers in public
+  health}, vol.~9, p. 641253, 2021.
+
+\bibitem{giuliani2020modelling}
+D.~Giuliani, M.~M. Dickson, G.~Espa, and F.~Santi, ``Modelling and predicting
+  the spatio-temporal spread of covid-19 in italy,'' \emph{BMC infectious
+  diseases}, vol.~20, pp. 1--10, 2020.
+
+\bibitem{verma2022temporal}
+H.~Verma, S.~Mandal, and A.~Gupta, ``Temporal deep learning architecture for
+  prediction of covid-19 cases in india,'' \emph{Expert Systems with
+  Applications}, vol. 195, p. 116611, 2022.
+
+\bibitem{ma2024reporting}
+L.~Ma, Z.~Qiu, P.~Van~Mieghem, and M.~Kitsak, ``Reporting delays: A widely
+  neglected impact factor in covid-19 forecasts,'' \emph{PNAS nexus}, vol.~3,
+  no.~6, p. pgae204, 2024.
+
+\bibitem{li2017diffusion}
+Y.~Li, R.~Yu, C.~Shahabi, and Y.~Liu, ``Diffusion convolutional recurrent
+  neural network: Data-driven traffic forecasting,'' \emph{arXiv preprint
+  arXiv:1707.01926}, 2017.
+
+\bibitem{zhang2021graph}
+S.~Zhang, Y.~Guo, P.~Zhao, C.~Zheng, and X.~Chen, ``A graph-based temporal
+  attention framework for multi-sensor traffic flow forecasting,'' \emph{IEEE
+  Transactions on Intelligent Transportation Systems}, vol.~23, no.~7, pp.
+  7743--7758, 2021.
+
+\bibitem{wu2018deep}
+Y.~Wu, Y.~Yang, H.~Nishiura, and M.~Saitoh, ``Deep learning for epidemiological
+  predictions,'' in \emph{The 41st international ACM SIGIR conference on
+  research \& development in information retrieval}, 2018, pp. 1085--1088.
+
+\bibitem{lai2018modeling}
+G.~Lai, W.-C. Chang, Y.~Yang, and H.~Liu, ``Modeling long-and short-term
+  temporal patterns with deep neural networks,'' in \emph{The 41st
+  international ACM SIGIR conference on research \& development in information
+  retrieval}, 2018, pp. 95--104.
+
+\bibitem{kimForecastingEpidemicSpread2025}
+M.~Kim, J.~H. Kim, and B.~Jang, ``Forecasting {{Epidemic Spread With Recurrent
+  Graph Gate Fusion Transformers}},'' \emph{IEEE Journal of Biomedical and
+  Health Informatics}, vol.~29, no.~2, pp. 1546--1559, Feb. 2025.
+
+\bibitem{zhiweidingBiologyInformedRecurrentNeural2023}
+{Zhiwei Ding}, {Feng Sha}, {Yi Zhang}, and {Zhouwang Yang},
+  ``Biology-{{Informed Recurrent Neural Network}} for {{Pandemic Prediction
+  Using Multimodal Data}},'' vol.~8, no.~2, pp. 158--158, Apr. 2023.
+
 \bibitem{chollet2017xception}
 F.~Chollet, ``Xception: Deep learning with depthwise separable convolutions,''
   in \emph{Proceedings of the IEEE conference on computer vision and pattern
@@ -91,21 +152,5 @@ R.~Chandra, S.~Goyal, and R.~Gupta, ``Evaluation of deep learning models for
 F.~Kamalov, K.~Rajab, A.~Cherukuri, A.~Elnagar, and M.~Safaraliev, ``Deep
   learning for covid-19 forecasting: State-of-the-art review,''
   \emph{Neurocomputing}, vol. 511, pp. 142--154, 2022.
-
-\bibitem{li2017diffusion}
-Y.~Li, R.~Yu, C.~Shahabi, and Y.~Liu, ``Diffusion convolutional recurrent
-  neural network: Data-driven traffic forecasting,'' \emph{arXiv preprint
-  arXiv:1707.01926}, 2017.
-
-\bibitem{lai2018modeling}
-G.~Lai, W.-C. Chang, Y.~Yang, and H.~Liu, ``Modeling long-and short-term
-  temporal patterns with deep neural networks,'' in \emph{The 41st
-  international ACM SIGIR conference on research \& development in information
-  retrieval}, 2018, pp. 95--104.
-
-\bibitem{wu2018deep}
-Y.~Wu, Y.~Yang, H.~Nishiura, and M.~Saitoh, ``Deep learning for epidemiological
-  predictions,'' in \emph{The 41st international ACM SIGIR conference on
-  research \& development in information retrieval}, 2018, pp. 1085--1088.
 
 \end{thebibliography}
