@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex paper"] 1757970913.44309 "paper.aux" "paper.bbl" "paper" 1757970913.6967 2
-  "./ref.bib" 1757957869 78479 e5accb6aed55125c05d8f4413d4f369f ""
+["bibtex paper"] 1758059352.83686 "paper.aux" "paper.bbl" "paper" 1758059353.08863 2
+  "./ref.bib" 1758059326 79186 5eda9042a78b53142d5620ed67ac52e7 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/bibtex/bst/ieeetran/IEEEtran.bst" 1440622569 57748 7c8250ecf02814ce6ddc0cdbb63df1dd ""
-  "paper.aux" 1757970905 32 3985256e7290058c681f74d7a3565a19 "pdflatex"
+  "paper.aux" 1758059352 12557 e35f816d03fc6fb1bf53bfb0d5188f0f "pdflatex"
   (generated)
   "paper.bbl"
   "paper.blg"
   (rewritten before read)
-["pdflatex"] 1757970910.53944 "c:/Users/ajaoo/Documents/GitHub/MSAGAT-Net/doc/paper/paper.tex" "paper.pdf" "paper" 1757970912.94998 0
+["pdflatex"] 1758059350.88896 "c:/Users/ajaoo/Documents/GitHub/MSAGAT-Net/doc/paper/paper.tex" "paper.pdf" "paper" 1758059353.08896 0
   "C:/Users/ajaoo/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1756427904 503103 29760d0ab7bbc844815e5302ceb8159a ""
   "C:/Users/ajaoo/AppData/Local/MiKTeX/fonts/tfm/public/rsfs/rsfs10.tfm" 1749306967 688 37338d6ab346c2f1466b29e195316aa4 ""
   "C:/Users/ajaoo/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1755287065 13257295 def1a4c4fc2441ff31aecb3b6c578743 ""
@@ -220,13 +220,13 @@
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/tools/xspace.sty" 1749468414 4545 d7bb86d489a8ad5263e4c34304c03aee ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1729265222 55384 b454dec21c2d9f45ec0b793f0995b992 ""
-  "c:/Users/ajaoo/Documents/GitHub/MSAGAT-Net/doc/paper/paper.tex" 1757970910 110981 61035614060d0685fffcae77bc771939 ""
+  "c:/Users/ajaoo/Documents/GitHub/MSAGAT-Net/doc/paper/paper.tex" 1758059348 111000 6f10969b3431cf778b42597b0501b61d ""
   "figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png" 1749432512 62525 d32af78f86ca02e8081b0e0811d29ee3 ""
   "figs/mtfm_diagram.pdf" 1749432512 90140 67a1780033d419d11ce981fac5f759f9 ""
-  "paper.aux" 1757970905 32 3985256e7290058c681f74d7a3565a19 "pdflatex"
-  "paper.bbl" 1757970913 0 d41d8cd98f00b204e9800998ecf8427e "bibtex paper"
-  "paper.out" 0 -1 0 "pdflatex"
-  "paper.tex" 1757970910 110981 61035614060d0685fffcae77bc771939 ""
+  "paper.aux" 1758059352 12557 e35f816d03fc6fb1bf53bfb0d5188f0f "pdflatex"
+  "paper.bbl" 1758059353 10742 b2e5c1f49911c18302313eb668d1eb31 "bibtex paper"
+  "paper.out" 1758059352 5530 39f5688b46d87997b357a7c5e5da747b "pdflatex"
+  "paper.tex" 1758059348 111000 6f10969b3431cf778b42597b0501b61d ""
   (generated)
   "paper.aux"
   "paper.log"
