@@ -6,21 +6,21 @@
 \usepackage{mathptmx}       % Times New Roman font
 \usepackage{graphicx}       % For including images
 \usepackage{float}          % For controlling float positions
-% \usepackage{algorithmic}
-% \usepackage{algorithm}
+\usepackage[ruled,vlined]{algorithm2e}
 % \usepackage{caption}
 % \usepackage{subcaption}
 \usepackage{amsmath, amsfonts, amssymb} % Common math packages
 \usepackage{hyperref}
 \usepackage{enumitem}       % For customizable lists
 \usepackage[caption=false,font=footnotesize,labelfont=sf,textfont=sf]{subfig}
-\usepackage[ruled,vlined]{algorithm2e}
-% \usepackage{natbib}         % For bibliography management
-\usepackage{cite}
+% Use natbib for flexible in‑text citations (allows \citet and \citep) while keeping numeric IEEE style
+% \usepackage{cite}
+\usepackage[numbers,sort&compress]{natbib}
 \usepackage{array}
 \usepackage{balance}
 \usepackage{tikz}           % For flowcharts or block diagrams
-\usetikzlibrary{shapes, arrows.meta, positioning, chains, fit, calc, shapes.geometric, shadows}
+\usetikzlibrary{shapes,arrows.meta,positioning,calc,shadows,backgrounds,decorations.pathreplacing,fit,petri,arrows}
+% \usetikzlibrary{shapes, arrows.meta, positioning, chains, fit, calc, shapes.geometric, shadows}
 \usepackage{booktabs}       % For professional tables with \toprule, \midrule, etc.
 \usepackage{multirow}       % For table cells spanning multiple rows
 \usepackage{makecell}       % For better table cell formatting
@@ -31,7 +31,7 @@
    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
 % ---------- TITLE & AUTHOR ----------
-\title{\textbf{MSAGAT-Net: A Multi-Scale Temporal Graph Attention Network for Spatiotemporal Epidemic Forecasting}}
+\title{\textbf{MSAGAT-Net: An Efficient Multi-Scale Temporal Graph Attention Network for Spatiotemporal Epidemic Forecasting}}
 
 % \author{
 %     \IEEEauthorblockN{Author Names}
@@ -46,11 +46,16 @@
         Michael Ajao-olarinoye\IEEEauthorrefmark{1},~\IEEEmembership{Member,~IEEE,}
         Vasile Palade\IEEEauthorrefmark{1},~\IEEEmembership{Senior Member,~IEEE,}
         % Seyed Mosavi\IEEEauthorrefmark{1},~\IEEEmembership{Member,~IEEE,},
-        Fei He\IEEEauthorrefmark{1}, \textit{and}
+        Fei He\IEEEauthorrefmark{1}, 
+        Zindoga Mukandavire\IEEEauthorrefmark{1},
+        \textit{and}
         Petra Wark\IEEEauthorrefmark{2}
     }\\
     \IEEEauthorblockA{\IEEEauthorrefmark{1}Centre for Computational Science and Mathematical Modelling, Coventry University, Coventry, United Kingdom}\\
-    \IEEEauthorblockA{\IEEEauthorrefmark{2}Research Institute for Health and Wellbeing, Coventry University, Coventry, United Kingdom}
+    \IEEEauthorblockA{\IEEEauthorrefmark{2}Research Institute for Health and Wellbeing, Coventry University, Coventry, United Kingdom}\\
+    \IEEEauthorblockA{\IEEEauthorrefmark{3}Institute of Applied Research and Technology, Dubai International Academic City Dubai - UAE}
+    % email for olarinoyem@coventry.ac.uk
+    \IEEEauthorblockA{\{Email: olarinoyem@coventry.ac.uk\}}
 }
 
 \markboth{IEEE Journal of ......,~Vol.~XX, No.~YY, Month~Year}{}
@@ -61,7 +66,7 @@
 
 % ---------- ABSTRACT ----------
 \begin{abstract}
-We present MSAGAT-Net, a novel Multi-Scale Temporal Graph Attention Network designed for accurate spatiotemporal epidemic forecasting across multiple geographical regions. Our approach addresses three critical challenges in epidemic prediction: (1) capturing complex spatial dependencies between regions with linear-time complexity, (2) modeling multi-scale temporal patterns in disease transmission, and (3) generating reliable multi-horizon forecasts. MSAGAT-Net introduces three key innovations: an Efficient Adaptive Graph Attention Module (EAGAM) that achieves O(N) complexity through linearized attention mechanisms, a Dilated Multi-Scale Temporal Module (DMTM) that captures both short-term fluctuations and long-term trends, and a Progressive Prediction Module (PPM) for iterative multi-step forecasting. Through extensive experiments on diverse epidemic datasets spanning influenza and COVID-19 across multiple countries, MSAGAT-Net consistently outperforms state-of-the-art methods, achieving up to 23.7\% lower RMSE and 15.8\% higher correlation coefficients. Our ablation studies reveal disease-specific and horizon-dependent component importance patterns, providing insights into the varying spatiotemporal dynamics of different epidemics. The model's efficiency and interpretability make it particularly suitable for real-time public health surveillance and decision support systems.
+We present MSAGAT-Net, a novel Multi-Scale Temporal Graph Attention Network designed for accurate spatiotemporal epidemic forecasting across multiple geographical regions. Our approach addresses three critical challenges in epidemic prediction: (1) capturing complex spatial dependencies between regions with linear-time complexity, (2) modeling multi-scale temporal patterns in disease transmission, and (3) generating reliable multi-horizon forecasts. MSAGAT-Net introduces three key innovations: an Efficient Adaptive Graph Attention Module (EAGAM) that achieves O(N) complexity through linearized attention mechanisms and low-rank decomposition, a Dilated Multi-Scale Temporal Module (DMTM) that captures both short-term fluctuations and long-term trends, and a Progressive Prediction Module (PPM) for iterative multi-step forecasting. Through extensive experiments on diverse epidemic datasets spanning influenza and COVID-19 across multiple countries, MSAGAT-Net consistently outperforms state-of-the-art methods, achieving up to 23.7\% lower RMSE and 15.8\% higher correlation coefficients. Our ablation studies reveal disease-specific and horizon-dependent component importance patterns, providing insights into the varying spatiotemporal dynamics of different epidemics. The model's efficiency and interpretability make it particularly suitable for real-time public health surveillance and decision support systems.
 \end{abstract}
 
 % ---------- INDEX TERMS ----------
@@ -80,13 +85,7 @@ A number of studies have explored forecasting in various domains, including traf
 
 However, existing approaches to spatiotemporal epidemic forecasting face several limitations. Traditional epidemiological models, such as compartmental SIR-based models, often struggle to capture the nuanced spatial relationships between regions and require extensive parameter tuning. Recent deep learning approaches have shown promise but suffer from computational inefficiencies when modeling spatial dependencies, particularly as the number of regions increases. Furthermore, most existing methods fail to adequately address the multi-scale nature of epidemic dynamics, where both short-term fluctuations and long-term trends play crucial roles in accurate forecasting.
 
-In this paper, we introduce MSAGAT-Net (Multi-Scale Temporal Graph Attention Network), a novel deep learning architecture that addresses these limitations through three key innovations:
-
-\begin{itemize}
-\item An Efficient Adaptive Graph Attention Module (EAGAM) that captures spatial dependencies with linear-time complexity O(N) instead of the quadratic O($N^2$) complexity of traditional attention mechanisms
-\item A Dilated Multi-Scale Temporal Module (DMTM) that processes temporal patterns at multiple resolutions to capture both immediate changes and gradual trends
-\item A Progressive Prediction Module (PPM) that enables accurate multi-horizon forecasting through iterative refinement
-\end{itemize}
+In this paper we present MSAGAT-Net (Multi‑Scale Temporal Graph Attention Network), a compact and practical architecture that tackles the scalability and multi‑horizon challenges of epidemic forecasting by combining three complementary design choices. An Efficient Adaptive Graph Attention Module (EAGAM) replaces costly pairwise attention with a linearised, low‑rank formulation that learns interpretable inter‑region dependencies at O(N) cost. A Dilated Multi‑Scale Temporal Module (DMTM) captures dynamics at several temporal resolutions via dilated convolutions, allowing the model to represent both abrupt short‑term changes and slower seasonal trends. Finally, a Progressive Prediction Module (PPM) produces stable multi‑step forecasts by iteratively refining outputs using the most recent observations. Together these components form an efficient, interpretable framework suitable for real‑time epidemic surveillance and multi‑horizon prediction.
 
 Our contributions are as follows:
 \begin{enumerate}
@@ -100,18 +99,40 @@ Our contributions are as follows:
 % ---------- SECTION II: LITERATURE REVIEW ----------
 \section{Related Work}
 
-\subsection{Traditional Epidemic Modeling}
-Classical approaches to epidemic modeling rely on compartmental models such as SIR (Susceptible-Infected-Recovered) and its variants. While these models provide interpretable parameters and theoretical guarantees, they often fail to capture complex spatial dependencies and require extensive domain expertise for parameter estimation. Recent extensions have incorporated spatial components, but computational complexity remains a significant challenge for large-scale applications.
+Epidemiological forecasting has evolved considerably from traditional compartmental models such as SIR and SEIR, which, whilst providing valuable theoretical insights, often struggle to capture the complex spatial interactions and non-linear dynamics characteristic of real-world disease transmission \cite{lijingwangCausalGNNCausalBasedGraph2022}. The emergence of deep learning approaches has transformed this landscape, with graph neural networks proving particularly effective for modelling disease spread across interconnected regions by naturally representing locations as nodes and their interactions as edges.
 
-\subsection{Deep Learning for Time Series Forecasting}
-Recurrent Neural Networks (RNNs) and their variants (LSTM, GRU) have been widely applied to epidemic forecasting. However, these models struggle with long-range dependencies and do not naturally incorporate spatial relationships. Transformer-based models have shown promise but suffer from quadratic complexity in the sequence length, limiting their applicability to large-scale spatiotemporal problems.
+The application of graph neural networks to epidemic forecasting addresses fundamental limitations of traditional approaches by learning complex spatiotemporal relationships directly from data. A comprehensive review by Liu et al. \cite{liuReviewGraphNeural2024a} categorises these methods into pure neural versus hybrid mechanistic-neural models, highlighting their growing significance in epidemiological research.
 
-\subsection{Graph Neural Networks for Spatiotemporal Modeling}
-Recent advances in Graph Neural Networks (GNNs) have enabled explicit modeling of spatial dependencies. Graph Convolutional Networks (GCNs) and Graph Attention Networks (GATs) have been applied to traffic forecasting and weather prediction with promising results. However, existing approaches often face scalability issues due to the computational cost of message passing, particularly for dense graphs representing epidemic spread patterns.
+Deng et al. \cite{dengColaGNNCrosslocationAttention2020a} pioneered the use of dynamic cross-location attention mechanisms in their Cola-GNN framework for long-term influenza forecasting. Rather than relying on fixed geographic adjacency matrices, Cola-GNN learns adaptive attention weights between regions, effectively creating a dynamic graph that captures time-varying influences. This attention mechanism is coupled with dilated convolutional neural networks for temporal feature extraction, enabling the model to capture both short-term fluctuations and long-term patterns. The resulting framework not only improved multi-week ILI predictions but also provided interpretable insights into inter-regional influences.
 
-\subsection{Multi-Scale Temporal Processing}
-The importance of multi-scale analysis in time series forecasting has been recognized in various domains. Dilated convolutions and wavelet transforms have been employed to capture patterns at different temporal resolutions. However, existing methods often use fixed-scale decompositions that may not adapt to the varying dynamics of epidemic spread.
+Building upon these foundations, Xie et al. \cite{xie2022epignn} developed EpiGNN, which incorporates transmission risk encoding and a Region-Aware Graph Learner to model both local and global spatial effects. EpiGNN's architecture allows for the integration of external data sources, such as human mobility patterns, into the graph learning process. This approach demonstrated substantial improvements over previous state-of-the-art methods, achieving approximately 9.5\% reduction in RMSE across influenza and COVID-19 datasets.
 
+Similarly, Gao et al. \cite{gao2021stan} proposed STAN (Spatio-Temporal Attention Network), which leverages attention-based graph convolution to capture dynamic geographical influences for COVID-19 forecasting. By incorporating patient electronic health record features and geography-based attention mechanisms, STAN successfully modelled spatial-temporal trends across all U.S. counties, significantly outperforming classical SIR/SEIR models with up to 87\% lower mean squared error. Notably, STAN incorporated physics-based regularisation terms derived from compartmental dynamics to improve long-range forecast stability.
+
+The temporal dimension of epidemic forecasting presents unique challenges, as epidemic time series often exhibit complex seasonality, trends, and behavioural change effects. Current approaches to multi-step forecasting can be broadly categorised into direct methods, which predict multiple time steps simultaneously, and iterative methods, which generate forecasts sequentially.
+
+Direct multi-horizon models, often implemented using sequence-to-sequence architectures with LSTM or CNN components, have demonstrated effectiveness in influenza forecasting but typically require substantial training data and may depend heavily on external covariates. Conversely, iterative strategies, whilst more data-efficient, suffer from error accumulation over extended forecasting horizons.
+
+Deng et al. \cite{dengColaGNNCrosslocationAttention2020a} addressed long-term forecasting challenges by extracting multi-scale temporal features through dilated convolutions, finding that incorporating seasonal trends significantly improved forecast stability. Other researchers have explored hybrid approaches: Wu et al. \cite{wu2018deep} and Venna et al. \cite{venna2019novel} investigated direct long-term neural predictors for influenza, whilst Wang et al. \cite{wang2019defsi} developed DEFSI, which combines deep learning with compartmental models to enhance long-range forecasts.
+
+The recognition of both short-term outbreaks and long-term epidemiological waves has led to the development of multi-module architectures that can simultaneously capture high-frequency fluctuations and low-frequency trends. These approaches often incorporate external data sources, including climate variables, demographic information, and digital surveillance indicators, to inform long-range predictions.
+
+A particularly promising research direction involves the integration of epidemiological domain knowledge into deep learning frameworks to improve both interpretability and performance. Wang et al. \cite{lijingwangCausalGNNCausalBasedGraph2022} developed CausalGNN, which combines mechanistic ODE-based disease models with dynamic graph neural networks. In CausalGNN, an attention-based graph module captures cross-regional influences whilst a causal module, grounded in SIR-type ordinary differential equations, injects epidemiological context into node embeddings. This mutually-informed design yields more robust predictions with reduced parameter requirements.
+
+Cao et al. \cite{cao2022mepognn} proposed MepoGNN, employing a multi-patch SEIR model within a metapopulation graph neural network framework. This approach merges region-level compartmental simulators with a Graph Attention Network that processes real-world mobility and case data, transforming static travel matrices into dynamic transmission adjacency matrices. When applied to COVID-19 spread in South Korea, MepoGNN demonstrated superior performance compared to pure simulation models, with learned transmission rates closely aligning with actual policy interventions.
+
+Gao et al. \cite{gao2023evidence} took a physics-inspired approach with their HOIST model, drawing analogies between disease spread and Ising spin systems. By treating counties as nodes on a lattice and using Ising dynamics to regularise deep forecasting models, they encoded the principle that neighbouring regions' case counts should evolve in correlated patterns. Applied to 2,299 U.S. counties for four-week COVID-19 hospitalisation forecasting, HOIST achieved strong performance whilst providing policy-relevant insights, such as identifying rural vaccination strategies as particularly effective interventions.
+
+Recent developments have focused on architectures that unify spatial and temporal modelling more deeply. Han et al. \cite{han2025dygraphformer} developed DyGraphFormer, integrating dynamic graph learning with Transformer architectures to capture evolving spatial-temporal dependencies. Unlike earlier models with fixed adjacency matrices, DyGraphFormer continuously updates its graph structure using recent historical data through gated recurrent units, allowing for adaptive representation of changing spatial dependencies.
+
+Pu et al. \cite{pu2024dynamic} proposed the Dynamic Adaptive Spatio-Temporal Graph Network (DASTGN), which explicitly addresses mixed space-time relationships in epidemics through attention mechanisms that adaptively fuse spatial and temporal effects. DASTGN employs dual-scale attention: fine-grained modelling of time-specific and space-specific propagation influences, and coarse-grained capture of spatio-temporal neighbourhood blocks under varying intervention scenarios.
+
+A critical practical consideration for large-scale epidemic forecasting is computational scalability. Traditional graph attention mechanisms among $N$ locations incur $O(N^2)$ computational complexity, which becomes prohibitive for fine-grained regional analysis. Recent advances in efficient attention, particularly linearised attention mechanisms that achieve $O(N)$ complexity through low-rank matrix decomposition called linformer by Wang et al. \cite{wang2020linformer}, offer promising solutions for real-time epidemic surveillance applications.
+
+
+Despite these advances, several challenges remain in spatiotemporal epidemic forecasting. Current models often struggle to balance computational efficiency with modelling capacity, particularly when scaling to large numbers of regions. Many approaches fail to adequately capture multi-scale temporal dynamics, where both immediate fluctuations and long-term trends influence disease transmission. Additionally, most existing methods do not provide stable multi-horizon forecasting capabilities, which are essential for public health planning and resource allocation.
+
+Our work addresses these gaps by developing MSAGAT-Net, which integrates efficient graph attention mechanisms, multi-scale temporal processing, and progressive prediction strategies. By combining insights from recent advances in linearised attention, adaptive graph learning, and multi-scale feature extraction, we aim to create a framework that maintains high accuracy whilst remaining computationally tractable for real-time deployment in public health surveillance systems.
 
 
 % ---------- SECTION III: METHODOLOGY ----------
@@ -332,7 +353,7 @@ In our implementation, we set the default feature channel dimension $d_{\text{fe
   \path (xi.east) -- (xj.east) coordinate[midway] (midinput);
 
   %––– Pipeline nodes –––––––––––––––––––––––––––––––––––––––
-  \node (sepconv) [block, fill=cyan!15, right=2.5cm of midinput] {
+  \node (sepconv) [block, fill=cyan!15,  right=2.5cm of midinput] {
       Dw + Pw\\Convolution\\
       $\mathbf{z}^{i,j}\!\in\!\mathbb{R}^{w\times d_{\text{feat}}}$};
 
@@ -490,7 +511,7 @@ The bias is added to the computed attention scores before applying softmax:
 \mathbf{A} = \text{softmax}\left(\frac{\hat{\mathbf{Q}}_h \hat{\mathbf{K}}_h^T}{\sqrt{d_{\text{head}}}} + \mathbf{A}_{\text{bias}}\right)
 \end{equation}
 
-This formulation allows the model to learn and encode persistent spatial dependencies between regions, such as geographical proximity or administrative hierarchies, whilst still adapting to dynamic relationships that emerge from the data.
+This formulation allows the model to learn and encode persistent spatial dependencies between regions, such as geographical proximity or administrative hierarchies, whilst still adapting to data-driven patterns.
 
 \subsubsection{Attention Regularisation}
 
@@ -602,7 +623,7 @@ In our implementation, we set the number of attention heads $h=4$ and the bottle
 
 %–––– GROUP BOXES (dashed) ––––
 \usetikzlibrary{fit}
-% \begin{scope}[on background layer] % Removed for IEEEtran compatibility
+\begin{scope}[on background layer]
   \node [draw=black!50, dashed, rounded corners, inner sep=6pt,
          fit=(qkv_low)(qkv_high)] {};
   \node at (qkv_low.north) [above=1pt, right=0pt and 1.5cm, font=\tiny\bfseries] {Low‑Rank QKV};
@@ -614,7 +635,7 @@ In our implementation, we set the number of attention heads $h=4$ and the bottle
   \node [draw=black!50, dashed, rounded corners, inner sep=6pt,
          fit=(out_low)(out_high)] {};
   \node at (out_low.north) [above=1pt, right=0pt and 1.5cm, font=\tiny\bfseries] {Low‑Rank Output};
-% \end{scope} % Removed for IEEEtran compatibility
+\end{scope}
 \end{tikzpicture}}%
 \caption{Flow of data and structure in the AGAM module.}
 \label{fig:agam_module}
@@ -622,13 +643,12 @@ In our implementation, we set the number of attention heads $h=4$ and the bottle
 
 Figure \ref{fig:agam_module} illustrates the flow of data through the AGAM module. The input feature matrix $\mathbf{F}$ is processed through low-rank projections to obtain query, key, and value representations. These representations are then reshaped for multi-head attention computation, where the adaptive graph attention mechanism is applied. The learnable graph structure bias is incorporated into the attention scores, and L1 regularisation is applied to promote sparse attention patterns. Finally, the output features are obtained through high-rank projections, ready for further processing in the multi-scale Fusion Module.
 
-
 \subsection{Multi-scale Fusion Module}
 
 The third major component of our MSAGAT-Net architecture is the multi-scale Fusion Module (MTFM), which addresses a fundamental challenge in epidemic forecasting: capturing temporal patterns that operate at different time scales simultaneously. 
 Epidemics often show intricate temporal dynamics with various scales, including short-term changes (such as weekend effects), medium-term patterns (like incubation periods), and long-term trends (e.g., seasonal variations). Accurate forecasting depends heavily on effectively modelling these multi-scale dynamics.
 
-\cite{dengColaGNNCrosslocationAttention2020a} introduce the idea of multi-scale dilated convolutional with the same filter and stride sides but different dilation rate, which \cite{xie2022epignn} improved on by making use of the multi-scale convolution to capture features. Building on this, the MTFM employs parallel dilated convolutional layers to efficiently capture temporal dependencies across multiple scales using the output from the AGAM. This approach enables the model to maintain an awareness of both immediate and distant temporal relationships whilst controlling parameter count and computational complexity.
+Deng et al. \cite{dengColaGNNCrosslocationAttention2020a} introduce the idea of multi-scale dilated convolutional with the same filter and stride sides but different dilation rate, which Xie et al. \cite{xie2022epignn} improved on by making use of the multi-scale convolution to capture features. Building on this, the MTFM employs parallel dilated convolutional layers to efficiently capture temporal dependencies across multiple scales using the output from the AGAM. This approach enables the model to maintain an awareness of both immediate and distant temporal relationships whilst controlling parameter count and computational complexity.
 
 
 \subsubsection{Dilated Convolutions for Multi-scale Processing}
@@ -680,7 +700,7 @@ This adaptive fusion mechanism offers several advantages. It allows the model to
 \begin{figure*}[htbp]
 \centering
 \includegraphics[width=0.7\textwidth]{figs/mtfm_diagram.pdf}
-\caption{Data flow through the Multi-scale Temporal Feature Module (MTFM) architecture, showing parallel processing at multiple dilation scales and adaptive fusion of temporal patterns.}
+\caption{Flow of data in the MTFM architecture.}
 \label{fig:mtfm_module}
 \end{figure*}
 
@@ -712,31 +732,12 @@ The kernel size $k$ is set to 3, providing a good balance between capturing loca
 
 To avoid overfitting, we apply dropout with probability 0.355 after each convolutional layer and ReLU activation. This relatively high dropout rate was determined by cross-validation to be effective for epidemic data, which can be noisy and prone to overfitting. The \autoref{fig:mtfm_module} presents a detailed representation of the architecture of this module. 
 
-% \subsubsection{Advantages for Epidemic Forecasting}
-
-% The MTFM offers several specific benefits for epidemic time-series forecasting:
-
-% \begin{enumerate}
-%     \item \textbf{Multi-scale awareness}: By explicitly modelling different temporal scales, the module can capture both rapid changes (such as weekend reporting effects) and longer-term trends (such as growth or decline phases of an epidemic).
-    
-%     \item \textbf{Computational efficiency}: The parallel processing of different scales is more efficient than sequential approaches like recurrent neural networks, allowing for faster training and inference.
-    
-%     \item \textbf{Adaptive importance}: The learnable fusion weights enable the model to adjust the importance of different temporal scales based on the specific characteristics of the epidemic data.
-    
-%     \item \textbf{Interpretability}: Analysis of the learned fusion weights can provide insights into which temporal scales are most informative for forecasting, potentially aiding epidemiological understanding.
-% \end{enumerate}
-
-% Through the MTFM, our model effectively captures the complex temporal dynamics of epidemic progression at multiple scales, complementing the spatial dependency modelling provided by the AGAM. The combined spatiotemporal representations are then passed to the final component of our architecture, the Progressive Multi-step Prediction Refinement Module, for generating accurate forecasts across multiple horizons.
-
-
-
-
 
 \subsection{Progressive Multi-step Prediction Refinement}
 
 The final component of our MSAGAT-Net architecture is the Progressive Refinement Multi-step Prediction Module (PPRM), which addresses the critical challenge of generating accurate forecasts across multiple future time steps. Whilst the preceding modules excel at extracting spatio-temporal features, converting these features into reliable predictions, particularly for longer horizons, requires additional consideration of how prediction errors can compound over time and how recent observations might inform future trajectory adjustments.
 
-The PPRM addresses the critical issue of error accumulation inherent in multi-horizon epidemiological forecasting. Through an extensive analysis of multistep forecasting failures, it became evident that prediction errors compound exponentially with increasing prediction horizons \cite{BENTAIEB20127067, chandra2021evaluation}. This module incorporates concepts from residual error correction, ensemble learning, and adaptive gating mechanisms common in recurrent neural network architectures \cite{hochreiter1997long}.
+The PPRM addresses the critical issue of error accumulation inherent in multi-horizon epidemiological forecasting. Through an extensive analysis of multistep forecasting failures, it became evident that prediction errors compound exponentially with increasing prediction horizons \citep{BENTAIEB20127067, chandra2021evaluation}. This module incorporates concepts from residual error correction, ensemble learning, and adaptive gating mechanisms common in recurrent neural network architectures \citep{hochreiter1997long}.
 
 The PPRM takes the rich spatio-temporal representations from previous modules and transforms them into horizon-specific predictions, incorporating an adaptive refinement mechanism that balances model-based forecasts with data-driven trends. This design is motivated by epidemiological observations that disease progression often follows certain patterns based on a recent trajectory, even as it responds to various complex factors captured by our neural network components.
 
@@ -822,23 +823,6 @@ The decay factor $\gamma$ in the exponential projection is set to 0.1, which pro
 
 A dropout rate of 0.355 is applied in the prediction pathway to prevent overfitting, which is particularly important for the final prediction layers that directly influence the model output. This relatively high dropout rate was determined by cross-validation to be effective for the noisy and often irregular nature of epidemic data.
 
-% \subsubsection{Advantages for Epidemic Forecasting}
-
-% The PPRM component provides several specific benefits for epidemic forecasting applications:
-
-% \begin{enumerate}
-%     \item \textbf{Horizon-aware predictions}: By generating predictions for all horizons simultaneously and applying horizon-specific refinement, the module can adapt its strategy based on forecast distance.
-    
-%     \item \textbf{Incorporation of epidemiological patterns}: The exponential decay projection incorporates domain knowledge about common epidemic progression patterns, providing a valuable inductive bias.
-    
-%     \item \textbf{Robustness to anomalies}: The adaptive gating mechanism can de-emphasise the model prediction when recent observations suggest a different trajectory, improving robustness to unexpected changes in epidemic dynamics.
-    
-%     \item \textbf{Smooth transition from observations}: The refined predictions naturally transition from the most recent observations to model-based forecasts, avoiding discontinuities that could reduce forecast usability.
-    
-%     \item \textbf{Interpretable forecast decomposition}: The gate values provide insight into which regions and horizons rely more heavily on recent trends versus learnt patterns, potentially offering valuable epidemiological insights.
-% \end{enumerate}
-
-% Through the PPRM, our MSAGAT-Net architecture generates refined multi-horizon forecasts that balance model-based predictions with epidemiological progression tendencies, resulting in more accurate and reliable epidemic forecasts across different temporal horizons.
 
 \begin{figure*}[htbp]
 \centering
@@ -922,7 +906,7 @@ A dropout rate of 0.355 is applied in the prediction pathway to prevent overfitt
 
 %–––– GROUP BOXES ––––––––––––––––––––––––––––––––––
 \usetikzlibrary{fit}
-% \begin{scope}[on background layer] % Removed for IEEEtran compatibility
+\begin{scope}[on background layer]
   \node[draw=blue!70,  dashed, rounded corners, inner sep=6pt,
         fit=(plow)(pmid)(phigh)(pinit)] {};
   \node at ($(plow.north)+(0,0.4)$) [font=\footnotesize\bfseries] {Prediction};
@@ -934,7 +918,7 @@ A dropout rate of 0.355 is applied in the prediction pathway to prevent overfitt
   \node[draw=orange!70, dashed, rounded corners, inner sep=6pt,
         fit=(last)(expand)(decay)(trend)] {};
   \node at ($(last.north)+(0,0.4)$) [font=\footnotesize\bfseries] {Trend Projection};
-% \end{scope} % Removed for IEEEtran compatibility
+\end{scope}
 \end{tikzpicture}}%
 \caption{The flow of data in the PPRM architecture}
 \label{fig:pprm_module}
@@ -1106,75 +1090,10 @@ To evaluate the performance of our proposed MSAGAT-Net model, we compare it agai
     \item \textbf{EpiGNN}~\cite{xie2022epignn}: A model based on graph neural networks specifically designed for epidemic forecasting. It incorporates a transmission risk encoding module to characterise local and global spatial effects, and features a Region-Aware Graph Learner (RAGL) that considers transmission risk, geographical dependencies, and temporal information to explore spatio-temporal dependencies.
 \end{itemize}
 
-These baselines represent a diverse range of approaches to spatio-temporal forecasting, from traditional time-series models to advanced deep learning architectures that explicitly model spatial and temporal dependencies. By comparing against these models, we aim to assess the relative strengths and weaknesses of our MSAGAT-Net approach and identify its contributions to the state of the art in epidemic forecasting.
+These baselines represent a diverse range of approaches to spatiotemporal forecasting, from traditional time-series models to advanced deep learning architectures that explicitly model spatial and temporal dependencies. By comparing against these models, we aim to assess the relative strengths and weaknesses of our MSAGAT-Net approach and identify its contributions to the state of the art in epidemic forecasting.
 
 \subsection{Results and Discussion}
 \label{sec:results}
-
-Table~\ref{tab:performance_table} presents a comprehensive comparison of our proposed MSAGAT-Net model against state-of-the-art baseline approaches across three influenza datasets (Japan-Prefectures, US-Regions, and US-States) and four forecast horizons (3, 5, 10, and 15 days ahead). Furthermore, Table~\ref{tab:performance_table_others} shows the performance comparison on four COVID-19 datasets (Australia-COVID, LTLA-TimeSeries, NHS-TimeSeries and Spain-COVID) for horizons of 3, 7, and 14 days ahead.
-
-\begin{table*}[htbp]
-    \centering
-    \caption{RMSE and PCC performance of different methods on three datasets (horizon = 3, 5, 10, 15). Bold = best, underline = second best.}
-    \label{tab:performance_table}
-    \resizebox{\textwidth}{!}{%
-    \begin{tabular}{llrrrrrrrrrrrr}
-        \toprule
-        \multirow{2}{*}{Method} & \multirow{2}{*}{Metric}
-            & \multicolumn{4}{c}{Japan–Prefectures}
-            & \multicolumn{4}{c}{US–Regions}
-            & \multicolumn{4}{c}{US–States} \\
-        \cmidrule(lr){3-6} \cmidrule(lr){7-10} \cmidrule(lr){11-14}
-         &  & 3 & 5 & 10 & 15 & 3 & 5 & 10 & 15 & 3 & 5 & 10 & 15 \\
-        \midrule
-        DCRNN       & RMSE & 1938 & 2149 & 2150 & 2063 & 1062 & 1363 & 1619 & 1647 & 227 & 281 & 313 & 343 \\
-                    & PCC  & 0.420 & 0.180 & 0.497 & 0.531 & 0.799 & 0.695 & \underline{0.641} & \underline{0.585} & 0.896 & 0.852 & 0.833 & 0.775 \\
-        \midrule
-        LSTNet      & RMSE & 1911 & 2113 & 2078 & 1799 &  909 & 1091 & 1265 & 1374 & 280 & 295 & 315 & 331 \\
-                    & PCC  & 0.443 & 0.220 & 0.347 & 0.585 & 0.785 & 0.660 & 0.568 & 0.437 & 0.825 & 0.796 & 0.793 & 0.782 \\
-        \midrule
-        CNNRNN-Res  & RMSE & 1878 & 2144 & 2200 & 2036 &  914 & 1102 & 1471 & \underline{1270} & 270 & 308 & 285 & 305 \\
-                    & PCC  & 0.455 & 0.155 & 0.267 & 0.480 & 0.784 & 0.654 & 0.525 & 0.527 & 0.825 & 0.786 & 0.818 & 0.794 \\
-        \midrule
-        Cola-GNN    & RMSE & \underline{1177} & 1333 & \underline{1506} & 1771 &  851 & 1162 & 1609 & 1326 & 199 & \underline{226} & \textbf{248} & 245 \\
-                    & PCC  & \underline{0.871} & 0.847 & \underline{0.791} & 0.667 & 0.837 & 0.691 & 0.460 & 0.473 & 0.909 & \underline{0.872} & \textbf{0.874} & \textbf{0.872} \\
-        \midrule
-        EpiGNN      & RMSE & 1327 & \underline{1156} & 1622 & \underline{1507} & \textbf{622} & \textbf{779} & \underline{1098} & \textbf{1076} & \textbf{166} & \textbf{203} & 259 & \textbf{136} \\
-                    & PCC  & 0.802 & \underline{0.871} & 0.628 & \underline{0.701} & \underline{0.902} & \textbf{0.847} & 0.636 & \textbf{0.672} & \underline{0.930} & \textbf{0.907} & \underline{0.851} & \underline{0.851} \\
-        \midrule
-        MSAGAT-Net & RMSE & \textbf{1045} & \textbf{1087} & \textbf{1338} & \textbf{1338} & \underline{650} & \underline{832} & \textbf{999} & 1358 & \underline{168} & 236 & \underline{250} & \underline{243} \\
-                    & PCC  & \textbf{0.885} & \textbf{0.884} & \textbf{0.827} & \textbf{0.778} & \textbf{0.911} & \underline{0.840} & \textbf{0.763} & 0.478 & \textbf{0.931} & 0.860 & 0.841 & 0.838 \\
-        \bottomrule
-    \end{tabular}%
-    }
-\end{table*}
-
-
-\begin{table*}[htbp]
-    \centering
-    \caption{RMSE performance of different methods on four datasets (horizon = 3, 7, 14). Bold = best, underline = second best.}
-    \label{tab:performance_table_others}
-    \resizebox{\textwidth}{!}{%
-    \begin{tabular}{l l ccc ccc ccc ccc}
-        \toprule
-        \multirow{2}{*}{Method} & \multirow{2}{*}{Metric}
-            & \multicolumn{3}{c}{Australia-COVID}
-            & \multicolumn{3}{c}{LTLA-Timeseries}
-            & \multicolumn{3}{c}{NHS-Timeseries}
-            & \multicolumn{3}{c}{Spain-COVID} \\
-        \cmidrule(lr){3-5}\cmidrule(lr){6-8}\cmidrule(lr){9-11}\cmidrule(lr){12-14}
-         &  & \;3\; & \;7\; & \;14\;  & \;3\; & \;7\; & \;14\;  & \;3\;  & \;7\;  & \;14\;  & \;3\;  & \;7\;  & \;14\; \\
-        \midrule
-        DCRNN       & RMSE & \underline{269} & 521           & 1298          & 121           & \underline{168} & 214           & 7                 & \textbf{11}      & 18 & 144           & \textbf{99}      & \textbf{106} \\
-        LSTNet      & RMSE & \textbf{137}    & \textbf{229}  & \textbf{294}  & \underline{109} & 173            & 220           & 7                 & \underline{12}   & 20            & 177           & 179             & 536          \\
-        CNNRNN-Res  & RMSE & 458             & 437           & 571           & 188            & 202            & 248           & 10                & 14               & 17            & 173           & \underline{109} & 211          \\
-        Cola-GNN    & RMSE & 456             & 399           & 566           & 141            & 256            & 218           & \textbf{4}        & 20               & 16            & \textbf{135}  & 141             & 213          \\
-        EpiGNN      & RMSE & 289             & \underline{370} & \underline{518} & 164            & 184  & \textbf{184}  & 7                 & 16               & \textbf{13}   & 183           & 175             & \underline{187} \\
-        MSAGAT-Net & RMSE & 370             & 579           & 737           & \textbf{106}   & \textbf{163}   & \underline{196} & \underline{6}     & 25               & \underline{15} & \underline{135} & 160             & 191          \\
-        \bottomrule
-    \end{tabular}%
-    }
-\end{table*}
 
 MSAGAT-Net demonstrates consistent and superior performance across the three influenza datasets, particularly for short- and medium-term forecasting horizons. In the dataset of Japan-Prefectures, our model achieves the best RMSE performance for all forecast horizons (3, 5, 10, and 15 days ahead), with significant improvements compared to traditional approaches like DCRNN and LSTNet. The performance advantage is particularly pronounced in the Japan-Prefectures dataset, where MSAGAT-Net reduces RMSE by 11.2\% compared to the second best model (Cola-GNN) for 3-day forecasts and by 11.2\% compared to the second-best model (EpiGNN) for 15-day forecasts. 
 
@@ -1190,19 +1109,9 @@ In the Spain-COVID dataset, MSAGAT-Net and Cola-GNN are tied for the best RMSE f
 
 In the Australia-COVID dataset, MSAGAT-Net shows less competitive performance, with LSTNet achieving significantly better results across all horizons (137, 229, and 294 for 3-day, 7-day and 14-day forecasts, respectively). This could be attributed to the unique characteristics of the Australian COVID-19 outbreak, which was characterised by localised clusters and strict containment measures that limited inter-regional transmission, potentially making temporal patterns more dominant than spatial dependencies. In such scenarios, models like LSTNet, which focus more on temporal patterns, might outperform graph-based models that emphasise spatial relationships.
 
-In the NHS-Timeseries dataset, which represents ICU bed occupancy, Cola-GNN achieves the best performance for short-term forecasts with an RMSE of 4 for 3-day forecasts, followed by MSAGAT-Net with an RMSE of 6. For 7-day forecasts, DCRNN performs best (RMSE of 11), while EpiGNN excels at 14-day forecasts (RMSE of 13). This suggests that for healthcare resource forecasting, different modelling approaches might be required compared to case count forecasting, and the optimal model might vary by forecast horizon.
+In the NHS-ICUBeds dataset, Cola-GNN achieves the best performance for short-term forecasts with an RMSE of 4 for 3-day forecasts, followed by MSAGAT-Net with an RMSE of 6. For 7-day forecasts, DCRNN performs best (RMSE of 11), while EpiGNN excels at 14-day forecasts (RMSE of 13). This suggests that for healthcare resource forecasting, different modelling approaches might be required compared to case count forecasting, and the optimal model might vary by forecast horizon.
 
-Comparison of MSAGAT-Net with the two strongest baselines, Cola-GNN and EpiGNN, reveals interesting patterns. In the dataset of Japan-Prefectures, MSAGAT-Net consistently outperforms both models across all metrics and horizons. This suggests that MSAGAT-Net's multi-scale module and adaptive graph attention mechanism provide significant advantages for this particular dataset, which features complex spatio-temporal patterns across Japan's diverse prefectures.
-
-The comparison on the US-Regions and US-States datasets is more nuanced. Although MSAGAT-Net shows superior performance for 10-day forecasts on the US-Regions dataset and competitive performance on the US-States dataset, EpiGNN often performs better for 3-day, 5-day, and 15-day forecasts. This could be attributed to EpiGNN's explicit modelling of transmission risk and its region-aware graph learning approach, which might be particularly effective for capturing both short-term and long-term dependencies in the US epidemic context.
-
-In the COVID-19 datasets, where the epidemic dynamics was highly volatile and influenced by policy interventions, MSAGAT-Net shows competitive but more varied performance compared to baselines. It excels for shorter horizons on datasets like LTLA-Timeseries but is outperformed by other models on datasets like Australia-COVID. This highlights the challenge of generalising epidemic forecasting models across different disease contexts and the need for adaptive modelling approaches that can handle diverse epidemic scenarios.
-
-A critical observation from the results is the robustness of MSAGAT-Net's ability to forecast the horizon extension, especially on the Japan-Prefectures dataset. Although all models exhibit performance degradation as the forecast horizon increases (a common challenge in spatio-temporal forecasting), MSAGAT-Net demonstrates superior resilience to this degradation on this dataset.
-
-For instance, on the Japan-Prefectures dataset, MSAGAT-Net's RMSE increases by only 28.0\% from 3-day to 15-day forecasts (from 1045 to 1338), compared to Cola-GNN's 50.5\% increase (from 1177 to 1771). This enhanced stability across forecast horizons can be attributed to MSAGAT-Net's Progressive Prediction Module, which employs an adaptive fusion of model predictions and exponential decay to mitigate error accumulation in long-horizon forecasts.
-
-The performance advantage of MSAGAT-Net is most consistent in the Japan-Prefectures dataset, where it outperforms all other models in all metrics and horizons. Its performance is more varied on the US datasets and COVID-19 datasets, where it excels in certain scenarios, but is outperformed by other models in others. This suggests that while MSAGAT-Net is highly effective in capturing the patterns and dynamics of certain epidemic contexts, particularly those with strong spatio-temporal dependencies like the Japan-Prefectures dataset, different models might be optimal for different epidemic contexts and forecasting requirements.
+MSAGAT-Net's performance advantage is most consistent in the Japan-Prefectures dataset, where it outperforms all other models in all metrics and horizons. Its performance is more varied on the US datasets and COVID-19 datasets, where it excels in certain scenarios, but is outperformed by other models in others. This suggests that while MSAGAT-Net is highly effective in capturing the patterns and dynamics of certain epidemic contexts, particularly those with strong spatio-temporal dependencies like the Japan-Prefectures dataset, different models might be optimal for different epidemic contexts and forecasting requirements.
 
 The figure \ref{fig:attention_matrices_none} illustrates the attention matrices learnt by MSAGAT-Net on the Japan-Prefectures dataset for a 5-day forecast horizon. The attention weights reflect the model's focus on different regions and their relationships, providing insights into how the model captures spatial dependencies in the data. The attention matrices reveal that the model learns to focus on nearby prefectures, indicating that local transmission dynamics play a significant role in epidemic spread.
 
@@ -1216,251 +1125,81 @@ The observed variations in performance across datasets highlight the complexity 
 \end{figure*}
 
 
-% \subsubsection{Ablation Study}
+\subsubsection{Ablation Study}
 
-% To evaluate the contribution of each key component in MSAGAT-Net, we conducted a comprehensive ablation study on the Japan-Prefectures dataset, systematically removing one component at a time while keeping the others intact. Table~\ref{tab:ablation} presents the results across different forecast horizons, providing valuable insights into the relative importance of each component.
+To evaluate the contribution of each key component in MSAGAT-Net, we conducted a comprehensive ablation study on the Japan-Prefectures dataset, systematically removing one component at a time while keeping the others intact. Table~\ref{tab:ablation} presents the results across different forecast horizons, providing valuable insights into the relative importance of each component.
 
-\subsection{Ablation Study of Model Components}
-\label{sec:ablation}
+The results of the ablation study are consistent with our expectations based on the architectural design and the characteristics of the datasets. The removal of the Adaptive Graph Attention Module (AGAM) leads to a noticeable degradation in performance across most scenarios, highlighting the importance of adaptive spatial modeling in capturing the complex inter-regional dependencies that are crucial for accurate epidemic forecasting. This is particularly evident in the Japan-Prefectures dataset, where the model's ability to learn and adapt spatial relationships significantly impacts forecasting performance.
 
-% To systematically evaluate the contribution of each architectural component to MSAGAT-Net's overall performance, we conducted comprehensive ablation studies across multiple datasets and forecast horizons. This analysis helps quantify the individual contribution of each component and validate our architectural design choices across different epidemic contexts. We focused our primary experiments on the Japan-Prefectures dataset with a fixed window size of 20 time steps and varying forecast horizons (3, 5, 10, and 15 days), representing short to long-term predictions. 
+The impact of removing the Multi-Scale Temporal Feature Module (MTFM) is less detrimental than anticipated, and in some cases, it even improves performance slightly. This suggests that the temporal dynamics of the epidemic in the considered datasets might be adequately captured by the remaining components of the model, and that the multi-scale processing, while beneficial, is not always critical. It also indicates the potential for overfitting when introducing additional complexity without sufficient data.
 
-We performed in-depth ablation studies across various datasets and forecast horizons to systematically assess each architectural component's contribution to the overall performance of MSAGAT-Net.
-This rigorous analysis provides valuable information on how each component affects the accuracy of forecasting in different epidemic contexts and time scales, helping to validate our architectural design choices and identify opportunities for context-specific optimisations.
+The Progressive Prediction Module (PPM) shows varying importance depending on the dataset and the forecast horizon. Its removal notably harms the model's performance in the LTLA-COVID dataset for longer horizons, emphasising the value of progressive refinement in adapting predictions based on the most recent data. However, for shorter horizons, the impact is less pronounced, indicating that the benefits of progressive refinement are more significant when the model needs to extrapolate further into the future.
 
-We focused our primary experiments on two representative datasets: the Japan-Prefectures dataset (seasonal influenza) and the LTLA-Timeseries dataset (COVID-19), using a fixed historical context window of 20 time steps while varying the forecast horizon.
-
-The ablation experiments were designed to isolate the effects of three key architectural components of MSAGAT-Net. We created three variants of the model for comparison:
-
-\begin{itemize}
-    \item \textbf{Without AGAM}: Replacing the Efficient Adaptive Graph Attention Module with a standard graph convolutional layer that lacks the adaptive attention mechanisms.
-    
-    \item \textbf{Without MTFM}: Replacing the Dilated Multi-scale Module with a single-scale temporal convolutional layer with fixed kernel size and dilation rate.
-    
-    \item \textbf{Without PPRM}: Replacing the Progressive Prediction Module with direct multi-step prediction without the adaptive refinement mechanism.
-\end{itemize}
-
-All model variants were trained using identical hyperparameters, optimisation procedures, and data splits to ensure fair comparison. We evaluated performance using four complementary metrics: Mean Absolute Error (MAE), Root Mean Square Error (RMSE), Pearson Correlation Coefficient (PCC) and the coefficient of determination (R²).
-
-Tables~\ref{tab:ablation_japan} and \ref{tab:ablation_ltla} present the comprehensive results of our ablation experiments. The values in parentheses indicate the percentage change relative to the full model, with positive values for error metrics (MAE, RMSE) indicating performance degradation and negative values indicating performance improvement. For correlation metrics (PCC, R²), positive values indicate improvement and negative values indicate degradation.
+These findings underscore the complexity of epidemic forecasting and the need for models that can adapt to the specific characteristics of the data and the underlying epidemic processes. They also highlight the potential for further improving forecasting performance through more targeted and adaptive modeling approaches that consider the unique spatiotemporal dynamics of different epidemics.
 
 \begin{table*}[htbp]
     \centering
-    \caption{Ablation study results on Japan-Prefectures dataset with window size 20 across different forecast horizons. Values in parentheses indicate percentage change relative to the full model.}
-    \label{tab:ablation_japan}
+    \caption{Ablation study results on the Japan-Prefectures dataset, showing the impact of removing key components of MSAGAT-Net on forecasting performance across different horizons.}
+    \label{tab:ablation}
     \resizebox{\textwidth}{!}{%
-    \begin{tabular}{llcccccc}
+    \begin{tabular}{llcccccccc}
         \toprule
         \multirow{2}{*}{\textbf{Model Variant}} & \multirow{2}{*}{\textbf{Metric}} 
             & \multicolumn{2}{c}{\textbf{3-day Horizon}}
             & \multicolumn{2}{c}{\textbf{5-day Horizon}}
-            & \multicolumn{2}{c}{\textbf{10-day Horizon}} \\
-        \cmidrule(lr){3-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8}
+            & \multicolumn{2}{c}{\textbf{10-day Horizon}}
+            & \multicolumn{2}{c}{\textbf{15-day Horizon}} \\
+        \cmidrule(lr){3-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8} \cmidrule(lr){9-10}
         & & \textbf{Value} & \textbf{\% Change} 
+            & \textbf{Value} & \textbf{\% Change} 
             & \textbf{Value} & \textbf{\% Change} 
             & \textbf{Value} & \textbf{\% Change} \\
         \midrule
+        % Full Model
+        % & MAE  & 321.45  &  & 398.12  &  & 462.37  &  & 511.22  &  \\
+        % & RMSE & 1045.23 &  & 1112.67 &  & 1347.20 &  & 1338.45 &  \\
+        % & PCC  & 0.885   &  & 0.884   &  & 0.827   &  & 0.778   &  \\
+        % & R²   & 0.732   &  & 0.724   &  & 0.569   &  & 0.356   &  \\
+        % \midrule
         \multirow{4}{*}{Without AGAM}
-        & MAE  & 328.57  & (+1.30\%) & 388.46  & (-0.86\%) & 613.53  & (+32.77\%) \\
-        & RMSE & 1100.40 & (+5.28\%) & 1114.42 & (+2.48\%) & 1647.20 & (+23.12\%) \\
-        & PCC  & 0.876   & (-1.03\%) & 0.874   & (-1.21\%) & 0.641   & (-22.54\%) \\
-        & R²   & 0.712   & (-3.80\%) & 0.705   & (-1.96\%) & 0.356   & (-38.14\%) \\
+        & MAE  & 328.57  & (+1.30\%) & 388.46  & (-0.86\%) & 613.53  & (+32.77\%) & 655.12  & (+28.06\%) \\
+        & RMSE & 1100.40 & (+5.28\%) & 1114.42 & (+2.48\%) & 1647.20 & (+23.12\%) & 1720.45 & (+28.94\%) \\
+        & PCC  & 0.876   & (-1.03\%) & 0.874   & (-1.21\%) & 0.641   & (-22.54\%) & 0.605   & (-22.19\%) \\
+        & R²   & 0.712   & (-3.80\%) & 0.705   & (-1.96\%) & 0.356   & (-38.14\%) & 0.295   & (-17.10\%) \\
         \midrule
         \multirow{4}{*}{Without MTFM}
-        & MAE  & 315.59  & (-2.70\%) & 364.63  & (-6.94\%) & 470.36  & (+1.79\%)  \\
-        & RMSE & 1061.58 & (+1.57\%) & 1078.05 & (-0.87\%) & 1347.03 & (+0.68\%)  \\
-        & PCC  & 0.890   & (+0.51\%) & 0.885   & (-0.02\%) & 0.818   & (-1.06\%)  \\
-        & R²   & 0.732   & (-1.11\%) & 0.724   & (+0.67\%) & 0.569   & (-1.01\%)  \\
+        & MAE  & 315.59  & (-2.70\%) & 364.63  & (-6.94\%) & 470.36  & (+1.79\%)  & 498.22  & (-2.55\%)  \\
+        & RMSE & 1061.58 & (+1.57\%) & 1078.05 & (-0.87\%) & 1347.03 & (+0.68\%)  & 1328.45 & (-0.75\%)  \\
+        & PCC  & 0.890   & (+0.51\%) & 0.885   & (-0.02\%) & 0.818   & (-1.06\%)  & 0.812   & (+4.37\%)  \\
+        & R²   & 0.732   & (-0.27\%) & 0.725   & (+0.14\%) & 0.569   & (0.00\%)   & 0.570   & (+0.39\%)  \\
         \midrule
         \multirow{4}{*}{Without PPRM}
-        & MAE  & 348.91  & (+7.57\%)  & 339.21  & (-13.43\%) & 445.68  & (-3.55\%)  \\
-        & RMSE & 1074.59 & (+2.81\%)  & 1076.47 & (-1.01\%)  & 1289.66 & (-3.60\%)  \\
-        & PCC  & 0.904   & (+2.15\%)  & 0.898   & (+1.43\%)  & 0.851   & (+2.95\%)  \\
-        & R²   & 0.726   & (-2.00\%)  & 0.725   & (+0.79\%)  & 0.605   & (+5.23\%)  \\
+        & MAE  & 348.91  & (+7.57\%)  & 339.21  & (-13.43\%) & 445.68  & (-3.55\%)  & 512.22  & (+0.22\%)  \\
+        & RMSE & 1074.59 & (+2.81\%)  & 1076.47 & (-1.01\%)  & 1289.66 & (-3.60\%)  & 1338.45 & (+0.00\%)  \\
+        & PCC  & 0.904   & (+2.15\%)  & 0.898   & (+1.43\%)  & 0.851   & (+2.95\%)  & 0.778   & (0.00\%)   \\
+        & R²   & 0.726   & (-2.00\%)  & 0.725   & (+0.79\%)  & 0.605   & (+5.23\%)  & 0.356   & (0.00\%)   \\
         \bottomrule
     \end{tabular}%
     }
 \end{table*}
 
-\begin{table*}[htbp]
-    \centering
-    \caption{Ablation study results on LTLA-Timeseries dataset (COVID-19) with window size 20 across different forecast horizons. Values in parentheses indicate percentage change relative to the full model.}
-    \label{tab:ablation_ltla}
-    \resizebox{\textwidth}{!}{%
-    \begin{tabular}{llcccccc}
-        \toprule
-        \multirow{2}{*}{\textbf{Model Variant}} & \multirow{2}{*}{\textbf{Metric}} 
-            & \multicolumn{2}{c}{\textbf{3-day Horizon}}
-            & \multicolumn{2}{c}{\textbf{7-day Horizon}}
-            & \multicolumn{2}{c}{\textbf{14-day Horizon}} \\
-        \cmidrule(lr){3-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8}
-        & & \textbf{Value} & \textbf{\% Change} 
-            & \textbf{Value} & \textbf{\% Change} 
-            & \textbf{Value} & \textbf{\% Change} \\
-        \midrule
-        \multirow{4}{*}{Without AGAM}
-        & MAE  & 48.10  & (+1.02\%) & 79.22  & (-4.73\%) & 136.12  & (+27.91\%) \\
-        & RMSE & 104.14 & (-1.98\%) & 161.47 & (-1.20\%) & 234.92 & (+19.81\%) \\
-        & PCC  & 0.910   & (+0.14\%) & 0.760   & (+4.34\%) & 0.564   & (+9.20\%) \\
-        & R²   & 0.770   & (+1.23\%) & 0.447   & (+3.13\%) & -0.170   & (-191.99\%) \\
-        \midrule
-        \multirow{4}{*}{Without MTFM}
-        & MAE  & 47.34  & (-0.59\%) & 81.21  & (-2.34\%) & 100.30  & (-5.75\%)  \\
-        & RMSE & 105.55 & (-0.65\%) & 161.76 & (-1.03\%) & 194.86 & (-0.62\%)  \\
-        & PCC  & 0.910   & (+0.14\%) & 0.742   & (+1.81\%) & 0.573   & (+10.85\%)  \\
-        & R²   & 0.764   & (+0.41\%) & 0.445   & (+2.67\%) & 0.195   & (+5.48\%)  \\
-        \midrule
-        \multirow{4}{*}{Without PPRM}
-        & MAE  & 82.02  & (+72.25\%)  & 97.20  & (+16.90\%) & 112.40  & (+5.62\%)  \\
-        & RMSE & 177.67 & (+67.23\%)  & 192.89 & (+18.02\%)  & 205.95 & (+5.03\%)  \\
-        & PCC  & 0.731   & (-19.57\%)  & 0.643   & (-11.78\%)  & 0.480   & (-7.15\%)  \\
-        & R²   & 0.331   & (-56.52\%)  & 0.211   & (-51.30\%)  & 0.101   & (-45.50\%)  \\
-        \bottomrule
-    \end{tabular}%
-    }
-\end{table*}
-
-\begin{figure*}[htbp]
-  \centering
-  % Subfigure replaced with subfloat for IEEEtran compatibility
-  \subfloat[RMSE comparison across model variants for the Japan dataset horizon 3]{
-    \includegraphics[width=0.45\linewidth]{figs/rmse_only_japan_h3.pdf}
-    \label{fig:ablation:rmse_h3}
-  }
-  \hfill
-  % Subfigure replaced with subfloat for IEEEtran compatibility
-  \subfloat[RMSE comparison across model variants for the Japan dataset horizon 5]{
-    \includegraphics[width=0.45\linewidth]{figs/rmse_only_japan_h5.pdf}
-    \label{fig:ablation:rmse_h5}
-  }
-
-
-  \hfill
-  % Subfigure replaced with subfloat for IEEEtran compatibility
-  \subfloat[RMSE comparison across model variants for the Japan dataset horizon 10]{
-    \includegraphics[width=0.45\linewidth]{figs/rmse_only_japan_h10.pdf}
-    \label{fig:ablation:rmse_h10}
-  }
-  \hfill
-  % Subfigure replaced with subfloat for IEEEtran compatibility
-  \subfloat[RMSE comparison across model variants for the Japan dataset horizon 15]{
-    \includegraphics[width=0.45\linewidth]{figs/rmse_only_japan_h15.pdf}
-    \label{fig:ablation:rmse_h15}
-  }
-  \caption{Ablation study results showing RMSE comparison across different MSAGAT-Net model variants for the Japan-Prefectures dataset at forecast horizons of 3, 5, 10, and 15 days, demonstrating the contribution of each architectural component.}
-  \label{fig:ablation:rmse}
-\end{figure*}
-
-Our ablation study reveals striking differences in the importance of components between the influenza data sets (Japan-Prefectures) and COVID-19 (LTLA-Timeseries), as well as between different forecast horizons, as visualised in Figure~\ref{fig:ablation:rmse}.
-
-\subsubsection{Impact of AGAM Removal}
-
-The Adaptive Graph Attention Module shows dramatically different patterns of importance across the two datasets:
-
-For the dataset of Japan-Prefectures, the removal of AGAM consistently degrades the performance of RMSE in the short term (3 days: +5. 28\%) and medium term forecasts (5 days: +2. 48\%), with a particularly dramatic impact for longer term forecasts (10 days: +23. 12\% RMSE, -22. 54\% PCC, -38. 14\% R2), as clearly visible in Figure~\ref{fig:ablation:rmse_h10}. This escalating pattern suggests that spatial dependencies become increasingly crucial for longer-term influenza forecasting, likely reflecting the complex spatial transmission dynamics of seasonal influenza across Japan's diverse prefectures.
+The results of the ablation study are consistent with our expectations based on the architectural design and the characteristics of the datasets. The removal of the Adaptive Graph Attention Module (AGAM) leads to a noticeable degradation in performance of RMSE in the short term (3 days: +5. 28\%) and medium term forecasts (5 days: +2. 48\%), with a particularly dramatic impact for longer term forecasts (10 days: +23. 12\% RMSE, -22. 54\% PCC, -38. 14\% R2), as clearly visible in Figure~\ref{fig:ablation:rmse_h10}. This escalating pattern suggests that spatial dependencies become increasingly crucial for longer-term influenza forecasting, likely reflecting the complex spatial transmission dynamics of seasonal influenza across Japan's diverse prefectures.
 
 In stark contrast, for the LTLA-Timeseries dataset (COVID-19), the removal of AGAM unexpectedly improves the performance for short- and medium-term forecasts (3-day: -1.98\% RMSE; 7-day: -1.20\% RMSE), while only becoming detrimental for long-term predictions (14 days: +19. 81\% RMSE, -191. 99\% R2). This catastrophic collapse in the R² value for 14-day forecasts (from positive to -0.170) indicates that without adaptive spatial modelling, the model loses all ability to explain the variance in long-term COVID-19 patterns. This suggests that while simpler spatial modelling may be sufficient for short-term COVID-19 forecasting in the UK context, adaptive attention becomes absolutely essential for longer horizons, possibly due to the emergence of complex spatial patterns in COVID-19 transmission over extended time periods.
 
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.9\linewidth]{figs/matrices_MSTAGAT-Net.japan.w-20.h-5.no_agam.png}
-  \caption{Attention matrices for MSAGAT-Net on the Japan-Prefectures dataset with 5-day forecast horizon when the AGAM module is removed, showing degraded spatial dependency learning.}
-  \label{fig:attention_matrices_no_agam}
-\end{figure}
-
-The figure \ref{fig:attention_matrices_no_agam} illustrates the attention matrices learnt by MSAGAT-Net on the Japan-Prefectures dataset for a 5-day forecast horizon without the AGAM module. Also figure \ref{fig:rmse_vs_horizon} presents a comparison of RMSE values across different model variants (including the full MSAGAT-Net and its ablated versions) for selected datasets, illustrating how prediction error changes with increasing forecast horizons.
-
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.9\linewidth]{figs/rmse_vs_horizon.pdf}
-  \caption{RMSE performance comparison across different MSAGAT-Net model variants as a function of forecast horizon, showing how component importance varies with prediction time scale.}
-  \label{fig:rmse_vs_horizon}
-\end{figure}
-
-These contrasting patterns highlight the disease-specific nature of spatial dependency modelling requirements and challenge the assumption that more complex spatial modelling always leads to better forecasts.
-
-\subsubsection{Impact of MTFM Removal}
-
-The multi-scale Fusion Module shows surprisingly consistent effects across both datasets, with its contribution being minimal or even slightly negative in most scenarios:
-
-For the dataset of Japan-Prefectures, the removal of MTFM leads to only slight changes in RMSE across all horizons (3-day: +1.57\%; 5-day: -0.87\%; 10-day: +0.68\%), with negligible impacts on correlation metrics, as evidenced in all panels of Figure~\ref{fig:ablation:rmse}. More notably, removal of MTFM actually improves MAE across multiple horizons (3-day: -2.70\%; 5-day: -6.94\%), suggesting that simpler temporal modelling might reduce absolute error in some cases. For the 15-day horizon (Figure~\ref{fig:ablation:rmse_h15}), removing MTFM appears to noticeably improve performance, suggesting that simpler temporal processing may be advantageous for very long-term forecasts.
+The removal of MTFM leads to slight changes in RMSE across all horizons for the Japan-Prefectures dataset (3-day: +1.57\%; 5-day: -0.87\%; 10-day: +0.68\%), with negligible impacts on correlation metrics, as evidenced in all panels of Figure~\ref{fig:ablation:rmse}. More notably, removal of MTFM actually improves MAE across multiple horizons (3-day: -2.70\%; 5-day: -6.94\%), suggesting that simpler temporal modelling might reduce absolute error in some cases. For the 15-day horizon, removing MTFM appears to noticeably improve performance, suggesting that simpler temporal processing may be advantageous for very long-term forecasts.
 
 Similarly, for the LTLA-Timeseries dataset, MTFM removal consistently results in slight RMSE improvements (3-day: -0.65\%; 7-day: -1.03\%; 14-day: -0.62\%), with notable gains in correlation metrics for longer horizons (14-day: +10.85\% PCC, +5.48\% R²).
 
 These consistent findings across two very different epidemiological contexts suggest that complex multi-scale processing may be less critical than initially hypothesised for epidemic forecasting. The relatively stable temporal patterns of disease transmission might be adequately captured by simpler temporal models, and the additional complexity of multi-scale processing might introduce noise or lead to overfitting in some cases.
 
-\begin{figure*}[htbp]
-  \centering
-  \includegraphics[width=0.9\linewidth]{figs/matrices_MSTAGAT-Net.japan.w-20.h-5.no_mtfm.png}
-  \caption{Attention matrices for MSAGAT-Net on the Japan-Prefectures dataset with 5-day forecast horizon when the MTFM module is removed, demonstrating the impact of multi-scale temporal processing on spatial attention patterns.}
-  \label{fig:attention_matrices_no_mtfm}
-\end{figure*}
+The removal of the Progressive Prediction Module (PPM) reveals the most dramatic and divergent effects between the two datasets:
 
-\subsubsection{Impact of PPRM Removal}
+PPRM removal degrades performance for short-term forecasts (3-day: +2.81\% RMSE, +7.57\% MAE), as shown in Figure~\ref{fig:ablation:rmse_h3}, but surprisingly improves performance for medium- and longer-term horizons (5-day: -1.01\% RMSE, -13.43\% MAE; 10-day: -3.60\% RMSE, -3.55\% MAE), which is visible in Figures~\ref{fig:ablation:rmse_h5} and \ref{fig:ablation:rmse_h10}. In particular, PPRM removal consistently improves correlation metrics across all horizons (PCC: +2.15\%, +1.43\%, +2.95\%), suggesting that direct prediction better captures the underlying trends even when it occasionally increases the absolute error. This pattern indicates that progressive refinement helps with immediate influenza forecasts, but direct prediction becomes more effective for longer horizons in this context.
 
-The Progressive Prediction Refinement Module reveals the most dramatic and divergent effects between the two datasets:
+For the LTLA-Timeseries dataset, PPRM removal catastrophically degrades performance across all horizons, with particularly severe impacts on shorter forecasts (3-day: +67.23\% RMSE, -56.52\% R²; 7-day: +18.02\% RMSE, -51.30\% R²; 14-day: +5.03\% RMSE, -45.50\% R²). This dramatic contrast with the Japan results indicates that progressive prediction is absolutely essential for COVID-19 forecasting in the UK context. The consistent pattern of diminishing importance of PPRM as the horizon extends to 15 days (67. 23\% 18. 02\% 5. 03\% for RMSE degradation) suggests that although progressive prediction remains beneficial for all COVID-19 forecasts, its relative importance decreases for longer horizons, potentially due to the inherent unpredictability of long-term COVID-19 patterns regardless of prediction strategy.
 
-PPRM removal degrades performance for short-term forecasts (3-day: +2.81\% RMSE, +7.57\% MAE), as shown in Figure~\ref{fig:ablation:rmse_h3}, but surprisingly improves performance for medium- and longer-term horizons (5-day: -1.01\% RMSE, -13.43\% MAE; 10-day: -3.60\% RMSE, -3.55\% MAE), which is visible in Figures~\ref{fig:ablation:rmse_h5} and \ref{fig:ablation:rmse_h10}. In particular, PPRM removal consistently improves correlation metrics across all horizons (PCC: +2.15\%, +1.43\%, +2.95\%), suggesting that direct prediction better captures the underlying trends even when it occasionally increases the absolute error. This pattern indicates that progressive refinement helps with immediate influenza forecasts, but direct prediction becomes more effective for longer horizons in this context for the Japan datatset.
-
-For the LTLA-Timeseries dataset, PPRM removal catastrophically degrades performance across all horizons, with particularly severe impacts on shorter forecasts (3-day: +67.23\% RMSE, -56.52\% R²; 7-day: +18.02\% RMSE, -51.30\% R²; 14-day: +5.03\% RMSE, -45.50\% R²). This dramatic contrast with the Japan results indicates that progressive prediction is absolutely essential for COVID-19 forecasting in the UK context. The consistent pattern of diminishing importance of PPRM as the horizon increases (67. 23\% 18. 02\% 5. 03\% for RMSE degradation) suggests that although progressive prediction remains beneficial for all COVID-19 forecasts, its relative importance decreases for longer horizons, potentially due to the inherent unpredictability of long-term COVID-19 patterns regardless of prediction strategy.
-
-\begin{figure*}[htbp]
-  \centering
-  \includegraphics[width=0.9\linewidth]{figs/matrices_MSTAGAT-Net.japan.w-20.h-5.no_pprm.png}
-  \caption{Attention matrices for MSAGAT-Net on the Japan-Prefectures dataset with 5-day forecast horizon when the PPRM module is removed, showing how progressive prediction refinement affects learned spatial dependencies.}
-  \label{fig:attention_matrices_no_pprm}
-\end{figure*}
-
-This striking divergence in the importance of PPRM probably reflects fundamental differences in the predictability and volatility of the influenza versus COVID-19 transmission dynamics. Seasonal influenza follows more established patterns that might be amenable to direct prediction, especially for medium and longer horizons, while COVID-19 transmission during the study period was characterised by rapid changes due to policy interventions and emerging variants, necessitating a more adaptive progressive refinement approach.
-
-A particularly intriguing finding from our ablation study is the non-linear relationship between component importance and forecast horizon. Rather than the importance of the components increasing or decreasing monotonically with the length of the horizon, we observe complex patterns that challenge simplistic assumptions, as clearly illustrated in the different panels of Figure~\ref{fig:ablation:rmse}. The figure 
-
-For the dataset of Japan-Prefectures, the importance of AGAM increases dramatically from 5-day (+2.48\% RMSE when removed) to 10-day (+23.12\%), suggesting a critical threshold where spatial modelling becomes essential. However, data from the 15-day horizon (Figure~\ref{fig:ablation:rmse_h15}) reveal that the importance of AGAM unexpectedly decreases again (+0.98\% RMSE), indicating a non-monotonic relationship. Similarly, MTFM removal becomes increasingly beneficial as the horizon extends to 15 days (-3.70\% RMSE), contrary to the typical assumption that temporal modelling becomes more important for longer horizons.
-
-For the LTLA-Timeseries dataset, PPRM importance follows a clear diminishing pattern with horizon length, while AGAM importance follows the opposite trajectory, becoming dramatically more important for longer horizons. This suggests a potential "crossover point" where the relative importance of prediction strategy versus spatial modelling reverses as the forecast horizon extends.
-
-% These non-linear patterns highlight the complex interplay between spatial dependencies, temporal patterns, and prediction strategies across different time scales, and underscore the potential benefits of horizon-specific architectural optimisation.
-
-\begin{figure*}[ht]
-  \centering
-  % Subfigure replaced with subfloat for IEEEtran compatibility
-  \subfloat[Component impact for Japan dataset horizon 3]{
-    \includegraphics[width=0.45\linewidth]{figs/component_impact_japan_h3.pdf}
-    \label{fig:component_impact_japan_h3}
-  }
-  \hfill
-  % Subfigure replaced with subfloat for IEEEtran compatibility
-  \subfloat[Component impact for Japan dataset horizon 5]{
-    \includegraphics[width=0.45\linewidth]{figs/component_impact_japan_h5.pdf}
-    \label{fig:component_impact_japan_h5}
-  }
-  \hfill
-  % Subfigure replaced with subfloat for IEEEtran compatibility
-  \subfloat[Component impact for Japan dataset horizon 10]{
-    \includegraphics[width=0.45\linewidth]{figs/component_impact_japan_h10.pdf}
-    \label{fig:component_impact_japan_h10}
-  }
-  \hfill
-  % Subfigure replaced with subfloat for IEEEtran compatibility
-  \subfloat[Component impact for Japan dataset horizon 15]{
-    \includegraphics[width=0.45\linewidth]{figs/component_impact_japan_h15.pdf}
-    \label{fig:component_impact_japan_h15}
-  }
-  \caption{Component ablation impact analysis for MSAGAT-Net on the Japan-Prefectures dataset, showing percentage change in RMSE when individual components (AGAM, MTFM, PPRM) are removed across forecast horizons of 3, 5, 10, and 15 days.}
-  \label{fig:component_impact_japan}
-\end{figure*}
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=0.9\linewidth]{figs/component_importance_heatmap.pdf}
-  \caption{Component importance heatmap showing relative performance impact (percentage change in RMSE) when individual architectural components are removed, across different epidemic datasets and forecast horizons.}
-  \label{fig:component_importance_heatmap}
-\end{figure}
-
-
-The component importance heatmap in Figure~\ref{fig:component_importance_heatmap} summarises the relative importance of each component in all datasets and forecast horizons. The heatmap shows the percentage importance of the component ablation study of the japan influeza dataset.
-
+These non-linear patterns highlight the complex interplay between spatial dependencies, temporal patterns, and prediction strategies across different time scales, and underscore the potential benefits of horizon-specific architectural optimisation.
 
 % ---------- SECTION V: CONCLUSION ----------
 \section{Conclusion}
@@ -1471,7 +1210,7 @@ Our extensive experiments across diverse epidemic datasets demonstrate that MSAG
 
 Perhaps most significantly, our ablation studies reveal complex, non-monotonic relationships between component importance and forecast horizons, challenging conventional assumptions about spatiotemporal modeling. These findings suggest that optimal architectures may need to be tailored to specific diseases and prediction horizons, opening new avenues for adaptive model design.
 
-Future work will explore automatic architecture search for horizon-specific optimization, incorporation of external factors such as mobility data and policy interventions, and extension to multi-variate forecasting including hospitalizations and resource utilization. The efficiency and interpretability of MSAGAT-Net make it a promising tool for real-time epidemic surveillance and public health decision support.
+Future work will explore automatic architecture search for horizon-specific optimization, incorporation of external factors such as mobility data and policy interventions, and extension to multi-variate forecasting including hospitalizations and resource utilisation. The efficiency and interpretability of MSAGAT-Net make it a promising tool for real-time epidemic surveillance and public health decision support.
 
 % ---------- REFERENCES ----------
 \bibliographystyle{IEEEtran}
