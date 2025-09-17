@@ -55,8 +55,8 @@ parser.add_argument('--label', type=str, default='')
 parser.add_argument('--pcc', type=str, default='')
 parser.add_argument('--result', type=int, default=0)
 parser.add_argument('--record', type=str, default='')
-parser.add_argument('--model', type=str, default='msagat', choices=['msagat', 'truelinformer', 'ablation'],
-                    help='Which model implementation to use: msagat (default), truelinformer (true Linformer variant), or ablation (use ablation variants via --ablation)')
+parser.add_argument('--model', type=str, default='msagat', choices=['msagat', 'linformer', 'ablation'],
+                    help='Which model implementation to use: msagat (default), linformer (Linformer variant), or ablation (use ablation variants via --ablation)')
 # New argument: starting date for forecast visualization (assume weekly frequency)
 parser.add_argument('--start_date', type=str, default='2020-01-01', help='Start date for forecast visualization')
 # Add ablation parameter
@@ -107,15 +107,11 @@ if args.mylog:
 data_loader = DataBasicLoader(args)
 
 # Instantiate the model based on ablation only
-if args.model == 'truelinformer':
-    # Use the true Linformer variant implementation if requested
-    try:
-        from model_true_linformer import MSTAGAT_Net_TrueLinformer
-        logger.info('Using True Linformer MSTAGAT-Net implementation')
-        model = MSTAGAT_Net_TrueLinformer(args, data_loader)
-    except Exception as e:
-        logger.error('Could not import TrueLinformer model: %s', e)
-        raise
+if args.model == 'linformer':
+    # Use the Linformer variant implementation if requested
+    from model_true_linformer import MSTAGAT_Net_Linformer
+    logger.info('Using Linformer MSTAGAT-Net implementation')
+    model = MSTAGAT_Net_Linformer(args, data_loader)
 else:
     # Default behaviour: use original implementation or ablation variants
     if args.ablation == 'none':

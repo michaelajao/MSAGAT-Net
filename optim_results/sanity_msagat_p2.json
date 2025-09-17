@@ -1,0 +1,30 @@
+{
+  "study_name": "sanity_msagat_p2",
+  "dataset": "japan",
+  "sim_mat": "japan-adj",
+  "window": 20,
+  "horizon": 3,
+  "model": "msagat",
+  "trials_total": 2,
+  "trials_completed": 1,
+  "trials_pruned": 1,
+  "best_trial_number": 0,
+  "best_val_rmse": 831.4163743275687,
+  "best_epoch": 186,
+  "best_params": {
+    "hidden_dim": 32,
+    "attention_heads": 8,
+    "bottleneck_dim": 4,
+    "num_scales": 4,
+    "kernel_size": 5,
+    "feature_channels": 8,
+    "dropout": 0.2146874422694166,
+    "attention_regularization_weight": 4.904510603491804e-05,
+    "lr": 0.0006137774758051202,
+    "weight_decay": 0.00015259907158078628
+  },
+  "test_rmse": 1150.5318335448176,
+  "test_pcc": 0.8400687802946327,
+  "pruner": "hyperband",
+  "trial_timeout_seconds": 0
+}

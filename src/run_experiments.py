@@ -26,6 +26,7 @@ DATASET_CONFIGS = [
     ('ltla_timeseries', 'ltla-adj', [3, 7, 14]),
 ]
 ABLATIONS = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
+MODELS = ['msagat', 'linformer']  # Compare standard vs Linformer variants
 DEFAULT_WINDOW = 20
 
 def setup_logging():
@@ -46,22 +47,21 @@ def setup_logging():
     logger.info(f"Logging to {log_file}")
     return logger
 
-def find_metrics_file(dataset, window, horizon, ablation):
+def find_metrics_file(dataset, window, horizon, ablation, model='msagat'):
     """Find existing metrics file for given configuration."""
-    pattern = f"final_metrics_*{dataset}*w-{window}*h-{horizon}*{ablation}.csv"
+    if model == 'msagat':
+        pattern = f"final_metrics_*{dataset}*w-{window}*h-{horizon}*{ablation}.csv"
+    else:
+        pattern = f"final_metrics_*{dataset}*w-{window}*h-{horizon}*{ablation}*{model}.csv"
     matches = glob.glob(os.path.join(METRICS_DIR, pattern))
     return matches[0] if matches else None
 
-def load_metrics(dataset, window, horizon, ablation):
+def load_metrics(dataset, window, horizon, ablation, model='msagat'):
     """Load metrics DataFrame from CSV file."""
-    path = find_metrics_file(dataset, window, horizon, ablation)
+    path = find_metrics_file(dataset, window, horizon, ablation, model)
     if not path or not os.path.exists(path):
         return None
-    try:
-        return pd.read_csv(path)
-    except Exception as e:
-        logger.error(f"Failed to read metrics CSV {path}: {e}")
-        return None
+    return pd.read_csv(path)
 
 def get_metric(df, key):
     """Extract metric value from DataFrame."""
@@ -74,21 +74,21 @@ def get_metric(df, key):
             return df[col].iloc[0]
     return float('nan')
 
-def generate_ablation_summary(dataset, window, horizon):
+def generate_ablation_summary(dataset, window, horizon, model='msagat'):
     """Generate ablation study summary for a dataset/horizon combination."""
     records = {}
     
     # Load baseline (none) metrics
-    base_df = load_metrics(dataset, window, horizon, 'none')
+    base_df = load_metrics(dataset, window, horizon, 'none', model)
     if base_df is None:
-        logger.warning(f"No baseline metrics for {dataset} h={horizon}")
+        logger.warning(f"No baseline metrics for {dataset} h={horizon} model={model}")
         return None
     
     base_vals = {m: get_metric(base_df, m) for m in ['mae', 'rmse', 'pcc', 'r2']}
     
     # Process all ablations
     for abl in ABLATIONS:
-        df = load_metrics(dataset, window, horizon, abl)
+        df = load_metrics(dataset, window, horizon, abl, model)
         if df is None:
             continue
             
@@ -110,29 +110,70 @@ def generate_ablation_summary(dataset, window, horizon):
     # Save summary
     summary = pd.DataFrame.from_dict(records, orient='index')
     os.makedirs(METRICS_DIR, exist_ok=True)
-    out_path = os.path.join(METRICS_DIR, f"ablation_summary_{dataset}.w-{window}.h-{horizon}.csv")
+    model_suffix = f".{model}" if model != 'msagat' else ""
+    out_path = os.path.join(METRICS_DIR, f"ablation_summary_{dataset}.w-{window}.h-{horizon}{model_suffix}.csv")
     
-    try:
-        summary.to_csv(out_path)
-        logger.info(f"Saved summary: {out_path}")
-        
-        # Generate text report
-        report_lines = [
-            f"Ablation Report for {dataset} (horizon={horizon})",
-            "=" * 60,
-            summary.to_string()
-        ]
-        report_path = os.path.join(METRICS_DIR, f"ablation_report_{dataset}.w-{window}.h-{horizon}.txt")
-        with open(report_path, 'w') as f:
-            f.write("\n".join(report_lines))
-        logger.info(f"Saved report: {report_path}")
-        
-    except Exception as e:
-        logger.error(f"Failed to save summary: {e}")
+    summary.to_csv(out_path)
+    logger.info(f"Saved summary: {out_path}")
+    
+    # Generate text report
+    report_lines = [
+        f"Ablation Report for {dataset} (horizon={horizon}, model={model})",
+        "=" * 60,
+        summary.to_string()
+    ]
+    report_path = os.path.join(METRICS_DIR, f"ablation_report_{dataset}.w-{window}.h-{horizon}{model_suffix}.txt")
+    with open(report_path, 'w') as f:
+        f.write("\n".join(report_lines))
+    logger.info(f"Saved report: {report_path}")
     
     return summary
 
-def build_train_command(dataset, sim_mat, window, horizon, ablation):
+def generate_model_comparison(dataset, window, horizon):
+    """Generate comparison between different model variants."""
+    records = {}
+    
+    for model in MODELS:
+        # Load baseline (none ablation) metrics for each model
+        df = load_metrics(dataset, window, horizon, 'none', model)
+        if df is None:
+            continue
+            
+        records[model.upper()] = {m.upper(): get_metric(df, m) for m in ['mae', 'rmse', 'pcc', 'r2']}
+    
+    if len(records) < 2:
+        return None
+    
+    # Calculate improvements from msagat to linformer
+    if 'MSAGAT' in records and 'LINFORMER' in records:
+        for m in ['MAE', 'RMSE', 'PCC', 'R2']:
+            base_val = records['MSAGAT'][m]
+            lin_val = records['LINFORMER'][m]
+            if base_val and not pd.isna(lin_val):
+                records['LINFORMER'][f"{m}_CHANGE"] = 100 * (lin_val - base_val) / base_val
+    
+    # Save comparison
+    comparison = pd.DataFrame.from_dict(records, orient='index')
+    os.makedirs(METRICS_DIR, exist_ok=True)
+    out_path = os.path.join(METRICS_DIR, f"model_comparison_{dataset}.w-{window}.h-{horizon}.csv")
+    
+    comparison.to_csv(out_path)
+    logger.info(f"Saved model comparison: {out_path}")
+    
+    # Generate text report
+    report_lines = [
+        f"Model Comparison for {dataset} (horizon={horizon})",
+        "=" * 60,
+        comparison.to_string()
+    ]
+    report_path = os.path.join(METRICS_DIR, f"model_comparison_{dataset}.w-{window}.h-{horizon}.txt")
+    with open(report_path, 'w') as f:
+        f.write("\n".join(report_lines))
+    logger.info(f"Saved model comparison report: {report_path}")
+    
+    return comparison
+
+def build_train_command(dataset, sim_mat, window, horizon, ablation, model='msagat'):
     """Build training command with essential arguments."""
     cmd = [
         sys.executable, TRAIN_SCRIPT,
@@ -141,6 +182,7 @@ def build_train_command(dataset, sim_mat, window, horizon, ablation):
         '--window', str(window),
         '--horizon', str(horizon),
         '--ablation', ablation,
+        '--model', model,
         '--save_dir', SAVE_DIR,
         '--epochs', '1500',
         '--batch', '32',
@@ -151,27 +193,20 @@ def build_train_command(dataset, sim_mat, window, horizon, ablation):
     ]
     
     # Add CUDA if available
-    try:
-        import torch
-        if torch.cuda.is_available():
-            cmd.extend(['--cuda', '--gpu', '0'])
-    except ImportError:
-        pass
+    import torch
+    if torch.cuda.is_available():
+        cmd.extend(['--cuda', '--gpu', '0'])
     
     return cmd
 
 def run_training(cmd):
     """Execute training command."""
-    try:
-        subprocess.run(cmd, check=True)
-        logger.info(f"Training completed: {' '.join(cmd[:8])}...")
-        return True
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Training failed: {e}")
-        return False
+    subprocess.run(cmd, check=True)
+    logger.info(f"Training completed: {' '.join(cmd[:8])}...")
+    return True
 
 def run_all_experiments():
-    """Run training for all dataset/horizon/ablation combinations."""
+    """Run training for all dataset/horizon/ablation/model combinations."""
     if not os.path.exists(TRAIN_SCRIPT):
         logger.error(f"Training script not found: {TRAIN_SCRIPT}")
         return
@@ -180,14 +215,15 @@ def run_all_experiments():
     
     for dataset, sim_mat, horizons in DATASET_CONFIGS:
         for horizon in horizons:
-            for ablation in ABLATIONS:
-                # Skip if metrics already exist
-                if find_metrics_file(dataset, DEFAULT_WINDOW, horizon, ablation):
-                    logger.info(f"Skipping existing: {dataset} h={horizon} ablation={ablation}")
-                    continue
-                
-                cmd = build_train_command(dataset, sim_mat, DEFAULT_WINDOW, horizon, ablation)
-                run_training(cmd)
+            for model in MODELS:
+                for ablation in ABLATIONS:
+                    # Skip if metrics already exist
+                    if find_metrics_file(dataset, DEFAULT_WINDOW, horizon, ablation, model):
+                        logger.info(f"Skipping existing: {dataset} h={horizon} ablation={ablation} model={model}")
+                        continue
+                    
+                    cmd = build_train_command(dataset, sim_mat, DEFAULT_WINDOW, horizon, ablation, model)
+                    run_training(cmd)
 
 def main():
     """Main execution function."""
@@ -199,10 +235,15 @@ def main():
     run_all_experiments()
     
     # Generate summaries
-    logger.info("Generating ablation summaries")
+    logger.info("Generating ablation summaries and model comparisons")
     for dataset, _, horizons in DATASET_CONFIGS:
         for horizon in horizons:
-            generate_ablation_summary(dataset, DEFAULT_WINDOW, horizon)
+            # Generate ablation summaries for each model
+            for model in MODELS:
+                generate_ablation_summary(dataset, DEFAULT_WINDOW, horizon, model)
+            
+            # Generate model comparisons
+            generate_model_comparison(dataset, DEFAULT_WINDOW, horizon)
     
     logger.info("All experiments complete")
 

@@ -15,9 +15,9 @@ KERNEL_SIZE = 3
 FEATURE_CHANNELS = 16
 BOTTLENECK_DIM = 8
 
-class TrueLinformerSpatialAttentionModule(nn.Module):
+class LinformerSpatialAttentionModule(nn.Module):
     """
-    True Linformer-style Spatial Attention Module with E and F projection matrices.
+    Linformer-style Spatial Attention Module with E and F projection matrices.
     
     This implements the actual Linformer mechanism from Wang et al. (2020) that achieves
     O(N) complexity by using projection matrices E and F to reduce the key and value
@@ -33,7 +33,7 @@ class TrueLinformerSpatialAttentionModule(nn.Module):
     """
     def __init__(self, hidden_dim, num_nodes, dropout=DROPOUT, attention_heads=ATTENTION_HEADS, 
                  attention_regularization_weight=ATTENTION_REG_WEIGHT_INIT, bottleneck_dim=BOTTLENECK_DIM):
-        super(TrueLinformerSpatialAttentionModule, self).__init__()
+        super(LinformerSpatialAttentionModule, self).__init__()
         self.hidden_dim = hidden_dim
         self.heads = attention_heads
         self.head_dim = hidden_dim // self.heads
@@ -64,7 +64,7 @@ class TrueLinformerSpatialAttentionModule(nn.Module):
 
     def forward(self, x, mask=None):
         """
-        Forward pass implementing true Linformer attention with O(N) complexity.
+        Forward pass implementing Linformer attention with O(N) complexity.
         
         Args:
             x (tensor): Input node features [batch, nodes, hidden_dim]
@@ -90,12 +90,18 @@ class TrueLinformerSpatialAttentionModule(nn.Module):
         attn_scores = torch.einsum('bhnd,bhkd->bhnk', q, k_proj) / math.sqrt(self.head_dim)
         
         # Add learnable graph structure bias in the projected k×k space
+        # Following Linformer paper: apply bias directly to attention scores
         graph_bias = torch.matmul(self.graph_bias_u, self.graph_bias_v)  # [heads, k, k]
         
-        # Expand bias to match attention scores shape and add
-        # We need to broadcast [heads, k, k] to [B, heads, N, k]
-        # For simplicity, we apply the bias as an additive term in the k dimension
-        attn_scores = attn_scores + graph_bias.unsqueeze(0).unsqueeze(2)  # [B, heads, N, k]
+        # Apply graph bias to attention scores in the k-dimensional space
+        # Since attn_scores is [B, heads, N, k] and graph_bias is [heads, k, k],
+        # we need to broadcast properly. Each node attends to k projected positions.
+        # We add the bias by expanding it to match the batch and node dimensions.
+        for h in range(self.heads):
+            # Expand bias from [k, k] to [1, N, k] by taking diagonal or mean
+            # For simplicity, use only the diagonal of the k×k bias matrix
+            bias_diagonal = torch.diag(graph_bias[h])  # [k]
+            attn_scores[:, h, :, :] = attn_scores[:, h, :, :] + bias_diagonal.unsqueeze(0).unsqueeze(0)  # [B, N, k]
         
         # Apply softmax over the k dimension (not N!)
         attn_weights = F.softmax(attn_scores, dim=-1)  # [B, heads, N, k]
@@ -321,9 +327,9 @@ class DepthwiseSeparableConv1D(nn.Module):
         return x
 
 
-class MSTAGAT_Net_TrueLinformer(nn.Module):
+class MSTAGAT_Net_Linformer(nn.Module):
     """
-    Multi-Scale Temporal-Adaptive Graph Attention Network with True Linformer Attention
+    Multi-Scale Temporal-Adaptive Graph Attention Network with Linformer Attention
     
     This model implements the actual Linformer mechanism from Wang et al. (2020) with
     E and F projection matrices to achieve true O(N) complexity in attention computation.
@@ -339,7 +345,7 @@ class MSTAGAT_Net_TrueLinformer(nn.Module):
         data: Data object containing dataset information
     """
     def __init__(self, args, data):
-        super(MSTAGAT_Net_TrueLinformer, self).__init__()
+        super(MSTAGAT_Net_Linformer, self).__init__()
         self.num_nodes = data.m
         self.window = args.window
         self.horizon = args.horizon
@@ -350,24 +356,25 @@ class MSTAGAT_Net_TrueLinformer(nn.Module):
         # Feature Extraction Component
         # ----------------------------
         # Extract features from raw time series using depthwise separable convolutions
+        feature_channels = getattr(args, 'feature_channels', FEATURE_CHANNELS)
         self.feature_extractor = DepthwiseSeparableConv1D(
             in_channels=1, 
-            out_channels=FEATURE_CHANNELS,
+            out_channels=feature_channels,
             kernel_size=self.kernel_size, 
             padding=self.kernel_size // 2,
             dropout=getattr(args, 'dropout', DROPOUT)
         )
 
         # Low-rank projection of extracted features
-        self.feature_projection_low = nn.Linear(FEATURE_CHANNELS * self.window, self.bottleneck_dim)
+        self.feature_projection_low = nn.Linear(feature_channels * self.window, self.bottleneck_dim)
         self.feature_projection_high = nn.Linear(self.bottleneck_dim, self.hidden_dim)
         self.feature_norm = nn.LayerNorm(self.hidden_dim)
         self.feature_act = nn.ReLU()
 
-        # Spatial Component with True Linformer Attention
-        # -----------------------------------------------
-        # Graph attention mechanism with E and F projections for true O(N) complexity
-        self.spatial_module = TrueLinformerSpatialAttentionModule(
+        # Spatial Component with Linformer Attention
+        # -------------------------------------------
+        # Graph attention mechanism with E and F projections for O(N) complexity
+        self.spatial_module = LinformerSpatialAttentionModule(
             self.hidden_dim, num_nodes=self.num_nodes,
             dropout=getattr(args, 'dropout', DROPOUT),
             attention_heads=getattr(args, 'attention_heads', ATTENTION_HEADS),
@@ -395,7 +402,7 @@ class MSTAGAT_Net_TrueLinformer(nn.Module):
 
     def forward(self, x, idx=None):
         """
-        Forward pass of the MSTAGAT-Net model with True Linformer attention.
+        Forward pass of the MSTAGAT-Net model with Linformer attention.
         
         Args:
             x (tensor): Input time series [batch, time_window, nodes]
@@ -420,9 +427,9 @@ class MSTAGAT_Net_TrueLinformer(nn.Module):
         features = self.feature_norm(features)
         features = self.feature_act(features)
         
-        # Spatial Processing with True Linformer Attention
-        # ------------------------------------------------
-        # Apply true Linformer graph attention with O(N) complexity
+        # Spatial Processing with Linformer Attention
+        # --------------------------------------------
+        # Apply Linformer graph attention with O(N) complexity
         graph_features, attn_reg_loss = self.spatial_module(features)
         
         # Temporal Processing

@@ -1,4 +1,6 @@
 import os
+import json
+import time
 import random
 import numpy as np
 import torch
@@ -38,10 +40,10 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-# Import model and data loader
-from model1 import MSAGATNet
+# Import basic models and data loader
+from model import MSTAGAT_Net
 from data import DataBasicLoader
-from srcn.utils import *
+from utils import *
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -83,8 +85,7 @@ def train_epoch(data_loader, model, optimizer, args, device, scheduler=None):
         # Move data to device
         X = X.to(device)
         Y = Y.to(device)
-        if index is not None:
-            index = index.to(device)
+        index = index.to(device)
             
         optimizer.zero_grad()
         output, attn_reg_loss = model(X, index)
@@ -126,8 +127,7 @@ def evaluate(data_loader, model, args, device, dataset='val'):
             # Move data to device
             X = X.to(device)
             Y = Y.to(device)
-            if index is not None:
-                index = index.to(device)
+            index = index.to(device)
                 
             output, attn_reg_loss = model(X, index)
             y_expanded = Y.unsqueeze(1).expand(-1, args.horizon, -1)
@@ -145,13 +145,16 @@ def evaluate(data_loader, model, args, device, dataset='val'):
     y_pred_states = y_pred.numpy() * (data_loader.max - data_loader.min) + data_loader.min
     
     # Calculate metrics
-    rmse = np.sqrt(mean_squared_error(y_true_states.flatten(), y_pred_states.flatten()))
-    
-    try:
-        pcc, _ = pearsonr(y_true_states.flatten(), y_pred_states.flatten())
-    except:
+    y_true_flat = y_true_states.flatten()
+    y_pred_flat = y_pred_states.flatten()
+    rmse = np.sqrt(mean_squared_error(y_true_flat, y_pred_flat))
+    # Pearson without try/except: guard zero variance
+    if np.std(y_true_flat) > 0 and np.std(y_pred_flat) > 0:
+        # Use numpy corrcoef for stability
+        pcc = float(np.corrcoef(y_true_flat, y_pred_flat)[0, 1])
+    else:
         pcc = 0.0
-    
+
     return rmse, pcc
 
 # =============================================================================
@@ -160,62 +163,74 @@ def evaluate(data_loader, model, args, device, dataset='val'):
 def objective(trial):
     # Define Args class with default training parameters
     class Args:
-        dataset = trial.study.user_attrs.get('dataset', 'region785')
-        sim_mat = trial.study.user_attrs.get('sim_mat', 'region-adj-49')
-        window = trial.study.user_attrs.get('window', 20)
-        horizon = trial.study.user_attrs.get('horizon', 5)
-        train = 0.5
-        val = 0.2
-        test = 0.3
-        epochs = DEFAULT_EPOCHS
-        batch = DEFAULT_BATCH_SIZE
-        seed = trial.study.user_attrs.get('seed', 42)
-        patience = DEFAULT_PATIENCE
-        save_dir = MODELS_DIR
-        mylog = True
-        cuda = True
-        gpu = trial.study.user_attrs.get('gpu', 0)
-        max_grad_norm = 1.0
-        lr_patience = 100
-        lr_factor = 0.5
-        
-        # Add all hyperparameters being optimized
-        hidden_dim = None  # Will be set by trial.suggest
-        attn_heads = None  # Will be set by trial.suggest
-        attention_reg_weight = None  # Will be set by trial.suggest
-        dropout = None  # Will be set by trial.suggest
-        num_scales = None  # Will be set by trial.suggest
-        kernel_size = None  # Will be set by trial.suggest
-        temp_conv_out_channels = None  # Will be set by trial.suggest
-        low_rank_dim = None  # Will be set by trial.suggest
-        
-        # Required by external modules
-        extra = ''
-        label = ''
-        pcc = ''
-        result = 0
-        record = ''
+        def __init__(self):
+            self.dataset = trial.study.user_attrs.get('dataset', 'region785')
+            self.sim_mat = trial.study.user_attrs.get('sim_mat', 'region-adj-49')
+            self.window = trial.study.user_attrs.get('window', 20)
+            self.horizon = trial.study.user_attrs.get('horizon', 5)
+            self.model_type = trial.study.user_attrs.get('model_type', 'msagat')
+            self.train = 0.5
+            self.val = 0.2
+            self.test = 0.3
+            self.epochs = DEFAULT_EPOCHS
+            self.batch = DEFAULT_BATCH_SIZE
+            self.seed = trial.study.user_attrs.get('seed', 42)
+            self.patience = DEFAULT_PATIENCE
+            self.save_dir = MODELS_DIR
+            self.mylog = True
+            self.cuda = True
+            self.gpu = trial.study.user_attrs.get('gpu', 0)
+            self.max_grad_norm = 1.0
+            self.lr_patience = 100
+            self.lr_factor = 0.5
+            
+            # Initialize hyperparameter attributes (will be set by trial)
+            self.hidden_dim = None
+            self.attention_heads = None
+            self.bottleneck_dim = None
+            self.num_scales = None
+            self.kernel_size = None
+            self.feature_channels = None
+            self.dropout = None
+            self.attention_regularization_weight = None
+            
+            # Required by external modules
+            self.extra = ''
+            self.label = ''
+            self.pcc = ''
+            self.result = 0
+            self.record = ''
     
     args = Args()
-    logger.info(f"Trial {trial.number}: Starting with seed {args.seed}")
     
     # === HYPERPARAMETER SELECTION ===
-    # Structural parameters for MSAGATNet
+    # Structural parameters
     args.hidden_dim = trial.suggest_categorical("hidden_dim", [16, 32, 64])
-    args.attn_heads = trial.suggest_categorical("attn_heads", [2, 4, 8])
-    args.low_rank_dim = trial.suggest_categorical("low_rank_dim", [4, 8, 16])
+    args.attention_heads = trial.suggest_categorical("attention_heads", [2, 4, 8])
+    
+    # For Linformer, use larger bottleneck_dim to avoid dimension mismatch issues
+    if args.model_type == 'linformer':
+        args.bottleneck_dim = trial.suggest_categorical("bottleneck_dim", [8, 16, 32])
+    else:
+        args.bottleneck_dim = trial.suggest_categorical("bottleneck_dim", [4, 8, 16])
+    
     args.num_scales = trial.suggest_int("num_scales", 2, 6)
-    args.kernel_size = trial.suggest_categorical("kernel_size", [3, 5, 7, 9])
-    args.temp_conv_out_channels = trial.suggest_categorical("temp_conv_out_channels", [8, 16, 32, 64])
+    args.kernel_size = trial.suggest_categorical("kernel_size", [3, 5, 7])
+    args.feature_channels = trial.suggest_categorical("feature_channels", [8, 16, 32])
     
     # Regularization parameters
     args.dropout = trial.suggest_float("dropout", 0.1, 0.5)
-    args.attention_reg_weight = trial.suggest_float("attention_reg_weight", 1e-6, 1e-4, log=True)
-    args.gru_layers = trial.suggest_int("gru_layers", 1, 3)
+    args.attention_regularization_weight = trial.suggest_float("attention_regularization_weight", 1e-6, 1e-4, log=True)
     
     # Optimization parameters
     lr = trial.suggest_float("lr", 1e-4, 1e-3, log=True)
     weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-3, log=True)
+    
+    # Prune invalid head dimension combos early
+    if args.hidden_dim % args.attention_heads != 0:
+        raise optuna.TrialPruned()
+
+    logger.info(f"Trial {trial.number}: Starting with seed {args.seed}")
     
     # Set seeds for reproducibility
     set_seeds(args.seed)
@@ -225,12 +240,16 @@ def objective(trial):
     
     # Initialize data loader and model
     data_loader = DataBasicLoader(args)
-    model = MSAGATNet(args, data_loader)
+    if args.model_type == 'linformer':
+        from model_true_linformer import MSTAGAT_Net_Linformer
+        model = MSTAGAT_Net_Linformer(args, data_loader)
+    else:
+        model = MSTAGAT_Net(args, data_loader)
     
     # Log model parameters for debugging
     logger.info(f"Trial {trial.number} model parameters: " +
                f"hidden_dim={args.hidden_dim}, " +
-               f"attn_heads={args.attn_heads}, " +
+               f"attention_heads={args.attention_heads}, " +
                f"num_scales={args.num_scales}, " +
                f"kernel_size={args.kernel_size}, " +
                f"dropout={args.dropout:.4f}")
@@ -244,7 +263,7 @@ def objective(trial):
     # Add learning rate scheduler with reduced patience to allow faster adaptation
     scheduler = ReduceLROnPlateau(
         optimizer, mode='min', factor=args.lr_factor, 
-        patience=25, verbose=False  # Reduced patience, disable verbose output
+        patience=25  # Reduced patience
     )
     
     # Training loop
@@ -254,6 +273,10 @@ def objective(trial):
     best_epoch = 0
     no_improve_count = 0
     min_epochs = 100  # Minimum epochs before pruning to allow for more complete training
+
+    # Per-trial timeout (seconds). If exceeded, prune the trial immediately.
+    trial_timeout_seconds = trial.study.user_attrs.get('trial_timeout_seconds', 0)
+    t0 = time.perf_counter()
     
     for epoch in range(1, args.epochs + 1):
         # Training phase
@@ -274,11 +297,15 @@ def objective(trial):
                       f"LR={current_lr:.6f}, "
                       f"Train Loss={train_loss:.4f}, Val RMSE={val_rmse:.2f}")
         
-        # Report to Optuna for pruning, but only after minimum epochs
+        # Check per-trial timeout regardless of epoch count
+        if trial_timeout_seconds and (time.perf_counter() - t0) > trial_timeout_seconds:
+            logger.info(f"Trial {trial.number}: Pruned due to timeout at epoch {epoch}")
+            raise optuna.TrialPruned()
+
+        # Report to Optuna for pruning after minimum epochs
         if epoch > min_epochs:
             trial.report(val_rmse, epoch)
-            # Only prune if significantly underperforming (2000+ RMSE after 100 epochs)
-            if trial.should_prune() and val_rmse > 2000:
+            if trial.should_prune():
                 logger.info(f"Trial {trial.number}: Pruned at epoch {epoch} with RMSE={val_rmse:.2f}")
                 raise optuna.TrialPruned()
         
@@ -314,8 +341,8 @@ def objective(trial):
         logger.info(f"Trial {trial.number} test metrics: RMSE={test_rmse:.2f}, PCC={test_pcc:.4f}")
         
         # Store minimal test metrics
-        trial.set_user_attr("test_rmse", float(test_rmse))
-        trial.set_user_attr("test_pcc", float(test_pcc))
+        trial.set_user_attr("test_rmse", test_rmse)
+        trial.set_user_attr("test_pcc", test_pcc)
     
     # Store minimal trial attributes
     trial.set_user_attr("best_rmse", best_val_rmse)
@@ -340,23 +367,24 @@ def setup_study(args):
     storage_path = os.path.join(OUTPUT_DIR, f"{study_name}.pkl")
     
     # Setup study based on whether continuing from existing or creating new
+    # Select pruner
+    if args.pruner == 'median':
+        pruner = optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=25)
+    elif args.pruner == 'hyperband':
+        # Use epochs as the resource; reduction factor 3 is a common default
+        pruner = optuna.pruners.HyperbandPruner(min_resource=50, max_resource=args.epochs, reduction_factor=3)
+    else:
+        pruner = optuna.pruners.NopPruner()
+
     if args.continue_from is not None and os.path.exists(args.continue_from):
-        try:
-            study = joblib.load(args.continue_from)
-            logger.info(f"Loaded existing study from {args.continue_from}")
-        except Exception as e:
-            logger.error(f"Error loading study: {str(e)}")
-            study = optuna.create_study(
-                study_name=study_name,
-                direction="minimize",
-                pruner=optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=25)
-            )
+        study = joblib.load(args.continue_from)
+        logger.info(f"Loaded existing study from {args.continue_from}")
     else:
         # Create new study
         study = optuna.create_study(
             study_name=study_name,
             direction="minimize",
-            pruner=optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=25)
+            pruner=pruner
         )
     
     # Add minimal study user attributes
@@ -365,7 +393,11 @@ def setup_study(args):
     study.set_user_attr("sim_mat", args.sim_mat)
     study.set_user_attr("window", args.window)
     study.set_user_attr("horizon", args.horizon)
+    study.set_user_attr("model_type", args.model)
     study.set_user_attr("gpu", args.gpu)
+    study.set_user_attr("trial_timeout_seconds", args.trial_timeout_seconds)
+    study.set_user_attr("pruner", args.pruner)
+    study.set_user_attr("epochs", args.epochs)
     
     return study, study_name, storage_path
 
@@ -389,8 +421,21 @@ if __name__ == "__main__":
                         help='Window size')
     parser.add_argument('--horizon', type=int, default=5,
                         help='Forecast horizon')
+    parser.add_argument('--model', type=str, default='msagat', 
+                        choices=['msagat', 'linformer'],
+                        help='Model type to optimize (msagat or linformer)')
     parser.add_argument('--gpu', type=int, default=0,
                         help='GPU index to use')
+    parser.add_argument('--epochs', type=int, default=DEFAULT_EPOCHS,
+                        help='Max training epochs per trial')
+    # New CLI options
+    parser.add_argument('--pruner', type=str, default='median', choices=['median', 'hyperband', 'none'],
+                        help='Optuna pruner to use (default: median)')
+    parser.add_argument('--trial-timeout-seconds', type=int, default=0,
+                        help='Per-trial timeout in seconds (0 disables)')
+    parser.add_argument('--post-eval-seeds', type=int, default=0,
+                        help='After optimization, re-train best params with this many seeds and summarize test metrics')
+
     args = parser.parse_args()
     
     # Set global random seed
@@ -402,35 +447,147 @@ if __name__ == "__main__":
     logger.info(f"Study '{study_name}'")
     logger.info(f"Starting optimization with {args.trials} trials...")
     
-    try:
-        # Run optimization
-        if args.parallel > 1:
-            # Parallel optimization
-            study.optimize(objective, n_trials=args.trials, n_jobs=args.parallel)
-        else:
-            # Single process
-            study.optimize(objective, n_trials=args.trials)
-    except KeyboardInterrupt:
-        logger.info("Optimization interrupted by user!")
-    finally:
-        # Save the study
-        joblib.dump(study, storage_path)
-        logger.info(f"Study saved to {storage_path}")
+    # Run optimization
+    if args.parallel > 1:
+        study.optimize(objective, n_trials=args.trials, n_jobs=args.parallel)
+    else:
+        study.optimize(objective, n_trials=args.trials)
+
+    # Save the study
+    joblib.dump(study, storage_path)
+    logger.info(f"Study saved to {storage_path}")
     
     logger.info("\nStudy completed!")
     
-    # Get best trial with error handling
-    try:
-        best_trial = study.best_trial
-        
-        # Log best trial information
-        logger.info("Best trial:")
-        logger.info(f"  Trial Number: {best_trial.number}")
-        logger.info(f"  RMSE: {best_trial.value:.4f}")
-        logger.info(f"  Test RMSE: {best_trial.user_attrs.get('test_rmse', 'Not recorded')}")
-        logger.info("  Hyperparameters:")
-        for key, value in best_trial.params.items():
-            logger.info(f"    {key}: {value}")
-            
-    except ValueError as e:
-        logger.warning(f"Could not get best trial: {str(e)}")
+    # Get best trial and log
+    best_trial = study.best_trial
+    logger.info("Best trial:")
+    logger.info(f"  Trial Number: {best_trial.number}")
+    logger.info(f"  RMSE: {best_trial.value:.4f}")
+    logger.info(f"  Test RMSE: {best_trial.user_attrs.get('test_rmse', 'Not recorded')}")
+    logger.info("  Hyperparameters:")
+    for key, value in best_trial.params.items():
+        logger.info(f"    {key}: {value}")
+
+    # Save JSON summary for quick table generation
+    summary = {
+        "study_name": study_name,
+        "dataset": args.dataset,
+        "sim_mat": args.sim_mat,
+        "window": args.window,
+        "horizon": args.horizon,
+        "model": args.model,
+        "trials_total": len(study.trials),
+        "trials_completed": len([t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]),
+        "trials_pruned": len([t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED]),
+        "best_trial_number": best_trial.number,
+        "best_val_rmse": best_trial.value,
+        "best_epoch": best_trial.user_attrs.get("best_epoch"),
+        "best_params": best_trial.params,
+        "test_rmse": best_trial.user_attrs.get("test_rmse"),
+        "test_pcc": best_trial.user_attrs.get("test_pcc"),
+        "pruner": study.user_attrs.get("pruner"),
+        "trial_timeout_seconds": study.user_attrs.get("trial_timeout_seconds"),
+    }
+    json_path = os.path.join(OUTPUT_DIR, f"{study_name}.json")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+    logger.info(f"Summary saved to {json_path}")
+
+    # Optional: re-train best hyperparameters across multiple seeds and summarize
+    if args.post_eval_seeds and args.post_eval_seeds > 0:
+        seeds = [args.seed + i for i in range(args.post_eval_seeds)]
+        test_rmses = []
+        test_pccs = []
+
+        for s in seeds:
+            set_seeds(s)
+
+            class EvalArgs:
+                def __init__(self):
+                    self.dataset = args.dataset
+                    self.sim_mat = args.sim_mat
+                    self.window = args.window
+                    self.horizon = args.horizon
+                    self.model_type = args.model
+                    self.train = 0.5
+                    self.val = 0.2
+                    self.test = 0.3
+                    self.epochs = DEFAULT_EPOCHS
+                    self.batch = DEFAULT_BATCH_SIZE
+                    self.seed = s
+                    self.patience = DEFAULT_PATIENCE
+                    self.save_dir = MODELS_DIR
+                    self.mylog = True
+                    self.cuda = True
+                    self.gpu = args.gpu
+                    self.max_grad_norm = 1.0
+                    self.lr_patience = 100
+                    self.lr_factor = 0.5
+
+                    # hyperparameters
+                    self.hidden_dim = best_trial.params["hidden_dim"]
+                    self.attention_heads = best_trial.params["attention_heads"]
+                    self.bottleneck_dim = best_trial.params["bottleneck_dim"]
+                    self.num_scales = best_trial.params["num_scales"]
+                    self.kernel_size = best_trial.params["kernel_size"]
+                    self.feature_channels = best_trial.params["feature_channels"]
+                    self.dropout = best_trial.params["dropout"]
+                    self.attention_regularization_weight = best_trial.params["attention_regularization_weight"]
+
+                    # Not optimized here; fixed reasonable defaults
+                    self.extra = ''
+                    self.label = ''
+                    self.pcc = ''
+                    self.result = 0
+                    self.record = ''
+
+            eargs = EvalArgs()
+            device = torch.device(f'cuda:{eargs.gpu}' if eargs.cuda and torch.cuda.is_available() else 'cpu')
+            data_loader = DataBasicLoader(eargs)
+            if eargs.model_type == 'linformer':
+                from model_true_linformer import MSTAGAT_Net_Linformer
+                model = MSTAGAT_Net_Linformer(eargs, data_loader)
+            else:
+                model = MSTAGAT_Net(eargs, data_loader)
+            model = model.to(device)
+
+            optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+                                   lr=best_trial.params["lr"],
+                                   weight_decay=best_trial.params["weight_decay"])
+            scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=eargs.lr_factor, patience=25)
+
+            best_val = float('inf')
+            best_path = os.path.join(MODELS_DIR, f"post_eval_seed_{s}_best.pt")
+            no_improve = 0
+            for epoch in range(1, eargs.epochs + 1):
+                _ = train_epoch(data_loader, model, optimizer, eargs, device)
+                val_rmse, _ = evaluate(data_loader, model, eargs, device, dataset='val')
+                scheduler.step(val_rmse)
+                if val_rmse < best_val:
+                    best_val = val_rmse
+                    no_improve = 0
+                    torch.save(model.state_dict(), best_path)
+                else:
+                    no_improve += 1
+                if no_improve >= eargs.patience and epoch > 100:
+                    break
+
+            model.load_state_dict(torch.load(best_path, map_location=device))
+            test_rmse, test_pcc = evaluate(data_loader, model, eargs, device, dataset='test')
+            test_rmses.append(test_rmse)
+            test_pccs.append(test_pcc)
+
+        post_eval = {
+            "seeds": seeds,
+            "test_rmse_mean": float(np.mean(test_rmses)) if test_rmses else None,
+            "test_rmse_std": float(np.std(test_rmses)) if test_rmses else None,
+            "test_pcc_mean": float(np.mean(test_pccs)) if test_pccs else None,
+            "test_pcc_std": float(np.std(test_pccs)) if test_pccs else None,
+        }
+
+        # Update and resave JSON summary
+        summary["post_eval"] = post_eval
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(summary, f, indent=2)
+        logger.info(f"Post-eval summary updated in {json_path}")

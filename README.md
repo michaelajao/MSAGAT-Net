@@ -1,18 +1,31 @@
-# MSAGATNet: Multi-Scale Adaptive Graph Attention Network for Epidemic Forecasting
+# MSAGAT-Net: Multi-Scale Temporal-Adaptive Graph Attention Network
 
-MSAGATNet is a lightweight spatiotemporal deep learning framework specifically designed for epidemic forecasting across multiple geographical regions. The model combines efficient graph attention for spatial relationships with multi-scale temporal processing for accurate time-series forecasting.
+A sophisticated spatiotemporal deep learning framework designed for epidemic forecasting across multiple geographical regions. MSAGAT-Net combines efficient graph attention mechanisms with multi-scale temporal processing to achieve state-of-the-art forecasting accuracy with linear computational complexity.
 
-![MSAGAT-Net Architecture](report/figures/msagat_net_overview.png)
+## 🚀 Key Features
 
-## Model Architecture
+- **Two Model Variants**: Standard MSAGAT-Net and Linformer-based implementation
+- **Linear Attention Complexity**: O(N) instead of O(N²) for large-scale applications  
+- **Multi-Scale Temporal Processing**: Captures patterns at different time scales
+- **Automated Hyperparameter Optimization**: Built-in Optuna-based optimization
+- **Comprehensive Evaluation**: Extensive metrics and visualization tools
+- **Production Ready**: Clean, modular code with extensive documentation
 
-MSAGATNet consists of three key components:
+## 🏗️ Model Architecture
 
-1. **Efficient Adaptive Graph Attention Module (EAGAM)**: Captures spatial dependencies between regions with linear complexity O(N) instead of quadratic O(N²)
-2. **Dilated Multi-Scale Temporal Module (DMTM)**: Processes time-series patterns at different temporal resolutions using dilated convolutions
-3. **Progressive Prediction Module (PPM)**: Enables region-aware multi-step forecasting with iterative refinement
+### Standard MSAGAT-Net
 
-## Key Features
+1. **Spatial Attention Module**: Low-rank graph attention with learnable bias and O(N) complexity
+2. **Multi-Scale Temporal Module**: Dilated convolutions for temporal pattern extraction  
+3. **Progressive Prediction Module**: Multi-step forecasting with adaptive refinement
+
+### Linformer MSAGAT-Net
+
+1. **Linformer Attention**: True O(N) complexity with E/F projection matrices from Wang et al. (2020)
+2. **Enhanced Spatial Processing**: Projected attention in lower-dimensional space (k << N)
+3. **Efficient Implementation**: Maintains accuracy while reducing computational cost
+
+## 📊 Performance Highlights
 
 - **Linear-time Attention Complexity**: Uses linearized attention with the ELU+1 kernel trick to achieve O(N) complexity
 - **Low-Rank Factorization**: Employs parameter-efficient factorized representations in attention and projection layers
@@ -31,32 +44,70 @@ Our experiments across multiple epidemic datasets show:
 
 ![Performance Across Horizons](report/figures/RMSE_vs_horizon_w20.png)
 
-## Datasets
+## 📊 Available Datasets
 
-The repository includes several epidemic datasets:
-- Japan COVID-19 dataset (`japan.txt`) with adjacency information (`japan-adj.txt`)
-- Spain COVID-19 dataset (`spain-covid.txt`) with adjacency information (`spain-adj.txt`)
-- Australia COVID-19 dataset (`australia-covid.txt`) with adjacency information (`australia-adj.txt`)
-- UK NHS regions dataset (`nhs_timeseries.txt`) with adjacency information (`nhs-adj.txt`)
-- US state-level dataset (`state360.txt`) with adjacency information (`state-adj-49.txt`, `state-adj-50.txt`)
-- US region-level dataset (`region785.txt`) with adjacency information (`region-adj.txt`)
+The repository includes multiple epidemic forecasting datasets:
 
-## Quick Start
+| Dataset | Description | Nodes | File | Adjacency |
+|---------|-------------|-------|------|-----------|
+| Japan COVID-19 | Prefecture-level data | 47 | `japan.txt` | `japan-adj.txt` |
+| Australia COVID-19 | State-level data | 8 | `australia-covid.txt` | `australia-adj.txt` |
+| Spain COVID-19 | Regional data | 17 | `spain-covid.txt` | `spain-adj.txt` |
+| UK NHS | Regional health data | 142 | `nhs_timeseries.txt` | `nhs-adj.txt` |
+| US States | State-level data | 49/50 | `state360.txt` | `state-adj-49.txt` |
+| US Regions | Regional data | 785 | `region785.txt` | `region-adj.txt` |
+| LTLA | Local authority data | - | `ltla_timeseries.txt` | `ltla-adj.txt` |
 
-### Installation
+## 🔧 Model Configuration
+
+### Core Hyperparameters
+
+| Parameter | Description | Default | Optimized Range |
+|-----------|-------------|---------|-----------------|
+| `--hidden_dim` | Hidden dimension size | 32 | [16, 32, 64] |
+| `--attention_heads` | Number of attention heads | 4 | [2, 4, 8] |
+| `--bottleneck_dim` | Low-rank projection dimension | 8 | [4, 8, 16, 32] |
+| `--num_scales` | Temporal scales count | 4 | [2, 6] |
+| `--kernel_size` | Convolution kernel size | 3 | [3, 5, 7] |
+| `--feature_channels` | Feature extractor channels | 16 | [8, 16, 32] |
+| `--dropout` | Dropout probability | 0.2 | [0.1, 0.5] |
+| `--attention_regularization_weight` | Attention L1 regularization | 1e-5 | [1e-6, 1e-4] |
+
+### Training Parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `--lr` | Learning rate | 1e-3 |
+| `--weight_decay` | L2 regularization | 5e-4 |
+| `--batch` | Batch size | 32 |
+| `--epochs` | Maximum epochs | 1500 |
+| `--patience` | Early stopping patience | 100 |
+| `--window` | Input sequence length | 20 |
+| `--horizon` | Prediction horizon | 5 |
+
+## 🛠️ Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/MSAGAT-Net.git
 cd MSAGAT-Net
 
-# Install dependencies
-pip install -r requirements.txt
+# Create conda environment
+conda create -n msagat python=3.11
+conda activate msagat
+
+# Install PyTorch with CUDA support
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# Install additional dependencies
+pip install optuna scikit-learn scipy pandas matplotlib seaborn tensorboard
 ```
 
-### Training
+## 🎯 Quick Start
 
-Train the model with optimal parameters:
+### Basic Training
+
+Train the standard MSAGAT-Net model:
 
 ```bash
 python src/train.py \
@@ -64,18 +115,72 @@ python src/train.py \
   --sim_mat japan-adj \
   --window 20 \
   --horizon 5 \
-  --hidden_dim 16 \
-  --attn_heads 8 \
-  --low_rank_dim 6 \
-  --num_scales 5 \
-  --kernel_size 3 \
-  --temp_conv_out_channels 12 \
-  --dropout 0.249 \
-  --attention_reg_weight 1e-3 \
-  --lr 0.001 \
-  --weight_decay 5e-4 \
+  --model msagat \
   --cuda \
+  --gpu 0 \
+  --epochs 1500 \
+  --batch 32 \
+  --lr 1e-3 \
+  --hidden_dim 32 \
+  --attention_heads 4 \
+  --bottleneck_dim 8 \
+  --save_dir save \
   --mylog
+```
+
+Train the Linformer variant:
+
+```bash
+python src/train.py \
+  --dataset japan \
+  --sim_mat japan-adj \
+  --window 20 \
+  --horizon 5 \
+  --model linformer \
+  --cuda \
+  --gpu 0 \
+  --epochs 1500 \
+  --batch 32 \
+  --lr 1e-3 \
+  --hidden_dim 32 \
+  --attention_heads 2 \
+  --bottleneck_dim 16 \
+  --save_dir save
+```
+
+### Hyperparameter Optimization
+
+Find optimal parameters automatically using Optuna:
+
+```bash
+# Optimize MSAGAT-Net
+python src/optimize.py \
+  --trials 50 \
+  --dataset japan \
+  --sim-mat japan-adj \
+  --window 20 \
+  --horizon 5 \
+  --model msagat \
+  --gpu 0
+
+# Optimize Linformer variant  
+python src/optimize.py \
+  --trials 50 \
+  --dataset japan \
+  --sim-mat japan-adj \
+  --window 20 \
+  --horizon 5 \
+  --model linformer \
+  --gpu 0
+```
+
+### Batch Experiments
+
+Run systematic experiments across multiple configurations:
+
+```bash
+# Run experiments across all datasets and horizons
+python src/run_experiments.py
 ```
 
 ```bash
@@ -280,22 +385,37 @@ This script produces:
 1. Performance comparison plots across datasets and forecast horizons
 2. Component importance visualizations showing which model parts contribute most
 
-## Key Parameters
+## 🧪 Optimization Results
 
-- `--dataset`: Name of the dataset (e.g., `japan`, `region785`, `state360`)
-- `--sim_mat`: Name of the adjacency matrix file (e.g., `japan-adj`)
-- `--window`: Input window size (default: `20`)
-- `--horizon`: Prediction horizon (default: `5`)
-- `--hidden_dim`: Hidden dimension size (default: `16`)
-- `--attn_heads`: Number of attention heads (default: `8`)
-- `--low_rank_dim`: Dimension for low-rank decompositions (default: `6`)
-- `--num_scales`: Number of temporal scales in multi-scale module (default: `5`)
-- `--kernel_size`: Size of temporal convolution kernel (default: `3`)
-- `--temp_conv_out_channels`: Output channels for temporal convolution (default: `12`)
-- `--dropout`: Dropout rate (default: `0.249`)
-- `--attention_reg_weight`: Weight for attention regularization (default: `1e-3`)
-- `--lr`: Learning rate (default: `0.001`)
-- `--weight_decay`: Weight decay (default: `5e-4`)
+Recent hyperparameter optimization revealed optimal configurations for both model variants:
+
+### MSAGAT-Net (Japan Dataset, Horizon=5)
+- **Best Validation RMSE**: 989.07
+- **Best Test RMSE**: 1171.08
+- **Optimal Configuration**:
+  - `hidden_dim`: 16
+  - `attention_heads`: 8  
+  - `bottleneck_dim`: 8
+  - `num_scales`: 5
+  - `kernel_size`: 5
+  - `dropout`: 0.255
+  - `lr`: 0.000579
+  - `weight_decay`: 2.38e-05
+
+### Linformer MSAGAT-Net (Japan Dataset, Horizon=5)
+- **Best Validation RMSE**: 960.69
+- **Best Test RMSE**: 1069.27  
+- **Optimal Configuration**:
+  - `hidden_dim`: 32
+  - `attention_heads`: 2
+  - `bottleneck_dim`: 16
+  - `num_scales`: 3
+  - `kernel_size`: 3
+  - `dropout`: 0.137
+  - `lr`: 0.000933
+  - `weight_decay`: 1.19e-05
+
+The Linformer variant shows **superior performance** with lower RMSE while maintaining computational efficiency.
 
 ## Extended Model Variants
 
@@ -416,31 +536,42 @@ The visualization outputs include:
 
 Check the `report/figures` directory for generated visualizations after training.
 
-## Extended Project Structure
-
-With the addition of the new models, the project structure has been expanded:
+## 📁 Project Structure
 
 ```
 MSAGAT-Net/
 ├── data/                   # Epidemic datasets and adjacency matrices
-├── optim_results/          # Hyperparameter optimization outputs
-├── report/figures/         # Generated visualizations
-├── results/                # Evaluation metrics and model comparisons
-├── save/                   # Saved model checkpoints 
-├── src/                    # Source code
-│   ├── model.py            # Original MSAGAT-Net implementation
-│   ├── location_aware_model.py  # LocationAwareMSAGAT_Net implementation
-│   ├── dynagraphatnet.py   # DynaGraphNet implementation
-│   ├── AFGNet.py           # AFGNet implementation  
-│   ├── train.py            # Unified training script for all models
-│   ├── train_ablation.py   # Ablation study script
-│   ├── analyze_ablations.py# Ablation analysis script
-│   ├── optimize.py         # Hyperparameter optimization script
-│   └── utils.py            # Utility functions
-├── tensorboard/            # TensorBoard logs
-├── compare_models.py       # Model comparison script
-└── generate_paper_visualizations.py  # Visualization script
+├── optim_results/          # Hyperparameter optimization outputs  
+├── report/
+│   ├── figures/           # Generated visualizations
+│   └── results/           # Evaluation metrics and results
+├── save/                  # Model checkpoints
+├── save_all/              # All model variants checkpoints
+├── src/                   # Source code
+│   ├── model.py           # Standard MSAGAT-Net implementation
+│   ├── model_true_linformer.py  # Linformer MSAGAT-Net implementation
+│   ├── train.py           # Unified training script
+│   ├── optimize.py        # Hyperparameter optimization (Optuna)
+│   ├── run_experiments.py # Batch experiment runner
+│   ├── ablation.py        # Ablation study models
+│   ├── data.py            # Data loading utilities
+│   └── utils.py           # Helper functions
+├── tensorboard/           # TensorBoard training logs
+└── old/                   # Legacy code and results
 ```
+
+## 📈 Evaluation Metrics
+
+The framework tracks comprehensive evaluation metrics:
+
+- **RMSE**: Root Mean Square Error
+- **MAE**: Mean Absolute Error
+- **PCC**: Pearson Correlation Coefficient  
+- **MAPE**: Mean Absolute Percentage Error
+- **R²**: Coefficient of Determination
+- **Peak Error**: Maximum absolute error across regions
+
+All metrics are computed both globally and per-region for detailed analysis.
 
 ## Citation
 

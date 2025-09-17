@@ -374,9 +374,9 @@ class MSTAGAT_Net(nn.Module):
             padding=self.kernel_size // 2,
             dropout=getattr(args, 'dropout', DROPOUT)
         )
-
         # Low-rank projection of extracted features
-        self.feature_projection_low = nn.Linear(FEATURE_CHANNELS * self.window, self.bottleneck_dim)
+        # Use the configured feature_channels to match the output of the extractor
+        self.feature_projection_low = nn.Linear(feature_channels * self.window, self.bottleneck_dim)
         self.feature_projection_high = nn.Linear(self.bottleneck_dim, self.hidden_dim)
         self.feature_norm = nn.LayerNorm(self.hidden_dim)
         self.feature_act = nn.ReLU()
