@@ -41,22 +41,19 @@
 
 % \markboth{IEEE Transactions on ...}{}
 
-\author{
-    \IEEEauthorblockN{
-        Michael Ajao-olarinoye\IEEEauthorrefmark{1},~\IEEEmembership{Member,~IEEE,}
-        Vasile Palade\IEEEauthorrefmark{1},~\IEEEmembership{Senior Member,~IEEE,}
-        % Seyed Mosavi\IEEEauthorrefmark{1},~\IEEEmembership{Member,~IEEE,},
-        Fei He\IEEEauthorrefmark{1}, 
-        Zindoga Mukandavire\IEEEauthorrefmark{1},
-        \textit{and}
-        Petra Wark\IEEEauthorrefmark{2}
-    }\\
-    \IEEEauthorblockA{\IEEEauthorrefmark{1}Centre for Computational Science and Mathematical Modelling, Coventry University, Coventry, United Kingdom}\\
-    \IEEEauthorblockA{\IEEEauthorrefmark{2}Research Institute for Health and Wellbeing, Coventry University, Coventry, United Kingdom}\\
-    \IEEEauthorblockA{\IEEEauthorrefmark{3}Institute of Applied Research and Technology, Dubai International Academic City Dubai - UAE}
-    % email for olarinoyem@coventry.ac.uk
-    \IEEEauthorblockA{\{Email: olarinoyem@coventry.ac.uk\}}
+\author{%
+  Michael Ajao-olarinoye,~\IEEEmembership{Member, IEEE}, 
+  Vasile Palade,~\IEEEmembership{Senior Member, IEEE}, 
+  Fei He, 
+  Petra Wark, 
+  and Zindoga Mukandavire%
+  \thanks{M. Ajao-olarinoye, V. Palade, and F. He are with the Centre for Computational Science and Mathematical Modelling, Coventry University, Coventry, U.K. (e-mail: olarinoyem@coventry.ac.uk).}%
+  \thanks{P. Wark is with the Research Institute for Health and Wellbeing, Coventry University, Coventry, U.K.}%
+  \thanks{Z. Mukandavire is with the Institute of Applied Research and Technology, Dubai International Academic City, Dubai, United Arab Emirates.}%
 }
+% \markboth{IEEE Transactions on <Journal>,~Vol.~XX, No.~X, <Month>~<Year>}%
+% {Ajao-olarinoye \MakeLowercase{\textit{et al.}}: <Short Paper Title>}
+
 
 \markboth{IEEE Journal of ......,~Vol.~XX, No.~YY, Month~Year}{}
 
@@ -66,7 +63,7 @@
 
 % ---------- ABSTRACT ----------
 \begin{abstract}
-We present MSAGAT-Net, a novel Multi-Scale Temporal Graph Attention Network designed for accurate spatiotemporal epidemic forecasting across multiple geographical regions. Our approach addresses three critical challenges in epidemic prediction: (1) capturing complex spatial dependencies between regions with linear-time complexity, (2) modeling multi-scale temporal patterns in disease transmission, and (3) generating reliable multi-horizon forecasts. MSAGAT-Net introduces three key innovations: an Efficient Adaptive Graph Attention Module (EAGAM) that achieves O(N) complexity through linearized attention mechanisms and low-rank decomposition, a Dilated Multi-Scale Temporal Module (DMTM) that captures both short-term fluctuations and long-term trends, and a Progressive Prediction Module (PPM) for iterative multi-step forecasting. Through extensive experiments on diverse epidemic datasets spanning influenza and COVID-19 across multiple countries, MSAGAT-Net consistently outperforms state-of-the-art methods, achieving up to 23.7\% lower RMSE and 15.8\% higher correlation coefficients. Our ablation studies reveal disease-specific and horizon-dependent component importance patterns, providing insights into the varying spatiotemporal dynamics of different epidemics. The model's efficiency and interpretability make it particularly suitable for real-time public health surveillance and decision support systems.
+Accurate and scalable spatiotemporal epidemic forecasting is a critical yet challenging task for public health systems, as traditional models often struggle with computational complexity and capturing multi-scale temporal dynamics. This paper introduces MSAGAT-Net, a novel Multi-Scale Temporal Graph Attention Network designed to overcome these limitations. Our architecture integrates four complementary innovations which are an efficient feature extraction module using depthwise separable convolutions, an Efficient Adaptive Graph Attention Module (EAGAM) that achieves linear O(N) complexity through low-rank bottleneck projections and linearized attention computation while learning interpretable inter-regional dependencies; a Multi-Scale Temporal Feature Module (MTFM) that captures dynamics across multiple temporal resolutions using adaptive dilated convolutions; and a Progressive Prediction Refinement Module (PPRM) that stabilizes multi-step predictions by combining model-based forecasts with trend-based extrapolations. Extensive evaluations on seven diverse epidemic datasets, including influenza and COVID-19 across multiple countries, demonstrate that MSAGAT-Net consistently outperforms state-of-the-art methods, achieving up to a 28.94\% improvement in RMSE. Comprehensive ablation studies reveal disease-specific and horizon-dependent importance of each component; for instance, spatial attention is critical for long-horizon influenza forecasts, while progressive refinement is essential for COVID-19 predictions. With its linear computational complexity and interpretable attention mechanisms, MSAGAT-Net offers a practical and powerful tool for real-time epidemic surveillance and decision support.
 \end{abstract}
 
 % ---------- INDEX TERMS ----------
@@ -89,10 +86,11 @@ In this paper we present MSAGAT-Net (Multi‑Scale Temporal Graph Attention Netw
 
 Our contributions are as follows:
 \begin{enumerate}
-\item We propose a computationally efficient graph attention mechanism that maintains modeling capacity while significantly reducing computational complexity through linearized attention and low-rank decomposition
-\item We develop a multi-scale temporal processing framework that adaptively combines features from different temporal resolutions
-\item We demonstrate through extensive experiments that MSAGAT-Net consistently outperforms state-of-the-art methods across diverse epidemic datasets
-\item We provide comprehensive ablation studies revealing disease-specific and horizon-dependent patterns in component importance
+\item We propose a computationally efficient graph attention mechanism that achieves linear O(N) complexity through low-rank bottleneck projections and linearized attention computation, avoiding the quadratic complexity of standard attention while maintaining modeling capacity for large-scale epidemic forecasting
+\item We develop a multi-scale temporal processing framework using adaptive dilated convolutions that efficiently captures epidemic dynamics across multiple temporal resolutions from immediate fluctuations to seasonal trends
+\item We introduce a progressive prediction refinement module that stabilizes multi-step forecasting by adaptively combining model-based predictions with trend-based extrapolations
+\item We demonstrate through extensive experiments on seven diverse epidemic datasets that MSAGAT-Net consistently outperforms state-of-the-art methods, achieving up to 28.94\% improvement in RMSE
+\item We provide comprehensive ablation studies revealing disease-specific and horizon-dependent patterns, showing that spatial attention is critical for long-horizon influenza forecasts while progressive refinement is essential for COVID-19 predictions
 \end{enumerate}
 
 
@@ -1095,6 +1093,71 @@ These baselines represent a diverse range of approaches to spatiotemporal foreca
 \subsection{Results and Discussion}
 \label{sec:results}
 
+Table~\ref{tab:performance_table} presents a comprehensive comparison of our proposed MSAGAT-Net model against state-of-the-art baseline approaches across three influenza datasets (Japan-Prefectures, US-Regions, and US-States) and four forecast horizons (3, 5, 10, and 15 days ahead). Furthermore, Table~\ref{tab:performance_table_others} shows the performance comparison on four COVID-19 datasets (Australia-COVID, LTLA-TimeSeries, NHS-TimeSeries and Spain-COVID) for horizons of 3, 7, and 14 days ahead.
+
+\begin{table*}[htbp]
+    \centering
+    \caption{RMSE and PCC performance of different methods on three datasets (horizon = 3, 5, 10, 15). Bold = best, underline = second best.}
+    \label{tab:performance_table}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{llrrrrrrrrrrrr}
+        \toprule
+        \multirow{2}{*}{Method} & \multirow{2}{*}{Metric}
+            & \multicolumn{4}{c}{Japan–Prefectures}
+            & \multicolumn{4}{c}{US–Regions}
+            & \multicolumn{4}{c}{US–States} \\
+        \cmidrule(lr){3-6} \cmidrule(lr){7-10} \cmidrule(lr){11-14}
+         &  & 3 & 5 & 10 & 15 & 3 & 5 & 10 & 15 & 3 & 5 & 10 & 15 \\
+        \midrule
+        DCRNN       & RMSE & 1938 & 2149 & 2150 & 2063 & 1062 & 1363 & 1619 & 1647 & 227 & 281 & 313 & 343 \\
+                    & PCC  & 0.420 & 0.180 & 0.497 & 0.531 & 0.799 & 0.695 & \underline{0.641} & \underline{0.585} & 0.896 & 0.852 & 0.833 & 0.775 \\
+        \midrule
+        LSTNet      & RMSE & 1911 & 2113 & 2078 & 1799 &  909 & 1091 & 1265 & 1374 & 280 & 295 & 315 & 331 \\
+                    & PCC  & 0.443 & 0.220 & 0.347 & 0.585 & 0.785 & 0.660 & 0.568 & 0.437 & 0.825 & 0.796 & 0.793 & 0.782 \\
+        \midrule
+        CNNRNN-Res  & RMSE & 1878 & 2144 & 2200 & 2036 &  914 & 1102 & 1471 & \underline{1270} & 270 & 308 & 285 & 305 \\
+                    & PCC  & 0.455 & 0.155 & 0.267 & 0.480 & 0.784 & 0.654 & 0.525 & 0.527 & 0.825 & 0.786 & 0.818 & 0.794 \\
+        \midrule
+        Cola-GNN    & RMSE & \underline{1177} & 1333 & \underline{1506} & 1771 &  851 & 1162 & 1609 & 1326 & 199 & \underline{226} & \textbf{248} & 245 \\
+                    & PCC  & \underline{0.871} & 0.847 & \underline{0.791} & 0.667 & 0.837 & 0.691 & 0.460 & 0.473 & 0.909 & \underline{0.872} & \textbf{0.874} & \textbf{0.872} \\
+        \midrule
+        EpiGNN      & RMSE & 1327 & \underline{1156} & 1622 & \underline{1507} & \textbf{622} & \textbf{779} & \underline{1098} & \textbf{1076} & \textbf{166} & \textbf{203} & 259 & \textbf{136} \\
+                    & PCC  & 0.802 & \underline{0.871} & 0.628 & \underline{0.701} & \underline{0.902} & \textbf{0.847} & 0.636 & \textbf{0.672} & \underline{0.930} & \textbf{0.907} & \underline{0.851} & \underline{0.851} \\
+        \midrule
+        MSAGAT-Net & RMSE & \textbf{1045} & \textbf{1087} & \textbf{1338} & \textbf{1338} & \underline{650} & \underline{832} & \textbf{999} & 1358 & \underline{168} & 236 & \underline{250} & \underline{243} \\
+                    & PCC  & \textbf{0.885} & \textbf{0.884} & \textbf{0.827} & \textbf{0.778} & \textbf{0.911} & \underline{0.840} & \textbf{0.763} & 0.478 & \textbf{0.931} & 0.860 & 0.841 & 0.838 \\
+        \bottomrule
+    \end{tabular}%
+    }
+\end{table*}
+
+
+\begin{table*}[htbp]
+    \centering
+    \caption{RMSE performance of different methods on four datasets (horizon = 3, 7, 14). Bold = best, underline = second best.}
+    \label{tab:performance_table_others}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{l l ccc ccc ccc ccc}
+        \toprule
+        \multirow{2}{*}{Method} & \multirow{2}{*}{Metric}
+            & \multicolumn{3}{c}{Australia-COVID}
+            & \multicolumn{3}{c}{LTLA-Timeseries}
+            & \multicolumn{3}{c}{NHS-Timeseries}
+            & \multicolumn{3}{c}{Spain-COVID} \\
+        \cmidrule(lr){3-5}\cmidrule(lr){6-8}\cmidrule(lr){9-11}\cmidrule(lr){12-14}
+         &  & \;3\; & \;7\; & \;14\;  & \;3\; & \;7\; & \;14\;  & \;3\;  & \;7\;  & \;14\;  & \;3\;  & \;7\;  & \;14\; \\
+        \midrule
+        DCRNN       & RMSE & \underline{269} & 521           & 1298          & 121           & \underline{168} & 214           & 7                 & \textbf{11}      & 18 & 144           & \textbf{99}      & \textbf{106} \\
+        LSTNet      & RMSE & \textbf{137}    & \textbf{229}  & \textbf{294}  & \underline{109} & 173            & 220           & 7                 & \underline{12}   & 20            & 177           & 179             & 536          \\
+        CNNRNN-Res  & RMSE & 458             & 437           & 571           & 188            & 202            & 248           & 10                & 14               & 17            & 173           & \underline{109} & 211          \\
+        Cola-GNN    & RMSE & 456             & 399           & 566           & 141            & 256            & 218           & \textbf{4}        & 20               & 16            & \textbf{135}  & 141             & 213          \\
+        EpiGNN      & RMSE & 289             & \underline{370} & \underline{518} & 164            & 184  & \textbf{184}  & 7                 & 16               & \textbf{13}   & 183           & 175             & \underline{187} \\
+        MSAGAT-Net & RMSE & 370             & 579           & 737           & \textbf{106}   & \textbf{163}   & \underline{196} & \underline{6}     & 25               & \underline{15} & \underline{135} & 160             & 191          \\
+        \bottomrule
+    \end{tabular}%
+    }
+\end{table*}
+
 MSAGAT-Net demonstrates consistent and superior performance across the three influenza datasets, particularly for short- and medium-term forecasting horizons. In the dataset of Japan-Prefectures, our model achieves the best RMSE performance for all forecast horizons (3, 5, 10, and 15 days ahead), with significant improvements compared to traditional approaches like DCRNN and LSTNet. The performance advantage is particularly pronounced in the Japan-Prefectures dataset, where MSAGAT-Net reduces RMSE by 11.2\% compared to the second best model (Cola-GNN) for 3-day forecasts and by 11.2\% compared to the second-best model (EpiGNN) for 15-day forecasts. 
 
 In the US-Regions dataset, MSAGAT-Net achieves the best RMSE performance for 10-day forecasts with a value of 999, improving on EpiGNN's 1098 by 9.0\%. However, for 3-day, 5-day and 15-day forecasts, EpiGNN shows better performance with RMSE values of 622, 779, and 1076, respectively. This could be attributed to EpiGNN's explicit modelling of transmission risk, which might be particularly effective for the spatial characteristics of the US-Regions dataset. However, MSAGAT-Net achieves the highest PCC values for 3-day and 10-day forecasts (0.911 and 0.763, respectively), indicating its strong ability to capture correlation patterns at these horizons.
@@ -1120,10 +1183,39 @@ The observed variations in performance across datasets highlight the complexity 
 \begin{figure*}[htbp]
   \centering
   \includegraphics[width=0.9\textwidth]{figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png}
-  \caption{Comparison of geographic adjacency matrix (left) and learned attention patterns (right) for MSAGAT-Net on the Japan-Prefectures dataset with 5-day forecast horizon, demonstrating adaptive spatial dependency learning.}
+  \caption{Attention matrices learned by MSAGAT-Net on the Japan-Prefectures dataset for 5-day forecasting,adjacency matrix (left), input correlation (center), and learned attention (right).}
   \label{fig:attention_matrices_none}
 \end{figure*}
 
+\begin{figure*}[htbp]
+    \centering
+    \subfloat[3-day Horizon RMSE]{
+        \includegraphics[width=0.45\textwidth]{figs/rmse_only_japan_h3.pdf}
+        \label{fig:ablation:rmse_h3}
+    }
+    \hfill
+    \subfloat[5-day Horizon RMSE]{
+        \includegraphics[width=0.45\textwidth]{figs/rmse_only_japan_h5.pdf}
+        \label{fig:ablation:rmse_h5}
+    }
+    \caption{Ablation study results for RMSE on the Japan-Prefectures dataset for short-term horizons (3-day and 5-day forecasts).}
+    \label{fig:ablation:rmse}
+\end{figure*}
+
+\begin{figure*}[htbp]
+    \centering
+    \subfloat[10-day Horizon RMSE]{
+        \includegraphics[width=0.45\textwidth]{figs/rmse_only_japan_h10.pdf}
+        \label{fig:ablation:rmse_h10}
+    }
+    \hfill
+    \subfloat[15-day Horizon RMSE]{
+        \includegraphics[width=0.45\textwidth]{figs/rmse_only_japan_h15.pdf}
+        \label{fig:ablation:rmse_h15}
+    }
+    \caption{Ablation study results for RMSE on the Japan-Prefectures dataset for long-term horizons (10-day and 15-day forecasts).}
+    \label{fig:ablation:rmse_long}
+\end{figure*}
 
 \subsubsection{Ablation Study}
 

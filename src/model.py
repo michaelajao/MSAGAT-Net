@@ -52,7 +52,6 @@ class SpatialAttentionModule(nn.Module):
         self.out_proj_high = nn.Linear(bottleneck_dim, hidden_dim)
 
         self.dropout = nn.Dropout(dropout)
-
         # Learnable graph structure bias (low-rank)
         self.u = Parameter(torch.Tensor(self.heads, num_nodes, bottleneck_dim))
         self.v = Parameter(torch.Tensor(self.heads, bottleneck_dim, num_nodes))
@@ -97,38 +96,43 @@ class SpatialAttentionModule(nn.Module):
             tuple: (Updated node features, Attention regularization loss)
         """
         B, N, H = x.shape
-        
+
         # Low-rank projection for qkv
         qkv_low = self.qkv_proj_low(x)
         qkv = self.qkv_proj_high(qkv_low)
         qkv = qkv.chunk(3, dim=-1)
-        
+
         # Separate query, key, value and reshape for multi-head attention
-        q, k, v = [x.view(B, N, self.heads, self.head_dim) for x in qkv]
+        q, k, v = [tensor.view(B, N, self.heads, self.head_dim) for tensor in qkv]
         q = q.transpose(1, 2)  # [B, heads, N, head_dim]
         k = k.transpose(1, 2)
         v = v.transpose(1, 2)
-        
-        # Compute attended values
+
+        # Use ONLY linear attention - O(N) complexity
         output = self._compute_attention(q, k, v)
-        
-        # Compute graph structure bias from low-rank factors
-        adj_bias = torch.matmul(self.u, self.v)
-        
-        # Calculate attention scores with graph bias
-        self.attn = F.softmax(torch.einsum('bhnd,bhmd->bhnm', q, k) / math.sqrt(self.head_dim) + adj_bias, dim=-1)
-        
-        # Compute regularization loss on attention weights using learned parameter
+
+        # Compute graph structure bias from low-rank factors for regularization
+        adj_bias = torch.matmul(self.u, self.v)  # [heads, N, N]
+
+        # Compute approximate attention weights for regularization (but don't use for computation)
+        # This maintains the regularization term without using O(N²) computation in the forward pass
+        with torch.no_grad():
+            sample_q = q[:, :, :min(32, N), :]  # Sample first 32 nodes for efficiency
+            sample_k = k[:, :, :min(32, N), :]
+            sample_attn = F.softmax(torch.einsum('bhnd,bhmd->bhnm', sample_q, sample_k) / math.sqrt(self.head_dim), dim=-1)
+
+        # Compute regularization loss using sampled attention and graph bias
         attention_reg_weight = torch.exp(self.log_attention_reg_weight)
-        attn_reg_loss = attention_reg_weight * torch.mean(torch.abs(self.attn))
-        
+        bias_reg_loss = attention_reg_weight * torch.mean(torch.abs(adj_bias))
+        attn_reg_loss = attention_reg_weight * torch.mean(torch.abs(sample_attn)) + bias_reg_loss
+
         # Reshape output to original dimensions
         output = output.transpose(1, 2).contiguous().view(B, N, H)
-        
+
         # Low-rank projection for output
         output = self.out_proj_low(output)
         output = self.out_proj_high(output)
-        
+
         return output, attn_reg_loss
 
 
@@ -362,9 +366,10 @@ class MSTAGAT_Net(nn.Module):
         # Feature Extraction Component
         # ----------------------------
         # Extract features from raw time series using depthwise separable convolutions
+        feature_channels = getattr(args, 'feature_channels', FEATURE_CHANNELS)
         self.feature_extractor = DepthwiseSeparableConv1D(
             in_channels=1, 
-            out_channels=FEATURE_CHANNELS,
+            out_channels=feature_channels,
             kernel_size=self.kernel_size, 
             padding=self.kernel_size // 2,
             dropout=getattr(args, 'dropout', DROPOUT)
@@ -383,6 +388,7 @@ class MSTAGAT_Net(nn.Module):
             self.hidden_dim, num_nodes=self.num_nodes,
             dropout=getattr(args, 'dropout', DROPOUT),
             attention_heads=getattr(args, 'attention_heads', ATTENTION_HEADS),
+            attention_regularization_weight=getattr(args, 'attention_regularization_weight', ATTENTION_REG_WEIGHT_INIT),
             bottleneck_dim=self.bottleneck_dim
         )
 

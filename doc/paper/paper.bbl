@@ -214,10 +214,24 @@ R.~Chandra, S.~Goyal, and R.~Gupta, ``Evaluation of deep learning models for
   multi-step ahead time series prediction,'' \emph{Ieee Access}, vol.~9, pp.
   83\,105--83\,123, 2021.
 
+\bibitem{hochreiter1997long}
+S.~Hochreiter and J.~Schmidhuber, ``Long short-term memory,'' \emph{Neural
+  computation}, vol.~9, no.~8, pp. 1735--1780, 1997.
+
 \bibitem{NHS2024HospitalActivity}
 {NHS England}, ``Covid-19 hospital activity,''
   \url{https://www.england.nhs.uk/statistics/statistical-work-areas/covid-19-hospital-activity/},
   2024, accessed 2025-05-10.
+
+\bibitem{oluwasakin2023data}
+E.~O. Oluwasakin and A.~Q. Khaliq, ``Data-driven deep learning neural networks
+  for predicting the number of individuals infected by {{COVID-19}} omicron
+  variant,'' \emph{Epidemiologia}, vol.~4, no.~4, pp. 420--453, 2023.
+
+\bibitem{zeroual2020deep}
+A.~Zeroual, F.~Harrou, A.~Dairi, and Y.~Sun, ``Deep learning methods for
+  forecasting {{COVID-19}} time-{{Series}} data: {{A Comparative}} study,''
+  \emph{Chaos, solitons \& fractals}, vol. 140, p. 110121, 2020.
 
 \bibitem{Kamalov2022ReviewDL}
 F.~Kamalov, K.~Rajab, A.~Cherukuri, A.~Elnagar, and M.~Safaraliev, ``Deep

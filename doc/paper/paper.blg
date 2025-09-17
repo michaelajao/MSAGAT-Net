@@ -10,58 +10,51 @@ Reallocating 'singl_function' (item size: 4) to 100 items.
 Reallocating 'wiz_functions' (item size: 4) to 6000 items.
 Reallocating 'singl_function' (item size: 4) to 100 items.
 Database file #1: ref.bib
-Repeated entry---line 3991 of file ref.bib
- : @inproceedings{wu2018deep
- :                          ,
-I'm skipping whatever remains of this entry
-Warning--I didn't find a database entry for "hochreiter1997long"
-Warning--I didn't find a database entry for "oluwasakin2023data"
-Warning--I didn't find a database entry for "zeroual2020deep"
 -- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
 -- http://www.michaelshell.org/tex/ieeetran/bibtex/
 -- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
 Warning--empty journal in zhiweidingBiologyInformedRecurrentNeural2023
 
 Done.
-You've used 35 entries,
+You've used 38 entries,
             4087 wiz_defined-function locations,
-            1039 strings with 16054 characters,
-and the built_in function-call counts, 30989 in all, are:
-= -- 2474
-> -- 912
-< -- 254
-+ -- 511
-- -- 194
-* -- 1533
-:= -- 4392
-add.period$ -- 74
-call.type$ -- 35
-change.case$ -- 36
-chr.to.int$ -- 570
-cite$ -- 36
-duplicate$ -- 2206
-empty$ -- 2338
-format.name$ -- 206
-if$ -- 7264
+            1054 strings with 16553 characters,
+and the built_in function-call counts, 33567 in all, are:
+= -- 2707
+> -- 965
+< -- 280
++ -- 541
+- -- 202
+* -- 1654
+:= -- 4773
+add.period$ -- 80
+call.type$ -- 38
+change.case$ -- 39
+chr.to.int$ -- 624
+cite$ -- 39
+duplicate$ -- 2393
+empty$ -- 2517
+format.name$ -- 217
+if$ -- 7871
 int.to.chr$ -- 0
-int.to.str$ -- 35
-missing$ -- 404
-newline$ -- 132
-num.names$ -- 35
-pop$ -- 946
+int.to.str$ -- 38
+missing$ -- 432
+newline$ -- 141
+num.names$ -- 38
+pop$ -- 999
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 2
-skip$ -- 2366
+skip$ -- 2577
 stack$ -- 0
-substring$ -- 1502
-swap$ -- 1893
-text.length$ -- 64
+substring$ -- 1643
+swap$ -- 2060
+text.length$ -- 72
 text.prefix$ -- 0
 top$ -- 5
-type$ -- 35
+type$ -- 38
 warning$ -- 1
-while$ -- 124
-width$ -- 37
-write$ -- 372
-(There was 1 error message)
+while$ -- 136
+width$ -- 40
+write$ -- 404
+(There was 1 warning)

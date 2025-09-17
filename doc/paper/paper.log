@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.8.15)  16 SEP 2025 22:49
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.8.15)  17 SEP 2025 01:15
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -764,27 +764,28 @@ File: l3backend-pdftex.def 2025-06-09 L3 backend support: PDF output (pdfTeX)
 LaTeX Warning: Unused global option(s):
     [lettersize].
 
-No file paper.aux.
+(paper.aux)
 \openout1 = `paper.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 64.
-LaTeX Font Info:    ... okay on input line 64.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 64.
-LaTeX Font Info:    ... okay on input line 64.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 64.
-LaTeX Font Info:    ... okay on input line 64.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 64.
-LaTeX Font Info:    ... okay on input line 64.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 64.
-LaTeX Font Info:    ... okay on input line 64.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 64.
-LaTeX Font Info:    ... okay on input line 64.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 64.
-LaTeX Font Info:    ... okay on input line 64.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 64.
-LaTeX Font Info:    ... okay on input line 64.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 64.
-LaTeX Font Info:    ... okay on input line 64.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+
 -- Lines per column: 58 (exact).
 (C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
@@ -805,76 +806,15 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 48
  (C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
-Package hyperref Info: Link coloring OFF on input line 64.
+Package hyperref Info: Link coloring OFF on input line 61.
+ (paper.out) (paper.out)
 \@outlinefile=\write4
 \openout4 = `paper.out'.
 
 Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: subfig package v1.3 is loaded.
 Package caption Info: End \AtBeginDocument code.
-LaTeX Font Info:    Calculating math sizes for size <11> on input line 66.
-LaTeX Font Info:    Trying to load font information for OT1+ztmcm on input line 66.
- (C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ot1ztmcm.fd
-File: ot1ztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OT1/ztmcm.
-)
-LaTeX Font Info:    Trying to load font information for OML+ztmcm on input line 66.
- (C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omlztmcm.fd
-File: omlztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OML/ztmcm.
-)
-LaTeX Font Info:    Trying to load font information for OMS+ztmcm on input line 66.
- (C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omsztmcm.fd
-File: omsztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMS/ztmcm.
-)
-LaTeX Font Info:    Trying to load font information for OMX+ztmcm on input line 66.
- (C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omxztmcm.fd
-File: omxztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMX/ztmcm.
-)
-LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8.14006> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 66.
-LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6.60007> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 66.
-LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 66.
 
-
-Package natbib Warning: Citation `ajao2023deep' on page 1 undefined on input line 82.
-
-
-Package natbib Warning: Citation `da2021covid' on page 1 undefined on input line 82.
-
-
-Package natbib Warning: Citation `giuliani2020modelling' on page 1 undefined on input line 82.
-
-
-Package natbib Warning: Citation `verma2022temporal' on page 1 undefined on input line 82.
-
-
-Package natbib Warning: Citation `ma2024reporting' on page 1 undefined on input line 82.
-
-
-Package natbib Warning: Citation `li2017diffusion' on page 1 undefined on input line 84.
-
-
-Package natbib Warning: Citation `zhang2021graph' on page 1 undefined on input line 84.
-
-
-Package natbib Warning: Citation `wu2018deep' on page 1 undefined on input line 84.
-
-
-Package natbib Warning: Citation `lai2018modeling' on page 1 undefined on input line 84.
-
-
-Package natbib Warning: Citation `kimForecastingEpidemicSpread2025' on page 1 undefined on input line 84.
-
-
-Package natbib Warning: Citation `zhiweidingBiologyInformedRecurrentNeural2023' on page 1 undefined on input line 84.
-
-
-
-
-Underfull \hbox (badness 2035) in paragraph at lines 94--95
-[]\T1/ptm/m/n/10 We demon-strate through ex-ten-sive ex-per-i-ments that
- []
 
 
 
@@ -883,148 +823,82 @@ Underfull \hbox (badness 2035) in paragraph at lines 94--95
 
 ]
 
-Package natbib Warning: Citation `lijingwangCausalGNNCausalBasedGraph2022' on page 2 undefined on input line 102.
 
-
-Package natbib Warning: Citation `liuReviewGraphNeural2024a' on page 2 undefined on input line 104.
-
-
-Package natbib Warning: Citation `wang_deepest_2024' on page 2 undefined on input line 104.
-
-
-Package natbib Warning: Citation `dengColaGNNCrosslocationAttention2020a' on page 2 undefined on input line 106.
-
-
-Package natbib Warning: Citation `xie2022epignn' on page 2 undefined on input line 108.
-
-
-Package natbib Warning: Citation `gao2021stan' on page 2 undefined on input line 110.
-
-
-
-
-Underfull \hbox (badness 1540) in paragraph at lines 114--115
+Underfull \hbox (badness 1540) in paragraph at lines 112--113
 []\T1/ptm/m/n/10 Direct multi-horizon mod-els, of-ten im-ple-mented us-ing
  []
 
 
-Package natbib Warning: Citation `dengColaGNNCrosslocationAttention2020a' on page 2 undefined on input line 116.
-
-
-Package natbib Warning: Citation `wu2018deep' on page 2 undefined on input line 116.
-
-
-Package natbib Warning: Citation `venna2019novel' on page 2 undefined on input line 116.
-
-
-Package natbib Warning: Citation `wang2019defsi' on page 2 undefined on input line 116.
-
-
-Package natbib Warning: Citation `lijingwangCausalGNNCausalBasedGraph2022' on page 2 undefined on input line 120.
-
-
-Package natbib Warning: Citation `cao2022mepognn' on page 2 undefined on input line 122.
-
-
-Package natbib Warning: Citation `gao2023evidence' on page 2 undefined on input line 124.
-
-
 
 [2]
-
-Package natbib Warning: Citation `han2025dygraphformer' on page 3 undefined on input line 126.
-
-
-Package natbib Warning: Citation `pu2024dynamic' on page 3 undefined on input line 128.
-
+LaTeX Font Info:    Trying to load font information for OT1+ztmcm on input line 128.
+ (C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ot1ztmcm.fd
+File: ot1ztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OT1/ztmcm.
+)
+LaTeX Font Info:    Trying to load font information for OML+ztmcm on input line 128.
+ (C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omlztmcm.fd
+File: omlztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OML/ztmcm.
+)
+LaTeX Font Info:    Trying to load font information for OMS+ztmcm on input line 128.
+ (C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omsztmcm.fd
+File: omsztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMS/ztmcm.
+)
+LaTeX Font Info:    Trying to load font information for OMX+ztmcm on input line 128.
+ (C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omxztmcm.fd
+File: omxztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMX/ztmcm.
+)
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7.4> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 130.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 128.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 128.
 
-Package natbib Warning: Citation `wang2020linformer' on page 3 undefined on input line 130.
-
-
-
-
-Package natbib Warning: Citation `chollet2017xception' on page 3 undefined on input line 260.
-
-
-Package natbib Warning: Citation `li2023multi' on page 3 undefined on input line 260.
-
-
-Package natbib Warning: Citation `yu2022traffic' on page 3 undefined on input line 260.
 
 
 
 [3]
-LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 274.
- (C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ts1ptm.fd
+
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 272.
+(C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 )
 
-
-
 [4]
-
-LaTeX Warning: Reference `fig:feature_extraction' on page 5 undefined on input line 330.
-
-
-
-
-Package natbib Warning: Citation `velickovic2017graph' on page 5 undefined on input line 401.
-
-
-Package natbib Warning: Citation `puny2020global' on page 5 undefined on input line 405.
-
-
-Package natbib Warning: Citation `kong2023low' on page 5 undefined on input line 405.
-
-
-Package natbib Warning: Citation `yang2023self' on page 5 undefined on input line 405.
 
 
 
 [5]
-Underfull \hbox (badness 2781) in paragraph at lines 427--428
+Underfull \vbox (badness 3029) has occurred while \output is active []
+
+
+
+
+Underfull \hbox (badness 2781) in paragraph at lines 425--426
 []\T1/ptm/m/n/10 where $[][] \OT1/ztmcm/m/n/10 : \U/msb/m/n/10 R[] \OMS/ztmcm/m/n/10 ! \U/msb/m/n/10 R[]$ \T1/ptm/m/n/10 and each of
  []
 
 
-
-
-Underfull \hbox (badness 2384) in paragraph at lines 433--434
+Underfull \hbox (badness 2384) in paragraph at lines 431--432
  \T1/ptm/m/it/10 2) Multi-Head At-ten-tion Mech-a-nism: [][][] \T1/ptm/m/n/10 To en-hance the
  []
 
 
-Overfull \hbox (44.20052pt too wide) detected at line 455
+Overfull \hbox (44.20052pt too wide) detected at line 453
 [][][]\OT1/ptm/b/n/10 Q[]\OML/ztmcm/m/it/10 ; \OT1/ptm/b/n/10 K[]\OML/ztmcm/m/it/10 ; \OT1/ptm/b/n/10 V[] \OT1/ztmcm/m/n/10 = [](\OT1/ptm/b/n/10 Q[]\OML/ztmcm/m/it/10 ; \OT1/ztmcm/m/n/10 0\OML/ztmcm/m/it/10 ; \OT1/ztmcm/m/n/10 1)\OML/ztmcm/m/it/10 ; []\OT1/ztmcm/m/n/10 (\OT1/ptm/b/n/10 K[]\OML/ztmcm/m/it/10 ; \OT1/ztmcm/m/n/10 0\OML/ztmcm/m/it/10 ; \OT1/ztmcm/m/n/10 1)\OML/ztmcm/m/it/10 ; []\OT1/ztmcm/m/n/10 (\OT1/ptm/b/n/10 V[]\OML/ztmcm/m/it/10 ; \OT1/ztmcm/m/n/10 0\OML/ztmcm/m/it/10 ; \OT1/ztmcm/m/n/10 1)
  []
 
 
 
 [6]
-Underfull \hbox (badness 3623) in paragraph at lines 524--525
+
+
+Underfull \hbox (badness 3623) in paragraph at lines 522--523
 []\T1/ptm/m/n/10 where $\OML/ztmcm/m/it/10 ^^U$ \T1/ptm/m/n/10 is the reg-u-lar-i-sa-tion weight. This en-cour-
  []
 
 
-Underfull \hbox (badness 2073) in paragraph at lines 524--525
+Underfull \hbox (badness 2073) in paragraph at lines 522--523
 []$ \T1/ptm/m/n/10 in our im-ple-men-ta-tion) is
  []
-
-
-
-
-LaTeX Warning: Reference `fig:agam_module' on page 7 undefined on input line 548.
-
-
-LaTeX Warning: Reference `fig:agam_module' on page 7 undefined on input line 644.
-
-
-Package natbib Warning: Citation `dengColaGNNCrosslocationAttention2020a' on page 7 undefined on input line 651.
-
-
-Package natbib Warning: Citation `xie2022epignn' on page 7 undefined on input line 651.
 
 
 
@@ -1035,27 +909,15 @@ Package natbib Warning: Citation `xie2022epignn' on page 7 undefined on input li
 [8]
 
 pdfTeX warning: pdflatex (file ./figs/mtfm_diagram.pdf): PDF inclusion: found PDF version <1.7>, but at most version <1.5> allowed
-<figs/mtfm_diagram.pdf, id=129, 421.575pt x 421.575pt>
+<figs/mtfm_diagram.pdf, id=300, 421.575pt x 421.575pt>
 File: figs/mtfm_diagram.pdf Graphic file (type pdf)
 <use figs/mtfm_diagram.pdf>
-Package pdftex.def Info: figs/mtfm_diagram.pdf  used on input line 702.
+Package pdftex.def Info: figs/mtfm_diagram.pdf  used on input line 700.
 (pdftex.def)             Requested size: 361.19843pt x 361.20299pt.
 
-LaTeX Warning: Reference `fig:mtfm_module' on page 9 undefined on input line 733.
 
 
-
-
-Package natbib Warning: Citation `BENTAIEB20127067' on page 9 undefined on input line 740.
-
-
-Package natbib Warning: Citation `chandra2021evaluation' on page 9 undefined on input line 740.
-
-
-Package natbib Warning: Citation `hochreiter1997long' on page 9 undefined on input line 740.
-
-
-Underfull \hbox (badness 1371) in paragraph at lines 746--747
+Underfull \hbox (badness 1371) in paragraph at lines 744--745
  \T1/ptm/m/it/10 1) Low-Rank Pre-dic-tion Pro-jec-tion: [][][] \T1/ptm/m/n/10 Given the spatio-
  []
 
@@ -1067,122 +929,80 @@ Underfull \hbox (badness 1371) in paragraph at lines 746--747
 
 [10 <./figs/mtfm_diagram.pdf>]
 
-LaTeX Warning: Reference `fig:pprm_module' on page 11 undefined on input line 927.
 
-
-Underfull \hbox (badness 1975) in paragraph at lines 933--934
+Underfull \hbox (badness 1975) in paragraph at lines 931--932
 \T1/ptm/m/n/10 pro-posed MSAGAT-Net model across mul-ti-ple epi-demic
  []
 
 
-
-
-LaTeX Warning: Reference `tab:datasets' on page 11 undefined on input line 945.
-
-
-Overfull \hbox (6.46878pt too wide) in paragraph at lines 951--964
+Overfull \hbox (6.46878pt too wide) in paragraph at lines 949--962
  [][] 
  []
 
 
 
 [11]
+Underfull \vbox (badness 6625) has occurred while \output is active []
 
 
-Package natbib Warning: Citation `NHS2024HospitalActivity' on page 12 undefined on input line 987.
 
 
 
 [12]
 
-Package natbib Warning: Citation `ajao2023deep' on page 13 undefined on input line 1000.
-
-
-Package natbib Warning: Citation `oluwasakin2023data' on page 13 undefined on input line 1000.
-
-
-Package natbib Warning: Citation `zeroual2020deep' on page 13 undefined on input line 1000.
-
-
-Package natbib Warning: Citation `Kamalov2022ReviewDL' on page 13 undefined on input line 1000.
-
-
-LaTeX Warning: Reference `alg:MSAGAT-Net_training' on page 13 undefined on input line 1024.
-
-
-
 
 LaTeX Warning: `h' float specifier changed to `ht'.
-
-
-Package natbib Warning: Citation `li2017diffusion' on page 13 undefined on input line 1082.
-
-
-Package natbib Warning: Citation `lai2018modeling' on page 13 undefined on input line 1084.
 
 
 
 [13]
 
-Package natbib Warning: Citation `wu2018deep' on page 14 undefined on input line 1086.
-
-
-Package natbib Warning: Citation `dengColaGNNCrosslocationAttention2020a' on page 14 undefined on input line 1088.
-
-
-Package natbib Warning: Citation `xie2022epignn' on page 14 undefined on input line 1090.
-
-
-
 
 
 [14]
 
-LaTeX Warning: Reference `fig:attention_matrices_none' on page 15 undefined on input line 1116.
-
-<figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png, id=224, 1308.087pt x 441.5697pt>
-File: figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png Graphic file (type png)
-<use figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png>
-Package pdftex.def Info: figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png  used on input line 1122.
-(pdftex.def)             Requested size: 464.39685pt x 156.76845pt.
-
-LaTeX Warning: Reference `tab:ablation' on page 15 undefined on input line 1130.
-
-
-
-
-LaTeX Warning: Reference `fig:ablation:rmse_h10' on page 15 undefined on input line 1186.
-
 
 
 [15]
+<figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png, id=412, 1308.087pt x 441.5697pt>
+File: figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png Graphic file (type png)
+<use figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png>
+Package pdftex.def Info: figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png  used on input line 1185.
+(pdftex.def)             Requested size: 464.39685pt x 156.76845pt.
+<figs/rmse_only_japan_h3.pdf, id=414, 353.70079pt x 281.84836pt>
+File: figs/rmse_only_japan_h3.pdf Graphic file (type pdf)
+<use figs/rmse_only_japan_h3.pdf>
+Package pdftex.def Info: figs/rmse_only_japan_h3.pdf  used on input line 1195.
+(pdftex.def)             Requested size: 232.19843pt x 185.03134pt.
+LaTeX Font Info:    Trying to load font information for T1+phv on input line 1195.
+ (C:\Users\ajaoo\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\t1phv.fd
+File: t1phv.fd 2020/03/25 scalable font definitions for T1/phv.
+)
+<figs/rmse_only_japan_h5.pdf, id=415, 353.70079pt x 281.84836pt>
+File: figs/rmse_only_japan_h5.pdf Graphic file (type pdf)
+<use figs/rmse_only_japan_h5.pdf>
+Package pdftex.def Info: figs/rmse_only_japan_h5.pdf  used on input line 1200.
+(pdftex.def)             Requested size: 232.19843pt x 185.03134pt.
+<figs/rmse_only_japan_h10.pdf, id=416, 353.70079pt x 281.84836pt>
+File: figs/rmse_only_japan_h10.pdf Graphic file (type pdf)
+<use figs/rmse_only_japan_h10.pdf>
+Package pdftex.def Info: figs/rmse_only_japan_h10.pdf  used on input line 1210.
+(pdftex.def)             Requested size: 232.19843pt x 185.03134pt.
+<figs/rmse_only_japan_h15.pdf, id=417, 353.70079pt x 281.84836pt>
+File: figs/rmse_only_japan_h15.pdf Graphic file (type pdf)
+<use figs/rmse_only_japan_h15.pdf>
+Package pdftex.def Info: figs/rmse_only_japan_h15.pdf  used on input line 1215.
+(pdftex.def)             Requested size: 232.19843pt x 185.03134pt.
 
-LaTeX Warning: Reference `fig:ablation:rmse' on page 16 undefined on input line 1190.
-
-
-Underfull \vbox (badness 4479) has occurred while \output is active []
 
 
 
+[16] [17 <./figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png> <./figs/rmse_only_japan_h3.pdf> <./figs/rmse_only_japan_h5.pdf> <./figs/rmse_only_japan_h10.pdf> <./figs/rmse_only_japan_h15.pdf>]
 
-LaTeX Warning: Reference `fig:ablation:rmse_h3' on page 16 undefined on input line 1198.
+(paper.bbl
 
+[18]
 
-LaTeX Warning: Reference `fig:ablation:rmse_h5' on page 16 undefined on input line 1198.
-
-
-LaTeX Warning: Reference `fig:ablation:rmse_h10' on page 16 undefined on input line 1198.
-
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-
-
-[16 <./figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png>] (paper.bbl
-
-
-
-[17]
 ** WARNING: IEEEtran.bst: No hyphenation pattern has been
 ** loaded for the language `en'. Using the pattern for
 ** the default language instead.
@@ -1191,60 +1011,42 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 ** the default language instead.
 
 
-
-Underfull \hbox (badness 4024) in paragraph at lines 218--221
+[19]
+Underfull \hbox (badness 4024) in paragraph at lines 222--225
 []\T1/ptm/m/n/10 NHS Eng-land, ``Covid-19 hos-pi-tal ac-tiv-ity,'' []$https :
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 218--221
+Underfull \hbox (badness 10000) in paragraph at lines 222--225
 \T1/ptm/m/n/10 / / www . england . nhs . uk / statistics / statistical-[]work-[]areas /
  []
 
 )
 
-Package natbib Warning: There were undefined citations.
 
 
+[20
 
-[18] (paper.aux
-
-Package natbib Warning: Citation(s) may have changed.
-(natbib)                Rerun to get citations correct.
-
-)
+] (paper.aux)
  ***********
 LaTeX2e <2025-06-01> patch level 1
 L3 programming layer <2025-07-20>
  ***********
-
-
-LaTeX Warning: There were undefined references.
-
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
-
-Package rerunfilecheck Warning: File `paper.out' has changed.
-(rerunfilecheck)                Rerun to get outlines right
-(rerunfilecheck)                or use package `bookmark'.
-
-Package rerunfilecheck Info: Checksums for `paper.out':
-(rerunfilecheck)             Before: <no file>
-(rerunfilecheck)             After:  39F5688B46D87997B357A7C5E5DA747B;5530.
+Package rerunfilecheck Info: File `paper.out' has not changed.
+(rerunfilecheck)             Checksum: 39F5688B46D87997B357A7C5E5DA747B;5530.
  ) 
 Here is how much of TeX's memory you used:
- 28930 strings out of 468134
- 572970 string characters out of 5430740
- 997474 words of memory out of 5000000
- 56854 multiletter control sequences out of 15000+600000
- 795499 words of font info for 261 fonts, out of 8000000 for 9000
+ 29057 strings out of 468134
+ 575729 string characters out of 5430740
+ 1011864 words of memory out of 5000000
+ 56956 multiletter control sequences out of 15000+600000
+ 788458 words of font info for 240 fonts, out of 8000000 for 9000
  1145 hyphenation exceptions out of 8191
- 84i,18n,91p,1489b,995s stack positions out of 10000i,1000n,20000p,200000b,200000s
-<C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/public/rsfs/rsfs10.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmbi8a.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
-Output written on paper.pdf (18 pages, 495151 bytes).
+ 84i,18n,91p,1787b,995s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/public/rsfs/rsfs10.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/helvetic/uhvr8a.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/symbol/usyr.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmbi8a.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
+Output written on paper.pdf (20 pages, 599508 bytes).
 PDF statistics:
- 373 PDF objects out of 1000 (max. 8388607)
- 153 named destinations out of 1000 (max. 500000)
- 119 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 755 PDF objects out of 1000 (max. 8388607)
+ 167 named destinations out of 1000 (max. 500000)
+ 379 words of extra memory for PDF output out of 10000 (max. 10000000)
 

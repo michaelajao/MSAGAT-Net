@@ -55,12 +55,22 @@ parser.add_argument('--label', type=str, default='')
 parser.add_argument('--pcc', type=str, default='')
 parser.add_argument('--result', type=int, default=0)
 parser.add_argument('--record', type=str, default='')
+parser.add_argument('--model', type=str, default='msagat', choices=['msagat', 'truelinformer', 'ablation'],
+                    help='Which model implementation to use: msagat (default), truelinformer (true Linformer variant), or ablation (use ablation variants via --ablation)')
 # New argument: starting date for forecast visualization (assume weekly frequency)
 parser.add_argument('--start_date', type=str, default='2020-01-01', help='Start date for forecast visualization')
 # Add ablation parameter
 parser.add_argument('--ablation', type=str, default='none', 
                    choices=['none', 'no_agam', 'no_mtfm', 'no_pprm'],
                    help='Ablation study type: none, no_agam (LR‑AGAM: Low-rank Adaptive Graph Attention Module), no_mtfm (MTFM: Multi-scale Temporal Feature Module), no_pprm (PPRM: Progressive Multi-step Prediction Refinement Module)')
+# Additional model hyperparameters exposed to CLI
+parser.add_argument('--attention_heads', type=int, default=4, help='Number of attention heads')
+parser.add_argument('--attention_regularization_weight', type=float, default=1e-5, help='Initial attention regularization weight')
+parser.add_argument('--num_scales', type=int, default=4, help='Number of temporal scales in MTFM')
+parser.add_argument('--kernel_size', type=int, default=3, help='Kernel size for temporal convs')
+parser.add_argument('--feature_channels', type=int, default=16, help='Number of channels output by the feature extractor')
+parser.add_argument('--bottleneck_dim', type=int, default=8, help='Bottleneck dimension used in low-rank projections')
+parser.add_argument('--hidden_dim', type=int, default=32, help='Hidden dimension size for model internals')
 args = parser.parse_args()
 print('--------Parameters--------')
 print(args)
@@ -97,12 +107,23 @@ if args.mylog:
 data_loader = DataBasicLoader(args)
 
 # Instantiate the model based on ablation only
-if args.ablation == 'none':
-    logger.info('Using full MSTAGAT-Net model')
-    model = MSTAGAT_Net(args, data_loader)
+if args.model == 'truelinformer':
+    # Use the true Linformer variant implementation if requested
+    try:
+        from model_true_linformer import MSTAGAT_Net_TrueLinformer
+        logger.info('Using True Linformer MSTAGAT-Net implementation')
+        model = MSTAGAT_Net_TrueLinformer(args, data_loader)
+    except Exception as e:
+        logger.error('Could not import TrueLinformer model: %s', e)
+        raise
 else:
-    logger.info('Using MSAGATNet ablation model: %s', args.ablation)
-    model = MSAGATNet_Ablation(args, data_loader)
+    # Default behaviour: use original implementation or ablation variants
+    if args.ablation == 'none':
+        logger.info('Using full MSTAGAT-Net model')
+        model = MSTAGAT_Net(args, data_loader)
+    else:
+        logger.info('Using MSAGATNet ablation model: %s', args.ablation)
+        model = MSAGATNet_Ablation(args, data_loader)
 
 logger.info('model %s', model.__class__.__name__) # Log the actual model class being used
 if args.cuda:

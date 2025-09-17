@@ -1,0 +1,146 @@
+2025-09-17 00:40:11,334 INFO: Logging to C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\logs\run_experiments_20250917_004011.log
+2025-09-17 00:40:11,335 INFO: Skipping existing: japan h=3 ab=none
+2025-09-17 00:40:11,336 INFO: Skipping existing: japan h=3 ab=no_agam
+2025-09-17 00:40:11,337 INFO: Skipping existing: japan h=3 ab=no_mtfm
+2025-09-17 00:40:11,337 INFO: Skipping existing: japan h=3 ab=no_pprm
+2025-09-17 00:40:11,338 INFO: Skipping existing: japan h=5 ab=none
+2025-09-17 00:40:11,338 INFO: Skipping existing: japan h=5 ab=no_agam
+2025-09-17 00:40:11,339 INFO: Skipping existing: japan h=5 ab=no_mtfm
+2025-09-17 00:40:11,340 INFO: Skipping existing: japan h=5 ab=no_pprm
+2025-09-17 00:40:11,340 INFO: Skipping existing: japan h=10 ab=none
+2025-09-17 00:40:11,341 INFO: Skipping existing: japan h=10 ab=no_agam
+2025-09-17 00:40:11,342 INFO: Skipping existing: japan h=10 ab=no_mtfm
+2025-09-17 00:40:11,343 INFO: Skipping existing: japan h=10 ab=no_pprm
+2025-09-17 00:40:11,344 INFO: Skipping existing: japan h=15 ab=none
+2025-09-17 00:40:11,344 INFO: Skipping existing: japan h=15 ab=no_agam
+2025-09-17 00:40:11,345 INFO: Skipping existing: japan h=15 ab=no_mtfm
+2025-09-17 00:40:11,345 INFO: Skipping existing: japan h=15 ab=no_pprm
+2025-09-17 00:40:11,346 INFO: Skipping existing: region785 h=3 ab=none
+2025-09-17 00:40:11,347 INFO: Skipping existing: region785 h=3 ab=no_agam
+2025-09-17 00:40:11,348 INFO: Skipping existing: region785 h=3 ab=no_mtfm
+2025-09-17 00:40:11,349 INFO: Skipping existing: region785 h=3 ab=no_pprm
+2025-09-17 00:40:11,349 INFO: Skipping existing: region785 h=5 ab=none
+2025-09-17 00:40:11,350 INFO: Skipping existing: region785 h=5 ab=no_agam
+2025-09-17 00:40:11,350 INFO: Skipping existing: region785 h=5 ab=no_mtfm
+2025-09-17 00:40:11,351 INFO: Skipping existing: region785 h=5 ab=no_pprm
+2025-09-17 00:40:11,351 INFO: Skipping existing: region785 h=10 ab=none
+2025-09-17 00:40:11,352 INFO: Skipping existing: region785 h=10 ab=no_agam
+2025-09-17 00:40:11,353 INFO: Skipping existing: region785 h=10 ab=no_mtfm
+2025-09-17 00:40:11,353 INFO: Skipping existing: region785 h=10 ab=no_pprm
+2025-09-17 00:40:11,354 INFO: Skipping existing: region785 h=15 ab=none
+2025-09-17 00:40:11,355 INFO: Skipping existing: region785 h=15 ab=no_agam
+2025-09-17 00:40:11,356 INFO: Skipping existing: region785 h=15 ab=no_mtfm
+2025-09-17 00:40:11,356 INFO: Skipping existing: region785 h=15 ab=no_pprm
+2025-09-17 00:40:11,357 INFO: Skipping existing: state360 h=3 ab=none
+2025-09-17 00:40:11,358 INFO: Skipping existing: state360 h=3 ab=no_agam
+2025-09-17 00:40:11,358 INFO: Skipping existing: state360 h=3 ab=no_mtfm
+2025-09-17 00:40:11,359 INFO: Skipping existing: state360 h=3 ab=no_pprm
+2025-09-17 00:40:11,360 INFO: Skipping existing: state360 h=5 ab=none
+2025-09-17 00:40:11,360 INFO: Skipping existing: state360 h=5 ab=no_agam
+2025-09-17 00:40:11,361 INFO: Skipping existing: state360 h=5 ab=no_mtfm
+2025-09-17 00:40:11,361 INFO: Skipping existing: state360 h=5 ab=no_pprm
+2025-09-17 00:40:11,362 INFO: Skipping existing: state360 h=10 ab=none
+2025-09-17 00:40:11,363 INFO: Skipping existing: state360 h=10 ab=no_agam
+2025-09-17 00:40:11,364 INFO: Skipping existing: state360 h=10 ab=no_mtfm
+2025-09-17 00:40:11,364 INFO: Skipping existing: state360 h=10 ab=no_pprm
+2025-09-17 00:40:11,365 INFO: Skipping existing: state360 h=15 ab=none
+2025-09-17 00:40:11,366 INFO: Skipping existing: state360 h=15 ab=no_agam
+2025-09-17 00:40:11,366 INFO: Skipping existing: state360 h=15 ab=no_mtfm
+2025-09-17 00:40:11,367 INFO: Skipping existing: state360 h=15 ab=no_pprm
+2025-09-17 00:40:11,367 INFO: Skipping existing: australia-covid h=3 ab=none
+2025-09-17 00:40:11,368 INFO: Skipping existing: australia-covid h=3 ab=no_agam
+2025-09-17 00:40:11,369 INFO: Skipping existing: australia-covid h=3 ab=no_mtfm
+2025-09-17 00:40:11,370 INFO: Skipping existing: australia-covid h=3 ab=no_pprm
+2025-09-17 00:40:11,371 INFO: Skipping existing: australia-covid h=7 ab=none
+2025-09-17 00:40:11,371 INFO: Skipping existing: australia-covid h=7 ab=no_agam
+2025-09-17 00:40:11,372 INFO: Skipping existing: australia-covid h=7 ab=no_mtfm
+2025-09-17 00:40:11,373 INFO: Skipping existing: australia-covid h=7 ab=no_pprm
+2025-09-17 00:40:11,373 INFO: Skipping existing: australia-covid h=14 ab=none
+2025-09-17 00:40:11,374 INFO: Skipping existing: australia-covid h=14 ab=no_agam
+2025-09-17 00:40:11,375 INFO: Skipping existing: australia-covid h=14 ab=no_mtfm
+2025-09-17 00:40:11,375 INFO: Skipping existing: australia-covid h=14 ab=no_pprm
+2025-09-17 00:40:11,376 INFO: Skipping existing: spain-covid h=3 ab=none
+2025-09-17 00:40:11,377 INFO: Skipping existing: spain-covid h=3 ab=no_agam
+2025-09-17 00:40:11,378 INFO: Skipping existing: spain-covid h=3 ab=no_mtfm
+2025-09-17 00:40:11,378 INFO: Skipping existing: spain-covid h=3 ab=no_pprm
+2025-09-17 00:40:11,379 INFO: Skipping existing: spain-covid h=7 ab=none
+2025-09-17 00:40:11,380 INFO: Skipping existing: spain-covid h=7 ab=no_agam
+2025-09-17 00:40:11,380 INFO: Skipping existing: spain-covid h=7 ab=no_mtfm
+2025-09-17 00:40:11,381 INFO: Skipping existing: spain-covid h=7 ab=no_pprm
+2025-09-17 00:40:11,382 INFO: Skipping existing: spain-covid h=14 ab=none
+2025-09-17 00:40:11,382 INFO: Skipping existing: spain-covid h=14 ab=no_agam
+2025-09-17 00:40:11,383 INFO: Skipping existing: spain-covid h=14 ab=no_mtfm
+2025-09-17 00:40:11,384 INFO: Skipping existing: spain-covid h=14 ab=no_pprm
+2025-09-17 00:40:11,385 INFO: Skipping existing: nhs_timeseries h=3 ab=none
+2025-09-17 00:40:11,385 INFO: Skipping existing: nhs_timeseries h=3 ab=no_agam
+2025-09-17 00:40:11,386 INFO: Skipping existing: nhs_timeseries h=3 ab=no_mtfm
+2025-09-17 00:40:11,386 INFO: Skipping existing: nhs_timeseries h=3 ab=no_pprm
+2025-09-17 00:40:11,387 INFO: Skipping existing: nhs_timeseries h=7 ab=none
+2025-09-17 00:40:11,388 INFO: Skipping existing: nhs_timeseries h=7 ab=no_agam
+2025-09-17 00:40:11,388 INFO: Skipping existing: nhs_timeseries h=7 ab=no_mtfm
+2025-09-17 00:40:11,390 INFO: Skipping existing: nhs_timeseries h=7 ab=no_pprm
+2025-09-17 00:40:11,390 INFO: Skipping existing: nhs_timeseries h=14 ab=none
+2025-09-17 00:40:11,391 INFO: Skipping existing: nhs_timeseries h=14 ab=no_agam
+2025-09-17 00:40:11,392 INFO: Skipping existing: nhs_timeseries h=14 ab=no_mtfm
+2025-09-17 00:40:11,393 INFO: Skipping existing: nhs_timeseries h=14 ab=no_pprm
+2025-09-17 00:40:11,393 INFO: Skipping existing: ltla_timeseries h=3 ab=none
+2025-09-17 00:40:11,394 INFO: Skipping existing: ltla_timeseries h=3 ab=no_agam
+2025-09-17 00:40:11,395 INFO: Skipping existing: ltla_timeseries h=3 ab=no_mtfm
+2025-09-17 00:40:11,395 INFO: Skipping existing: ltla_timeseries h=3 ab=no_pprm
+2025-09-17 00:40:11,396 INFO: Skipping existing: ltla_timeseries h=7 ab=none
+2025-09-17 00:40:11,396 INFO: Skipping existing: ltla_timeseries h=7 ab=no_agam
+2025-09-17 00:40:11,397 INFO: Skipping existing: ltla_timeseries h=7 ab=no_mtfm
+2025-09-17 00:40:11,397 INFO: Skipping existing: ltla_timeseries h=7 ab=no_pprm
+2025-09-17 00:40:11,398 INFO: Skipping existing: ltla_timeseries h=14 ab=none
+2025-09-17 00:40:11,399 INFO: Skipping existing: ltla_timeseries h=14 ab=no_agam
+2025-09-17 00:40:11,399 INFO: Skipping existing: ltla_timeseries h=14 ab=no_mtfm
+2025-09-17 00:40:11,400 INFO: Skipping existing: ltla_timeseries h=14 ab=no_pprm
+2025-09-17 00:40:11,411 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_japan.w-20.h-3.csv
+2025-09-17 00:40:11,413 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_japan.w-20.h-3.txt
+2025-09-17 00:40:11,423 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_japan.w-20.h-5.csv
+2025-09-17 00:40:11,425 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_japan.w-20.h-5.txt
+2025-09-17 00:40:11,433 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_japan.w-20.h-10.csv
+2025-09-17 00:40:11,436 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_japan.w-20.h-10.txt
+2025-09-17 00:40:11,444 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_japan.w-20.h-15.csv
+2025-09-17 00:40:11,445 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_japan.w-20.h-15.txt
+2025-09-17 00:40:11,453 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_region785.w-20.h-3.csv
+2025-09-17 00:40:11,456 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_region785.w-20.h-3.txt
+2025-09-17 00:40:11,465 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_region785.w-20.h-5.csv
+2025-09-17 00:40:11,466 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_region785.w-20.h-5.txt
+2025-09-17 00:40:11,475 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_region785.w-20.h-10.csv
+2025-09-17 00:40:11,477 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_region785.w-20.h-10.txt
+2025-09-17 00:40:11,486 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_region785.w-20.h-15.csv
+2025-09-17 00:40:11,488 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_region785.w-20.h-15.txt
+2025-09-17 00:40:11,498 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_state360.w-20.h-3.csv
+2025-09-17 00:40:11,499 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_state360.w-20.h-3.txt
+2025-09-17 00:40:11,509 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_state360.w-20.h-5.csv
+2025-09-17 00:40:11,510 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_state360.w-20.h-5.txt
+2025-09-17 00:40:11,519 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_state360.w-20.h-10.csv
+2025-09-17 00:40:11,521 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_state360.w-20.h-10.txt
+2025-09-17 00:40:11,528 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_state360.w-20.h-15.csv
+2025-09-17 00:40:11,530 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_state360.w-20.h-15.txt
+2025-09-17 00:40:11,538 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_australia-covid.w-20.h-3.csv
+2025-09-17 00:40:11,540 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_australia-covid.w-20.h-3.txt
+2025-09-17 00:40:11,550 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_australia-covid.w-20.h-7.csv
+2025-09-17 00:40:11,552 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_australia-covid.w-20.h-7.txt
+2025-09-17 00:40:11,561 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_australia-covid.w-20.h-14.csv
+2025-09-17 00:40:11,563 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_australia-covid.w-20.h-14.txt
+2025-09-17 00:40:11,572 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_spain-covid.w-20.h-3.csv
+2025-09-17 00:40:11,574 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_spain-covid.w-20.h-3.txt
+2025-09-17 00:40:11,583 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_spain-covid.w-20.h-7.csv
+2025-09-17 00:40:11,584 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_spain-covid.w-20.h-7.txt
+2025-09-17 00:40:11,593 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_spain-covid.w-20.h-14.csv
+2025-09-17 00:40:11,596 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_spain-covid.w-20.h-14.txt
+2025-09-17 00:40:11,605 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_nhs_timeseries.w-20.h-3.csv
+2025-09-17 00:40:11,606 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_nhs_timeseries.w-20.h-3.txt
+2025-09-17 00:40:11,615 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_nhs_timeseries.w-20.h-7.csv
+2025-09-17 00:40:11,618 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_nhs_timeseries.w-20.h-7.txt
+2025-09-17 00:40:11,627 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_nhs_timeseries.w-20.h-14.csv
+2025-09-17 00:40:11,629 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_nhs_timeseries.w-20.h-14.txt
+2025-09-17 00:40:11,637 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_ltla_timeseries.w-20.h-3.csv
+2025-09-17 00:40:11,639 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_ltla_timeseries.w-20.h-3.txt
+2025-09-17 00:40:11,647 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_ltla_timeseries.w-20.h-7.csv
+2025-09-17 00:40:11,649 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_ltla_timeseries.w-20.h-7.txt
+2025-09-17 00:40:11,658 INFO: Saved summary CSV: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_summary_ltla_timeseries.w-20.h-14.csv
+2025-09-17 00:40:11,659 INFO: Saved report TXT: C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\report\results\ablation_report_ltla_timeseries.w-20.h-14.txt
+2025-09-17 00:40:11,659 INFO: All experiments complete.
