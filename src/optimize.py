@@ -2,6 +2,8 @@ import os
 import json
 import time
 import random
+import tempfile
+import shutil
 import numpy as np
 import torch
 import torch.nn as nn
@@ -60,6 +62,43 @@ for directory in [OUTPUT_DIR, MODELS_DIR]:
 # =============================================================================
 # Utility Functions
 # =============================================================================
+def safe_torch_save(state_dict, target_path, retries=5, backoff=0.2):
+    """Safely save a PyTorch state dict with atomic replace and retries.
+
+    - Ensures parent directory exists
+    - Writes to a temporary file first, then atomically replaces target
+    - Retries on common intermittent Windows file errors
+    Returns True on success, False otherwise
+    """
+    try:
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+    except Exception as e:
+        logger.warning(f"Failed to ensure directory for {target_path}: {e}")
+        return False
+
+    last_err = None
+    for attempt in range(1, retries + 1):
+        tmp_file = None
+        try:
+            # Create temp file in same directory to allow atomic replace
+            tmp_fd, tmp_file = tempfile.mkstemp(dir=os.path.dirname(target_path), prefix='.tmp_save_', suffix='.pt')
+            os.close(tmp_fd)
+            torch.save(state_dict, tmp_file)
+            # On Windows, os.replace is atomic if same drive/dir
+            os.replace(tmp_file, target_path)
+            return True
+        except Exception as e:
+            last_err = e
+            logger.warning(f"Attempt {attempt}/{retries} to save model failed: {e}")
+            # Clean up temp file if created
+            try:
+                if tmp_file and os.path.exists(tmp_file):
+                    os.remove(tmp_file)
+            except Exception:
+                pass
+            time.sleep(backoff * attempt)
+    logger.error(f"Failed to save model to {target_path} after {retries} attempts. Last error: {last_err}")
+    return False
 def set_seeds(seed):
     """Set all random seeds to ensure reproducibility"""
     random.seed(seed)
@@ -316,8 +355,9 @@ def objective(trial):
             best_epoch = epoch
             no_improve_count = 0
             
-            # Save best model
-            torch.save(model.state_dict(), best_model_path)
+            # Save best model safely
+            if not safe_torch_save(model.state_dict(), best_model_path):
+                logger.warning(f"Could not save best model to {best_model_path}, continuing without crash.")
         else:
             no_improve_count += 1
         
@@ -567,13 +607,17 @@ if __name__ == "__main__":
                 if val_rmse < best_val:
                     best_val = val_rmse
                     no_improve = 0
-                    torch.save(model.state_dict(), best_path)
+                    if not safe_torch_save(model.state_dict(), best_path):
+                        logger.warning(f"Post-eval: could not save model for seed {s} to {best_path}")
                 else:
                     no_improve += 1
                 if no_improve >= eargs.patience and epoch > 100:
                     break
 
-            model.load_state_dict(torch.load(best_path, map_location=device))
+            if os.path.exists(best_path):
+                model.load_state_dict(torch.load(best_path, map_location=device))
+            else:
+                logger.warning(f"Post-eval: best model file missing at {best_path}; using last epoch weights for evaluation.")
             test_rmse, test_pcc = evaluate(data_loader, model, eargs, device, dataset='test')
             test_rmses.append(test_rmse)
             test_pccs.append(test_pcc)

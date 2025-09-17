@@ -127,29 +127,6 @@ J.~Gao, R.~Sharma, C.~Qian, L.~M. Glass, J.~Spaeder, J.~Romberg, J.~Sun, and
   using real-world evidence,'' \emph{Journal of the American Medical
   Informatics Association}, vol.~28, no.~4, pp. 733--743, 2021.
 
-\bibitem{venna2019novel}
-S.~R. Venna, A.~Tavanaei, R.~N. Gottumukkala, V.~V. Raghavan, A.~S. Maida, and
-  S.~Nichols, ``A novel data-driven model for real-time influenza
-  forecasting,'' \emph{IEEE Access}, vol.~7, pp. 7691--7701, 2019.
-
-\bibitem{wang2019defsi}
-L.~Wang, J.~Chen, and M.~Marathe, ``Defsi: Deep learning based epidemic
-  forecasting with synthetic information,'' in \emph{Proceedings of the AAAI
-  conference on artificial intelligence}, vol.~33, no.~01, 2019, pp.
-  9607--9612.
-
-\bibitem{cao2022mepognn}
-Q.~Cao, R.~Jiang, C.~Yang, Z.~Fan, X.~Song, and R.~Shibasaki, ``Mepognn:
-  Metapopulation epidemic forecasting with graph neural networks,'' in
-  \emph{Joint European conference on machine learning and knowledge discovery
-  in databases}.\hskip 1em plus 0.5em minus 0.4em\relax Springer, 2022, pp.
-  453--468.
-
-\bibitem{gao2023evidence}
-J.~Gao, J.~Heintz, C.~Mack, L.~Glass, A.~Cross, and J.~Sun, ``Evidence-driven
-  spatiotemporal covid-19 hospitalization prediction with ising dynamics,''
-  \emph{Nature communications}, vol.~14, no.~1, p. 3093, 2023.
-
 \bibitem{han2025dygraphformer}
 S.~Han, Y.~Xun, J.~Cai, H.~Yang, and Y.~Li, ``Dygraphformer: Transformer
   combining dynamic spatio-temporal graph network for multivariate time series
@@ -167,6 +144,29 @@ X.~Pu, J.~Zhu, Y.~Wu, C.~Leng, Z.~Bo, and H.~Wang, ``Dynamic adaptive
 \bibitem{wang2020linformer}
 S.~Wang, B.~Z. Li, M.~Khabsa, H.~Fang, and H.~Ma, ``Linformer: Self-attention
   with linear complexity,'' \emph{arXiv preprint arXiv:2006.04768}, 2020.
+
+\bibitem{cao2022mepognn}
+Q.~Cao, R.~Jiang, C.~Yang, Z.~Fan, X.~Song, and R.~Shibasaki, ``Mepognn:
+  Metapopulation epidemic forecasting with graph neural networks,'' in
+  \emph{Joint European conference on machine learning and knowledge discovery
+  in databases}.\hskip 1em plus 0.5em minus 0.4em\relax Springer, 2022, pp.
+  453--468.
+
+\bibitem{gao2023evidence}
+J.~Gao, J.~Heintz, C.~Mack, L.~Glass, A.~Cross, and J.~Sun, ``Evidence-driven
+  spatiotemporal covid-19 hospitalization prediction with ising dynamics,''
+  \emph{Nature communications}, vol.~14, no.~1, p. 3093, 2023.
+
+\bibitem{venna2019novel}
+S.~R. Venna, A.~Tavanaei, R.~N. Gottumukkala, V.~V. Raghavan, A.~S. Maida, and
+  S.~Nichols, ``A novel data-driven model for real-time influenza
+  forecasting,'' \emph{IEEE Access}, vol.~7, pp. 7691--7701, 2019.
+
+\bibitem{wang2019defsi}
+L.~Wang, J.~Chen, and M.~Marathe, ``Defsi: Deep learning based epidemic
+  forecasting with synthetic information,'' in \emph{Proceedings of the AAAI
+  conference on artificial intelligence}, vol.~33, no.~01, 2019, pp.
+  9607--9612.
 
 \bibitem{chollet2017xception}
 F.~Chollet, ``Xception: Deep learning with depthwise separable convolutions,''

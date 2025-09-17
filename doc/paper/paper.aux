@@ -13,32 +13,34 @@
 \citation{dengColaGNNCrosslocationAttention2020a}
 \citation{xie2022epignn}
 \citation{gao2021stan}
-\citation{dengColaGNNCrosslocationAttention2020a}
-\citation{wu2018deep}
-\citation{venna2019novel}
-\citation{wang2019defsi}
-\citation{lijingwangCausalGNNCausalBasedGraph2022}
-\citation{cao2022mepognn}
-\@writefile{toc}{\contentsline {section}{\numberline {II}Related Work}{2}{section.2}\protected@file@percent }
-\citation{gao2023evidence}
 \citation{han2025dygraphformer}
 \citation{pu2024dynamic}
 \citation{wang2020linformer}
+\citation{lijingwangCausalGNNCausalBasedGraph2022}
+\citation{cao2022mepognn}
+\@writefile{toc}{\contentsline {section}{\numberline {II}Related Work}{2}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Spatiotemporal Epidemic Modelling}{2}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}Physics-Informed and Hybrid Approaches}{2}{subsection.2.2}\protected@file@percent }
+\citation{gao2023evidence}
+\citation{wu2018deep,venna2019novel}
+\citation{wang2019defsi}
+\citation{dengColaGNNCrosslocationAttention2020a}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Multi-Scale Temporal Processing}{3}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}Methodology}{3}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Problem Formulation}{3}{subsection.3.1}\protected@file@percent }
 \citation{chollet2017xception}
 \citation{li2023multi}
 \citation{yu2022traffic}
-\@writefile{toc}{\contentsline {section}{\numberline {III}Methodology}{3}{section.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Problem Formulation}{3}{subsection.3.1}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overview of the MSAGAT-Net architecture. The model processes input through four main modules: Feature Extraction (depthwise separable convolutions), EAGAM (Efficient Adaptive Graph Attention Module with O(N) complexity), MTFM (Multi-scale Temporal Feature Module with dilation rates $d \in \{1,2,4,8\}$), and PPRM (Progressive Prediction Refinement Module). The dashed line represents the skip connection for refinement.}}{4}{figure.1}\protected@file@percent }
-\newlabel{fig:msagat_net_architecture}{{1}{4}{Overview of the MSAGAT-Net architecture. The model processes input through four main modules: Feature Extraction (depthwise separable convolutions), EAGAM (Efficient Adaptive Graph Attention Module with O(N) complexity), MTFM (Multi-scale Temporal Feature Module with dilation rates $d \in \{1,2,4,8\}$), and PPRM (Progressive Prediction Refinement Module). The dashed line represents the skip connection for refinement}{figure.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Feature Extraction}{4}{subsection.3.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-B}1}Depthwise Separable Convolutions}{4}{subsubsection.3.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-B}2}Low-Rank Feature Projection}{4}{subsubsection.3.2.2}\protected@file@percent }
 \citation{velickovic2017graph}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overview of the MSAGAT-Net architecture. The model processes input through four main modules: Feature Extraction (depthwise separable convolutions), EAGAM, DMTFM (dilation rates $d \in \{1,2,4,8\}$), and PPRM. The dashed line represents the skip connection for refinement.}}{5}{figure.1}\protected@file@percent }
+\newlabel{fig:msagat_net_architecture}{{1}{5}{Overview of the MSAGAT-Net architecture. The model processes input through four main modules: Feature Extraction (depthwise separable convolutions), EAGAM, DMTFM (dilation rates $d \in \{1,2,4,8\}$), and PPRM. The dashed line represents the skip connection for refinement}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Efficient Adaptive Graph Attention with Low-Rank Decomposition}{5}{subsection.3.3}\protected@file@percent }
 \citation{puny2020global}
 \citation{kong2023low}
 \citation{yang2023self}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-B}2}Low-Rank Feature Projection}{5}{subsubsection.3.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Adaptive Graph Attention with Low-Rank Decomposition}{5}{subsection.3.3}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Feature‑extraction pipeline. Independent regional time‑series $\mathbf  {x}^i$ and $\mathbf  {x}^j$ are processed in parallel by depth‑wise and point‑wise convolutions, normalised, flattened, passed through a bottleneck projection ($d_b\!\to \! d_h$), and normalised again to yield region‑level feature vectors $\mathbf  F$.}}{6}{figure.2}\protected@file@percent }
 \newlabel{fig:feature_extraction}{{2}{6}{Feature‑extraction pipeline. Independent regional time‑series $\mathbf {x}^i$ and $\mathbf {x}^j$ are processed in parallel by depth‑wise and point‑wise convolutions, normalised, flattened, passed through a bottleneck projection ($d_b\!\to \! d_h$), and normalised again to yield region‑level feature vectors $\mathbf F$}{figure.2}{}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-C}1}Bottleneck Projection}{6}{subsubsection.3.3.1}\protected@file@percent }
@@ -47,34 +49,34 @@
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-C}4}Attention Regularisation}{7}{subsubsection.3.3.4}\protected@file@percent }
 \citation{dengColaGNNCrosslocationAttention2020a}
 \citation{xie2022epignn}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Flow of data and structure in the AGAM module.}}{8}{figure.3}\protected@file@percent }
-\newlabel{fig:agam_module}{{3}{8}{Flow of data and structure in the AGAM module}{figure.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Multi-scale Fusion Module}{8}{subsection.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Dilated Multi-Scale Temporal Feature Module}{8}{subsection.3.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-D}1}Dilated Convolutions for Multi-scale Processing}{8}{subsubsection.3.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-D}2}Adaptive Scale Fusion}{8}{subsubsection.3.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-D}3}Bottleneck Projection and Residual Connection}{8}{subsubsection.3.4.3}\protected@file@percent }
 \citation{BENTAIEB20127067,chandra2021evaluation}
 \citation{hochreiter1997long}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-D}2}Adaptive Scale Fusion}{9}{subsubsection.3.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-D}3}Bottleneck Projection and Residual Connection}{9}{subsubsection.3.4.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Flow of data and structure in the EAGAM module.}}{9}{figure.3}\protected@file@percent }
+\newlabel{fig:eagam_module}{{3}{9}{Flow of data and structure in the EAGAM module}{figure.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-E}}Progressive Multi-step Prediction Refinement}{9}{subsection.3.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-E}1}Low-Rank Prediction Projection}{9}{subsubsection.3.5.1}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Flow of data in the MTFM architecture.}}{10}{figure.4}\protected@file@percent }
-\newlabel{fig:mtfm_module}{{4}{10}{Flow of data in the MTFM architecture}{figure.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Flow of data in the DMTFM architecture.}}{10}{figure.4}\protected@file@percent }
+\newlabel{fig:dmtfm_module}{{4}{10}{Flow of data in the DMTFM architecture}{figure.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-E}1}Low-Rank Prediction Projection}{10}{subsubsection.3.5.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-E}2}Horizon-Specific Prediction}{10}{subsubsection.3.5.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-E}3}Adaptive Refinement Mechanism}{10}{subsubsection.3.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-E}3}Adaptive Refinement Mechanism}{11}{subsubsection.3.5.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {IV}Experiments and Analysis}{11}{section.4}\protected@file@percent }
 \newlabel{sec:experiments}{{IV}{11}{Experiments and Analysis}{section.4}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Experimental Setup}{11}{subsection.4.1}\protected@file@percent }
 \newlabel{sec:experimental_setup}{{\mbox  {IV-A}}{11}{Experimental Setup}{subsection.4.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Datasets}{11}{subsection.4.2}\protected@file@percent }
-\newlabel{sec:datasets}{{\mbox  {IV-B}}{11}{Datasets}{subsection.4.2}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces The flow of data in the PPRM architecture}}{12}{figure.5}\protected@file@percent }
 \newlabel{fig:pprm_module}{{5}{12}{The flow of data in the PPRM architecture}{figure.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Datasets}{12}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:datasets}{{\mbox  {IV-B}}{12}{Datasets}{subsection.4.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-B}1}Influenza Datasets}{12}{subsubsection.4.2.1}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Overview of the epidemic datasets used in our experimental evaluation. ``Granularity'' indicates the temporal resolution of the epidemic data, whilst ``Size'' represents the product of the number of locations and the number of time steps.}}{12}{table.1}\protected@file@percent }
 \newlabel{tab:datasets}{{I}{12}{Overview of the epidemic datasets used in our experimental evaluation. ``Granularity'' indicates the temporal resolution of the epidemic data, whilst ``Size'' represents the product of the number of locations and the number of time steps}{table.1}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-B}1}Influenza Datasets}{12}{subsubsection.4.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-B}2}COVID-19 Datasets}{12}{subsubsection.4.2.2}\protected@file@percent }
 \citation{NHS2024HospitalActivity}
 \citation{ajao2023deep,oluwasakin2023data,zeroual2020deep,Kamalov2022ReviewDL}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-B}2}COVID-19 Datasets}{13}{subsubsection.4.2.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Model Optimisation}{13}{subsection.4.3}\protected@file@percent }
 \newlabel{sec:optimisation}{{\mbox  {IV-C}}{13}{Model Optimisation}{subsection.4.3}{}}
 \citation{li2017diffusion}
@@ -111,12 +113,12 @@
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {10-day Horizon RMSE}}}{17}{subfigure.8.1}\protected@file@percent }
 \@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {15-day Horizon RMSE}}}{17}{subfigure.8.2}\protected@file@percent }
 \newlabel{fig:ablation:rmse_long}{{8}{17}{Ablation study results for RMSE on the Japan-Prefectures dataset for long-term horizons (10-day and 15-day forecasts)}{figure.8}{}}
-\bibstyle{IEEEtran}
-\bibdata{ref}
-\bibcite{ajao2023deep}{{1}{}{{}}{{}}}
 \@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces Ablation study results on the Japan-Prefectures dataset, showing the impact of removing key components of MSAGAT-Net on forecasting performance across different horizons.}}{18}{table.4}\protected@file@percent }
 \newlabel{tab:ablation}{{IV}{18}{Ablation study results on the Japan-Prefectures dataset, showing the impact of removing key components of MSAGAT-Net on forecasting performance across different horizons}{table.4}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {V}Conclusion}{18}{section.5}\protected@file@percent }
+\bibstyle{IEEEtran}
+\bibdata{ref}
+\bibcite{ajao2023deep}{{1}{}{{}}{{}}}
 \bibcite{da2021covid}{{2}{}{{}}{{}}}
 \bibcite{giuliani2020modelling}{{3}{}{{}}{{}}}
 \bibcite{verma2022temporal}{{4}{}{{}}{{}}}
@@ -133,13 +135,13 @@
 \bibcite{dengColaGNNCrosslocationAttention2020a}{{15}{}{{}}{{}}}
 \bibcite{xie2022epignn}{{16}{}{{}}{{}}}
 \bibcite{gao2021stan}{{17}{}{{}}{{}}}
-\bibcite{venna2019novel}{{18}{}{{}}{{}}}
-\bibcite{wang2019defsi}{{19}{}{{}}{{}}}
-\bibcite{cao2022mepognn}{{20}{}{{}}{{}}}
-\bibcite{gao2023evidence}{{21}{}{{}}{{}}}
-\bibcite{han2025dygraphformer}{{22}{}{{}}{{}}}
-\bibcite{pu2024dynamic}{{23}{}{{}}{{}}}
-\bibcite{wang2020linformer}{{24}{}{{}}{{}}}
+\bibcite{han2025dygraphformer}{{18}{}{{}}{{}}}
+\bibcite{pu2024dynamic}{{19}{}{{}}{{}}}
+\bibcite{wang2020linformer}{{20}{}{{}}{{}}}
+\bibcite{cao2022mepognn}{{21}{}{{}}{{}}}
+\bibcite{gao2023evidence}{{22}{}{{}}{{}}}
+\bibcite{venna2019novel}{{23}{}{{}}{{}}}
+\bibcite{wang2019defsi}{{24}{}{{}}{{}}}
 \bibcite{chollet2017xception}{{25}{}{{}}{{}}}
 \bibcite{li2023multi}{{26}{}{{}}{{}}}
 \bibcite{yu2022traffic}{{27}{}{{}}{{}}}

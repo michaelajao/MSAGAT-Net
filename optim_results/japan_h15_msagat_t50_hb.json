@@ -1,0 +1,30 @@
+{
+  "study_name": "japan_h15_msagat_t50_hb",
+  "dataset": "japan",
+  "sim_mat": "japan-adj",
+  "window": 20,
+  "horizon": 15,
+  "model": "msagat",
+  "trials_total": 50,
+  "trials_completed": 20,
+  "trials_pruned": 30,
+  "best_trial_number": 7,
+  "best_val_rmse": 1084.757230904685,
+  "best_epoch": 127,
+  "best_params": {
+    "hidden_dim": 16,
+    "attention_heads": 2,
+    "bottleneck_dim": 16,
+    "num_scales": 4,
+    "kernel_size": 7,
+    "feature_channels": 16,
+    "dropout": 0.3485363152492791,
+    "attention_regularization_weight": 2.4544333918228593e-06,
+    "lr": 0.00040194982759059796,
+    "weight_decay": 4.782653231628049e-05
+  },
+  "test_rmse": 1318.2566138654493,
+  "test_pcc": 0.8175673265993534,
+  "pruner": "hyperband",
+  "trial_timeout_seconds": 0
+}

@@ -1,0 +1,30 @@
+{
+  "study_name": "spain-covid_h7_quick",
+  "dataset": "spain-covid",
+  "sim_mat": "spain-adj",
+  "window": 20,
+  "horizon": 7,
+  "model": "msagat",
+  "trials_total": 3,
+  "trials_completed": 3,
+  "trials_pruned": 0,
+  "best_trial_number": 1,
+  "best_val_rmse": 379.11609781833323,
+  "best_epoch": 1,
+  "best_params": {
+    "hidden_dim": 32,
+    "attention_heads": 2,
+    "bottleneck_dim": 16,
+    "num_scales": 3,
+    "kernel_size": 5,
+    "feature_channels": 32,
+    "dropout": 0.18141214215954915,
+    "attention_regularization_weight": 2.740625999333871e-05,
+    "lr": 0.00029474417326577775,
+    "weight_decay": 4.168802250228886e-05
+  },
+  "test_rmse": 174.26026691417638,
+  "test_pcc": 0.4348335508132879,
+  "pruner": "median",
+  "trial_timeout_seconds": 900
+}
