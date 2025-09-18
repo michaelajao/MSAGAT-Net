@@ -63,7 +63,7 @@
 
 % ---------- ABSTRACT ----------
 \begin{abstract}
-Accurate and scalable spatiotemporal epidemic forecasting is a critical yet challenging task for public health systems, as traditional models often struggle with computational complexity and capturing multi-scale temporal dynamics. This paper introduces MSAGAT-Net, a novel Multi-Scale Temporal Graph Attention Network designed to overcome these limitations. Our architecture integrates four complementary innovations: an efficient feature extraction module using depthwise separable convolutions; an Efficient Adaptive Graph Attention Module (EAGAM) that achieves linear O(N) complexity through low-rank bottleneck projections and linearized attention computation while learning interpretable inter-regional dependencies; a Dilated Multi-Scale Temporal Feature Module (DMTFM) that captures dynamics across multiple temporal resolutions using adaptive dilated convolutions; and a Progressive Prediction Refinement Module (PPRM) that stabilizes multi-step predictions by combining model-based forecasts with trend-based extrapolations. Extensive evaluations on seven diverse epidemic datasets, including influenza and COVID-19 across multiple countries, show that MSAGAT-Net outperforms strong baselines (DCRNN, LSTNet, CNNRNN-Res, Cola-GNN, EpiGNN), achieving up to 11.2\% lower root mean square error (RMSE) than the best prior model on the Japan-Prefectures dataset (3/10/15-day horizons) and leading short-horizon results on LTLA. Comprehensive ablation studies reveal disease-specific and horizon-dependent importance of each component; for instance, spatial attention is critical for long-horizon influenza forecasts, while progressive refinement is essential for COVID-19 predictions. With its linear computational complexity and interpretable attention mechanisms, MSAGAT-Net offers a practical and powerful tool for real-time epidemic surveillance and decision support.
+Accurate and scalable spatiotemporal epidemic forecasting is a critical yet challenging task for public health systems, as traditional models often struggle with computational complexity and capturing multi-scale temporal dynamics. This paper introduces MSAGAT-Net, a novel Multi-Scale Temporal Graph Attention Network designed to overcome these limitations through three key innovations: linearised attention for computational efficiency, adaptive multi-scale temporal processing, and progressive prediction refinement for stable multi-horizon forecasts. Additionally, we contribute two novel epidemic forecasting datasets (LTLA-COVID and NHS-ICUBeds) following established graph construction methodologies. Extensive evaluations on seven diverse epidemic datasets, including influenza and COVID-19 across multiple countries, show that MSAGAT-Net outperforms strong baselines such as Cola-GNN, EpiGNN, achieving up to 11.2\% lower root mean square error (RMSE) than the best prior model on the Japan-Prefectures dataset (3, 10 and 15-day horizons) and leading short-horizon results on LTLA. Comprehensive ablation studies reveal disease-specific and horizon-dependent importance of each component, highlighting the importance of adaptive architectural design for epidemic forecasting.
 \end{abstract}
 
 % ---------- INDEX TERMS ----------
@@ -75,22 +75,23 @@ Deep Learning, Graph Neural Networks, Multi-head Attention, Time Series Analysis
 \section{Introduction}
 
 Spatio-temporal forecasting plays a critical role in addressing complex real-world problems, from urban traffic management and environmental monitoring to epidemic prediction and resource allocation. 
-% Accurate forecasting in these domains requires models that can effectively capture both spatial dependencies between different geographical regions and temporal patterns within each region over time. 
 The COVID-19 pandemic has underscored the importance of reliable epidemic forecasting models that can adapt to rapidly changing dynamics and provide actionable insights for timely public health decision-making and resource allocation \cite{ajao2023deep,da2021covid, giuliani2020modelling, verma2022temporal, ma2024reporting}. However, developing such models presents significant challenges due to the complex interplay between spatial dependencies, temporal patterns, and the inherent uncertainty in disease transmission.
 
-A number of studies have explored forecasting in various domains, including traffic prediction \cite{li2017diffusion, zhang2021graph}, environmental monitoring \cite{wu2018deep, lai2018modeling}, and epidemic forecasting \cite{kimForecastingEpidemicSpread2025, zhiweidingBiologyInformedRecurrentNeural2023}. Using deep learning techniques, such as recurrent neural networks (RNN), convolutional neural networks (CNN), and graph neural networks (GNN), researchers have made significant strides in improving forecasting accuracy and efficiency, particularly in capturing complex patterns and relationships within the data.
+The challenge of epidemic forecasting lies in capturing the complex interplay between spatial dependencies (how diseases spread between interconnected regions) and temporal patterns that range from daily reporting fluctuations to seasonal epidemic waves. Traditional epidemiological models, whilst providing valuable theoretical insights, often struggle with the computational complexity required for real-time surveillance across hundreds or thousands of regions. 
 
-However, existing approaches to spatiotemporal epidemic forecasting face several limitations. Traditional epidemiological models, such as compartmental SIR-based models, often struggle to capture the nuanced spatial relationships between regions and require extensive parameter tuning. Recent deep learning approaches have shown promise but suffer from computational inefficiencies when modeling spatial dependencies, particularly as the number of regions increases. Furthermore, most existing methods fail to adequately address the multi-scale nature of epidemic dynamics, where both short-term fluctuations and long-term trends play crucial roles in accurate forecasting.
+A number of studies have explored forecasting in various domains, including traffic prediction \cite{li2017diffusion, zhang2021graph}, environmental monitoring \cite{wu2018deep, lai2018modeling}, and epidemic forecasting \cite{kimForecastingEpidemicSpread2025, zhiweidingBiologyInformedRecurrentNeural2023}. Using deep learning techniques, such as recurrent neural networks (RNN), convolutional neural networks (CNN), and graph neural networks (GNN), researchers have made significant strides in improving forecasting accuracy and efficiency, particularly in capturing complex patterns and relationships within the data. Recent advances in deep learning, particularly graph neural networks, have shown particular promise for epidemic forecasting by learning complex spatiotemporal patterns directly from data.
 
-In this paper we present MSAGAT-Net (Multi‑Scale Temporal Graph Attention Network), a compact and practical architecture that tackles the scalability and multi‑horizon challenges of epidemic forecasting by combining three complementary design choices. EAGAM replaces costly pairwise attention with a linearised, low‑rank formulation that learns interpretable inter‑region dependencies at O(N) cost. DMTFM captures dynamics at several temporal resolutions via dilated convolutions, allowing the model to represent both abrupt short‑term changes and slower seasonal trends. Finally, PPRM produces stable multi‑step forecasts by iteratively refining outputs using the most recent observations. Together these components form an efficient, interpretable framework suitable for real‑time epidemic surveillance and multi‑horizon prediction.
+However, current approaches face three fundamental limitations that prevent their deployment in real-world surveillance systems. First, most graph attention mechanisms suffer from quadratic computational complexity, making them prohibitively expensive for national-scale surveillance involving thousands of regions. Second, existing methods typically employ fixed architectural choices for temporal processing, failing to adapt to the diverse dynamics exhibited by different diseases and forecasting horizons. Third, multi-step forecasting remains unstable due to error accumulation, limiting the utility of long-range predictions essential for public health planning and resource allocation.
+
+To address these challenges, we propose MSAGAT-Net (Multi-Scale Temporal Graph Attention Network), a novel architecture that achieves computational efficiency whilst maintaining high forecasting accuracy across diverse epidemic scenarios. Our architecture integrates four complementary innovations: an efficient feature extraction module using depthwise separable convolutions; an Efficient Adaptive Graph Attention Module (EAGAM) that achieves linear O(N) complexity through low-rank bottleneck projections and linearised attention computation while learning interpretable inter-regional dependencies; a Dilated Multi-Scale Temporal Feature Module (DMTFM) that captures dynamics across multiple temporal resolutions using adaptive dilated convolutions; and a Progressive Prediction Refinement Module (PPRM) that stabilises multi-step predictions by combining model-based forecasts with trend-based extrapolations.
 
 Our contributions are as follows:
 \begin{enumerate}
-\item We propose a computationally efficient graph attention mechanism that achieves linear O(N) complexity through low-rank bottleneck projections and linearized attention computation, avoiding the quadratic complexity of standard attention while maintaining modeling capacity for large-scale epidemic forecasting.
-\item We develop a multi-scale temporal processing framework using adaptive dilated convolutions that efficiently captures epidemic dynamics across multiple temporal resolutions, from immediate fluctuations to seasonal trends.
-\item We introduce a progressive prediction refinement module that stabilizes multi-step forecasting by adaptively combining model-based predictions with trend-based extrapolations.
-\item We demonstrate through extensive experiments on seven diverse epidemic datasets that MSAGAT-Net outperforms strong baselines, achieving up to 11.2\% lower RMSE than the best prior model on Japan-Prefectures (3/10/15-day horizons), with leading short-horizon results on LTLA.
-\item We provide comprehensive ablation studies revealing disease-specific and horizon-dependent patterns, showing that spatial attention is critical for long-horizon influenza forecasts while progressive refinement is essential for COVID-19 predictions.
+\item We propose a computationally efficient graph attention mechanism that achieves linear O(N) complexity through low-rank bottleneck projections and linearised attention computation, enabling real-time surveillance across thousands of regions whilst maintaining modelling capacity for accurate epidemic forecasting.
+\item We develop an adaptive multi-scale temporal processing framework using dilated convolutions that efficiently captures epidemic dynamics across multiple temporal resolutions, from immediate reporting fluctuations to seasonal epidemic waves.
+\item We introduce a progressive prediction refinement module that stabilises multi-step forecasting by adaptively combining model-based predictions with trend-based extrapolations, addressing the critical challenge of error accumulation in long-range epidemic predictions.
+\item We introduce two novel epidemic forecasting datasets (LTLA-COVID and NHS-ICUBeds) following established graph construction methodologies, providing new benchmarks for spatiotemporal epidemic forecasting research.
+\item We demonstrate substantial performance improvements across seven diverse epidemic datasets, with comprehensive ablation studies revealing disease-specific and horizon-dependent architectural requirements that challenge conventional assumptions about spatiotemporal modelling.
 \end{enumerate}
 
 
@@ -166,7 +167,7 @@ where $\boldsymbol{\Theta}$ represents the learnable parameters of our forecasti
 
 The challenge lies in designing this function $f$ to effectively capture both spatial dependencies between regions and temporal patterns within regions, whilst remaining computationally tractable and robust to the noisy and incomplete nature of epidemic data. Our approach, detailed in the following sections, addresses this challenge through a novel neural network architecture that combines graph attention mechanisms with multi-scale processing.
 
-\begin{figure*}[!t]
+\begin{figure*}[!htbp]
     \centering
     \begin{tikzpicture}[
         font=\footnotesize,
@@ -292,7 +293,7 @@ This normalisation step helps mitigate internal covariate shift during training,
 
 \subsubsection{Low-Rank Feature Projection}
 
-After extracting features using depthwise separable convolutions, we applied a low-rank projection to further reduce dimensionality and capture the most salient features. This projection consists of two linear transformations with a bottleneck in between:
+After extracting features using depthwise separable convolutions, we apply a low-rank projection to further reduce dimensionality and capture the most salient features. This projection consists of two linear transformations with a bottleneck in between:
 
 \begin{equation}
 \mathbf{F}^i_{\text{low}} = \text{Linear}_{\text{low}}(\text{Flatten}(\mathbf{z}^i_{\text{norm}}))
@@ -403,9 +404,9 @@ The second core component of our MSAGAT-Net architecture is EAGAM. Traditional a
 
 A significant challenge in implementing graph attention mechanisms for large-scale epidemic or forecasting problems is computational complexity. Standard attention mechanisms in graph neural networks (GNNs) typically incur quadratic complexity with respect to the number of nodes, making them prohibitively expensive for large graphs. Additionally, these methods often suffer from over-smoothing when modelling long-range dependencies, where node representations become increasingly similar after multiple message-passing iterations.
 
-Recent advances in efficient attention mechanisms have shown that low-rank decomposition techniques can substantially reduce computational complexity whilst maintaining expressive power. Several influential works have explored this direction. Researchers such as \cite{puny2020global} propose a low-rank global attention (LRGA), an adaptive module that replaces the total attention of the dot product in GNN with a decomposed low-rank form. \cite{kong2023low} present the Global Representation Key (GRK) attention layer, where the attention scores of each node are calculated using a shared projection of the features of its neighbours. A learnt adaptive low-rank matrix captures the most salient structural information, mitigating over-smoothing and improving performance on graphs. While \cite{yang2023self} embeds an adaptive low-rank decomposition step in each propagation layer within each ego network to concentrate message passing on the most prominent low-dimensional subspaces. This lets the model adaptively focus on the most informative subspace per node, improving robustness without labels. These studies collectively demonstrate that low‑rank factorisation offers an efficient, scalable and expressive alternative to full‑rank attention in graph architectures, and motivate the design of this module in our framework.
+Recent advances in efficient attention mechanisms have shown that low-rank decomposition techniques can substantially reduce computational complexity whilst maintaining expressive power. Several influential works have explored this direction. Researchers such as \cite{puny2020global} propose a low-rank global attention (LRGA), an adaptive module that replaces the total attention of the dot product in GNN with a decomposed low-rank form. \cite{kong2023low} present the Global Representation Key (GRK) attention layer, where the attention scores of each node are calculated using a shared projection of the features of its neighbours. A learnt adaptive low-rank matrix captures the most salient structural information, mitigating over-smoothing and improving performance on graphs. While \cite{yang2023self} embeds an adaptive low-rank decomposition step in each propagation layer within each ego network to concentrate message passing on the most prominent low-dimensional subspaces. This lets the model adaptively focus on the most informative subspace per node, improving robustness without labels. These studies collectively demonstrate that low-rank factorisation offers an efficient, scalable and expressive alternative to full-rank attention in graph architectures, motivating the design of this module in our framework.
 
-Motivated by these advances, EAGAM employs a novel attention mechanism that combines low-rank decomposition with a learnable graph structure. Rather than computing the full attention matrix between all pairs of regions (which would incur $\mathcal{O}(N^2)$ complexity), we decompose the attention computation into more efficient operations. Specifically, we used a low-rank approximation of the attention matrix, which allows us to capture the most salient relationships between regions without incurring the full computational cost. This is achieved by projecting the feature representations into a lower-dimensional space before computing attention scores, effectively reducing the number of parameters and operations required.
+Motivated by these advances, EAGAM employs a novel attention mechanism that combines low-rank decomposition with a learnable graph structure. Rather than computing the full attention matrix between all pairs of regions (which would incur $\mathcal{O}(N^2)$ complexity), we decompose the attention computation into more efficient operations. Specifically, we use a low-rank approximation of the attention matrix, which allows us to capture the most salient relationships between regions without incurring the full computational cost. This is achieved by projecting the feature representations into a lower-dimensional space before computing attention scores, effectively reducing the number of parameters and operations required.
 
 This allows the model to adaptively learn the strength of connections between regions based on their feature representations rather than relying on a fixed adjacency matrix. The EAGAM module consists of several key components: (1) low-rank feature projections, (2) multi-head attention computation, (3) enhanced attention stability, (4) learnable graph structure bias, and (5) attention regularisation. 
 
@@ -563,7 +564,7 @@ In our implementation, we set the number of attention heads $h=4$ and the bottle
 % Through these innovations, the AGAM effectively captures the complex spatial dependencies inherent in epidemic data, providing a solid foundation for the subsequent temporal modelling steps in our architecture.
 
 
-\begin{figure*}[!t]
+\begin{figure*}[!htbp]
 \centering
 %–— 1. We still fix the width to \linewidth; the height now shrinks naturally –—
 \resizebox{\linewidth}{!}{%
@@ -668,13 +669,7 @@ resulting in a tensor of shape $[B, d_{\text{hidden}}, N]$. We then process this
 
 where $i \in \{1, 2, \ldots, S\}$ indexes the scale, $k$ is the kernel size (set to 3 by default), and $d^{(i)} = 2^{i-1}$ is the dilation rate for the scale $i$. Each branch produces an output tensor $\mathbf{H}^{(i)} \in \mathbb{R}^{B \times d_{\text{hidden}} \times N}$.
 
-The increasing dilation rates create an exponentially expanding receptive field across the branches:
-\begin{itemize}
-    \item Scale 1 ($d^{(1)} = 1$): Captures immediate temporal dependencies with a receptive field of $k$ time steps
-    \item Scale 2 ($d^{(2)} = 2$): Captures medium-range dependencies with a receptive field of $k + (k-1)$ time steps
-    \item Scale 3 ($d^{(3)} = 4$): Captures longer-range dependencies with a receptive field of $k + 3(k-1)$ time steps
-    \item And so on for higher scales
-\end{itemize}
+The increasing dilation rates create an exponentially expanding receptive field across the branches. Scale 1 ($d^{(1)} = 1$) captures immediate temporal dependencies with a receptive field of $k$ time steps, whilst Scale 2 ($d^{(2)} = 2$) captures medium-range dependencies with a receptive field of $k + (k-1)$ time steps. Scale 3 ($d^{(3)} = 4$) captures longer-range dependencies with a receptive field of $k + 3(k-1)$ time steps, and this pattern continues for higher scales.
 
 This multi-scale approach allows the model to efficiently capture a wide range of temporal dependencies without requiring deep sequential processing, which is particularly advantageous for epidemic time-series that often exhibit both rapid changes and gradual trends.
 
@@ -696,7 +691,7 @@ The multi-scale features are then fused using these weights:
 
 where $\mathbf{H}_{\text{fused}} \in \mathbb{R}^{B \times d_{\text{hidden}} \times N}$ is the scale-fused feature representation.
 
-This adaptive fusion mechanism offers several advantages. It allows the model to automatically adjust the importance of different temporal scales based on the data, can adapt to different regions that might exhibit varying temporal characteristics, and provides interpretable insights into which temporal scales are most relevant for forecasting.
+This adaptive fusion mechanism offers several advantages by allowing the model to automatically adjust the importance of different temporal scales based on the data, adapting to different regions that might exhibit varying temporal characteristics, and providing interpretable insights into which temporal scales are most relevant for forecasting.
 
 \begin{figure*}[!t]
 \centering
@@ -752,12 +747,7 @@ Given the spatio-temporal feature tensor $\mathbf{H}_{\text{final}} \in \mathbb{
 
 where $\mathbf{P}_{\text{low}} \in \mathbb{R}^{B \times N \times d_{\text{bottle}}}$ is the bottleneck representation with dimension $d_{\text{bottle}} \ll d_{\text{hidden}}$.
 
-This bottleneck projection serves multiple purposes:
-\begin{enumerate}
-    \item It reduces the parameter count in the subsequent prediction layers
-    \item It forces the model to identify the most salient features for forecasting
-    \item It acts as an implicit regulariser, helping to prevent overfitting
-\end{enumerate}
+This bottleneck projection reduces the parameter count in the subsequent prediction layers whilst forcing the model to identify the most salient features for forecasting and acting as an implicit regulariser to prevent overfitting.
 
 We then apply layer normalisation, ReLU activation, and dropout to the bottleneck representation:
 
@@ -777,14 +767,9 @@ From the processed bottleneck representation, we generate initial predictions fo
 
 where $\mathbf{P}_{\text{initial}} \in \mathbb{R}^{B \times N \times h}$ represents the raw model predictions for each region in all forecast horizons $h$.
 
-This approach generates predictions for all horizons simultaneously rather than autoregressively, which offers several advantages:
-\begin{enumerate}
-    \item It avoids the compounding error problem of sequential prediction
-    \item It allows the model to learn horizon-specific patterns directly
-    \item It enables more efficient training and inference
-\end{enumerate}
+This approach generates predictions for all horizons simultaneously rather than autoregressively, avoiding the compounding error problem of sequential prediction whilst allowing the model to learn horizon-specific patterns directly and enabling more efficient training and inference.
 
-However, we recognise that different forecast horizons may require different prediction strategies—near-term forecasts might benefit more from recent observations, whilst longer-term forecasts might rely more heavily on learnt patterns. Our architecture addresses this through an adaptive refinement mechanism.
+However, we recognise that different forecast horizons may require different prediction strategies, as near-term forecasts might benefit more from recent observations, whilst longer-term forecasts might rely more heavily on learnt patterns. Our architecture addresses this through an adaptive refinement mechanism.
 
 \subsubsection{Adaptive Refinement Mechanism}
 
@@ -825,7 +810,7 @@ The decay factor $\gamma$ in the exponential projection is set to 0.1, which pro
 A dropout rate of 0.355 is applied in the prediction pathway to prevent overfitting, which is particularly important for the final prediction layers that directly influence the model output. This relatively high dropout rate was determined by cross-validation to be effective for the noisy and often irregular nature of epidemic data.
 
 
-\begin{figure*}[htbp]
+\begin{figure*}[!htbp]
 \centering
 % ~0.55·textheight; width adapts automatically
 \resizebox{!}{0.55\textheight}{%
@@ -876,7 +861,7 @@ A dropout rate of 0.355 is applied in the prediction pathway to prevent overfitt
 \foreach \a/\b in {last/expand, expand/decay, decay/trend}
   \draw[arrow] (\a) -- (\b);
 
-%–––– FUSION OPS (now lower) –––––––––––––––––––––––
+% FUSION OPS (now lower)
 % Products placed well below group boxes
 \node (mul1) [op, below=2.0cm of ginv] {$\odot$};
 \node (mul2) [op, right=3.8cm of mul1] {$\odot$};
@@ -886,7 +871,7 @@ A dropout rate of 0.355 is applied in the prediction pathway to prevent overfitt
 
 \node (output) [io, right=2.2cm of add] {$\hat{\mathbf x}_{t+h}$};
 
-%––– Arrows from paths to products (entering from sides) –––
+% Arrows from paths to products (entering from sides)
 \draw[arrow] (pinit.south) -- ++ (0,-0.8) -| ($(mul1.west)+(-1.8,0)$) -- (mul1.west);
 \draw[arrow] (gsig.east) -- ++ (1.2,0) |- (mul1.east);
 
@@ -898,14 +883,14 @@ A dropout rate of 0.355 is applied in the prediction pathway to prevent overfitt
 \draw[arrow] (mul2.south) -- ($(mul2.south)!0.5!(add.north)$) -- (add.north);
 \draw[arrow] (add.east) -- (output.west);
 
-%–––– EQUATION –––––––––––––––––––––––––––––––––––––
+% EQUATION
 \node (eq) [below=0.5cm of add, font=\scriptsize, align=center]
 {$\displaystyle \hat{\mathbf x}_{t+h}\;=\;
         \mathbf G \odot \mathbf P_{\text{init}}
         \;+\;
         (1-\mathbf G) \odot \mathbf T$};
 
-%–––– GROUP BOXES ––––––––––––––––––––––––––––––––––
+% GROUP BOXES
 \usetikzlibrary{fit}
 \begin{scope}[on background layer]
   \node[draw=blue!70,  dashed, rounded corners, inner sep=6pt,
@@ -931,7 +916,7 @@ The figure \ref{fig:pprm_module} illustrates the flow of data through the PPRM m
 \section{Experiments and Analysis}
 \label{sec:experiments}
 
-This section presents a comprehensive evaluation of our proposed MSAGAT-Net model across multiple epidemic datasets with varying characteristics. We compare MSAGAT-Net against strong baseline models to assess its effectiveness in capturing complex spatio-temporal dynamics and generating accurate multi-horizon forecasts. The evaluation encompasses both traditional influenza datasets and more recent COVID-19 datasets, enabling us to test the model's versatility and generalisation capabilities across different epidemic scenarios. We evaluated the models using multiple metrics, including root mean square error (RMSE), Pearson correlation coefficient (PCC), mean absolute error (MAE), and coefficient of determination (R²), to provide a comprehensive assessment of performance.
+This section presents a comprehensive evaluation of our proposed MSAGAT-Net model across multiple epidemic datasets with varying characteristics. We compare MSAGAT-Net against strong baseline models to assess its effectiveness in capturing complex spatio-temporal dynamics and generating accurate multi-horizon forecasts. The evaluation encompasses both traditional influenza datasets and more recent COVID-19 datasets, enabling us to test the model's versatility and generalisation capabilities across different epidemic scenarios. We evaluated the models using multiple metrics, including RMSE, PCC, MAE, and R², to provide a comprehensive assessment of performance.
 
 \subsection{Experimental Setup}
 \label{sec:experimental_setup}
@@ -945,7 +930,7 @@ To comprehensively evaluate the performance and generalisability of our proposed
 
 Our experimental evaluation encompasses seven distinct datasets, each offering unique challenges and characteristics for epidemic forecasting. These datasets represent different geographical scales (from local authorities to national regions), temporal resolutions (daily and weekly measurements), and disease contexts (seasonal influenza and COVID-19). Table~\ref{tab:datasets} provides a statistical overview of these datasets, summarising their key characteristics and numerical properties.
 
-\begin{table}[t]
+\begin{table}[!htbp]
 \centering
 \caption{Overview of the epidemic datasets used in our experimental evaluation. ``Granularity'' indicates the temporal resolution of the epidemic data, whilst ``Size'' represents the product of the number of locations and the number of time steps.}
 \label{tab:datasets}
@@ -983,12 +968,17 @@ To assess the adaptability of our model to new epidemic scenarios, we incorporat
     
     \item \textbf{Australia-COVID Dataset:} Compiled from the Johns Hopkins University Centre for Systems Science and Engineering (JHU-CSSE) repository, this dataset contains daily new confirmed cases of COVID-19 from 27 January 2020 to 4 August 2021 across all eight Australian jurisdictions (six states and two territories).
 
-    \item \textbf{LTLA-COVID Dataset:} Derived from the UK Health Security Agency\footnote{\url{https://ukhsa-dashboard.data.gov.uk/respiratory-viruses/covid-19}}, this dataset contains daily data from COVID-19 cases from March 2020 to February 2022 for 372 Lower-Tier Local Authority districts in England. 
+    \item \textbf{LTLA-COVID Dataset:} Derived from the UK Health Security Agency\footnote{\url{https://ukhsa-dashboard.data.gov.uk/respiratory-viruses/covid-19}}, this dataset contains daily data from COVID-19 cases from March 2020 to February 2022 for 372 Lower-Tier Local Authority districts in England. This dataset represents one of our key contributions to the research community, providing a comprehensive spatiotemporal benchmark for COVID-19 forecasting at the local authority level.
     
-    \item \textbf{NHS-ICUBeds Dataset:} Obtained from the National Health Service (NHS) England\cite{NHS2024HospitalActivity}, this dataset provides daily counts of occupied mechanical ventilator beds in seven regions of the NHS from March 2020 to February 2022. Unlike the other datasets that focus on case counts, this dataset offers an opportunity to evaluate the model's capability to predict healthcare resource utilisation, which is critical for effective epidemic response and management.
+    \item \textbf{NHS-ICUBeds Dataset:} Obtained from the National Health Service (NHS) England\cite{NHS2024HospitalActivity}, this dataset provides daily counts of occupied mechanical ventilator beds in seven regions of the NHS from March 2020 to February 2022. Unlike the other datasets that focus on case counts, this dataset offers an opportunity to evaluate the model's capability to predict healthcare resource utilisation, which is critical for effective epidemic response and management. This dataset constitutes another novel contribution, addressing the gap in publicly available healthcare resource forecasting benchmarks.
 \end{itemize}
 
-A critical aspect of our approach involves the construction of an appropriate graph structure to represent spatial relationships between regions. For our implementation, we constructed the adjacency matrix based on geographic proximity, using the Haversine formula to calculate the great circle distance between regions. Two regions are considered connected if the distance between them falls below a threshold $d_{\text{threshold}}$ (set to 150 km in our experiments):
+\subsection{Graph Construction Methodology}
+\label{sec:graph_construction}
+
+Following the established methodology from STAN \cite{gao2021stan}, we construct spatial graph structures to capture epidemic transmission patterns between geographic regions. This approach, applied to our newly introduced LTLA-COVID and NHS-ICUBeds datasets, utilises geographic proximity as the primary criterion for establishing spatial relationships.
+
+For our implementation, we constructed the adjacency matrix based on geographic proximity, using the Haversine formula to calculate the great circle distance between regions, consistent with established practices in spatiotemporal epidemic modelling. Two regions are considered connected if the distance between them falls below a threshold $d_{\text{threshold}}$ (set to 150 km in our experiments):
 
 \begin{equation}
 a_{ij} = 
@@ -1013,16 +1003,11 @@ The loss function for the MSAGAT-Net model is a combination of prediction error 
 \mathcal{L}_{\text{total}} = \mathcal{L}_{\text{pred}} + \lambda_{\text{attn}}\mathcal{L}_{\text{attn}} + \lambda_{\text{l2}}\|\Theta\|_2
 \end{equation}
 
-where:
-\begin{itemize}
-    \item $\mathcal{L}_{\text{pred}}$ is the mean squared error (MSE) measuring discrepancies between the model predictions and the observed data.
-    \item $\mathcal{L}_{\text{attn}}$ represents the attention regularisation term that enforces sparsity and interpretability in spatial relationships.
-    \item The hyperparameters $\lambda_{\text{attn}} = 10^{-4}$ and $\lambda_{\text{l2}} = 5 \times 10^{-4}$ control the strength of regularisation.
-\end{itemize}
+where $\mathcal{L}_{\text{pred}}$ is the mean squared error measuring discrepancies between the model predictions and the observed data, $\mathcal{L}_{\text{attn}}$ represents the attention regularisation term that enforces sparsity and interpretability in spatial relationships, and the hyperparameters $\lambda_{\text{attn}} = 10^{-4}$ and $\lambda_{\text{l2}} = 5 \times 10^{-4}$ control the strength of regularisation.
 
 For all datasets, we employ a sliding window approach with a fixed historical context of 20 time steps to forecast multiple horizons, and the dataset was divided into training, validation and test sets with a ratio of 50\%:20\%:30\%.
 
-The training algorithm for the MSAGAT-Net model is formalised in Algorithm~\ref{alg:MSAGAT-Net_training}, which incorporates several sophisticated optimization strategies tailored for spatiotemporal forecasting. The training procedure addresses three critical challenges: (1) handling the multi-objective loss landscape combining prediction accuracy with attention sparsity, (2) managing gradient flow through the complex multi-module architecture, and (3) preventing overfitting in the presence of limited epidemic data.
+The training algorithm for the MSAGAT-Net model is formalised in Algorithm~\ref{alg:MSAGAT-Net_training}, which incorporates several sophisticated optimization strategies tailored for spatiotemporal forecasting. The training procedure addresses three critical challenges in handling the multi-objective loss landscape combining prediction accuracy with attention sparsity, managing gradient flow through the complex multi-module architecture, and preventing overfitting in the presence of limited epidemic data.
 
 The optimization process employs a carefully designed curriculum where the attention regularisation term $\mathcal{L}_{\text{attn}}$ is gradually introduced to allow the model to first learn basic spatiotemporal patterns before enforcing sparsity constraints. This prevents the sparse attention mechanism from prematurely restricting the model's capacity during early training phases. The AdamW optimizer's weight decay specifically targets the tendency of attention weights to become over-parameterized, while the momentum terms help navigate the non-convex loss surface created by the interaction between spatial attention and temporal convolutions.
 
@@ -1030,7 +1015,7 @@ A key innovation in our training strategy is the dynamic loss balancing mechanis
 
 The early stopping mechanism incorporates a sophisticated validation strategy that monitors not only the overall loss but also the stability of attention patterns across epochs. Training is terminated when the validation loss plateaus and attention matrices converge to stable patterns, indicating that the model has learned robust spatiotemporal representations rather than continuing to fit noise in the training data.
 
-\begin{algorithm}[!t]
+\begin{algorithm}[!htbp]
     \caption{MSAGAT-Net Training Algorithm}
     \label{alg:MSAGAT-Net_training}
     \KwIn{Training data $\mathcal{D}_{\text{train}}$, validation data $\mathcal{D}_{\text{val}}$, adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$}
@@ -1093,12 +1078,12 @@ To evaluate the performance of our proposed MSAGAT-Net model, we compare it agai
 
 These baselines represent a diverse range of approaches to spatiotemporal forecasting, from traditional time-series models to advanced deep learning architectures that explicitly model spatial and temporal dependencies. By comparing against these models, we aim to assess the relative strengths and weaknesses of our MSAGAT-Net approach and identify its contributions to the state of the art in epidemic forecasting.
 
-\subsection{Results and Discussion}
+\section{Results and Discussion}
 \label{sec:results}
 
 Table~\ref{tab:performance_table} presents a comprehensive comparison of our proposed MSAGAT-Net model against state-of-the-art baseline approaches across three influenza datasets (Japan-Prefectures, US-Regions, and US-States) and four forecast horizons (3, 5, 10, and 15 days ahead). Furthermore, Table~\ref{tab:performance_table_others} shows the performance comparison on four COVID-19 datasets (Australia-COVID, LTLA-TimeSeries, NHS-TimeSeries and Spain-COVID) for horizons of 3, 7, and 14 days ahead.
 
-\begin{table*}[!th]
+\begin{table*}[!htbp]
     \centering
     \caption{RMSE and PCC performance of different methods on three datasets (horizon = 3, 5, 10, 15). Bold = best, underline = second best.}
     \label{tab:performance_table}
@@ -1135,7 +1120,7 @@ Table~\ref{tab:performance_table} presents a comprehensive comparison of our pro
 \end{table*}
 
 
-\begin{table*}[!th]
+\begin{table*}[!htbp]
     \centering
     \caption{RMSE performance of different methods on four datasets (horizon = 3, 7, 14). Bold = best, underline = second best.}
     \label{tab:performance_table_others}
@@ -1179,18 +1164,32 @@ In the NHS-ICUBeds dataset, Cola-GNN achieves the best performance for short-ter
 
 MSAGAT-Net's performance advantage is most consistent in the Japan-Prefectures dataset, where it outperforms all other models in all metrics and horizons. Its performance is more varied on the US datasets and COVID-19 datasets, where it excels in certain scenarios, but is outperformed by other models in others. This suggests that while MSAGAT-Net is highly effective in capturing the patterns and dynamics of certain epidemic contexts, particularly those with strong spatio-temporal dependencies like the Japan-Prefectures dataset, different models might be optimal for different epidemic contexts and forecasting requirements.
 
-The figure \ref{fig:attention_matrices_none} illustrates the attention matrices learnt by MSAGAT-Net on the Japan-Prefectures dataset for a 5-day forecast horizon. The attention weights reflect the model's focus on different regions and their relationships, providing insights into how the model captures spatial dependencies in the data. The attention matrices reveal that the model learns to focus on nearby prefectures, indicating that local transmission dynamics play a significant role in epidemic spread.
+Figures~\ref{fig:attention_matrices_none}, \ref{fig:attention_matrices_no_pprm}, and \ref{fig:attention_matrices_no_eagam} illustrate the learned attention patterns for different model configurations on the Japan-Prefectures dataset. The full model (Figure~\ref{fig:attention_matrices_none}) learns to focus on nearby prefectures while capturing longer-range dependencies, indicating that both local and inter-regional transmission dynamics are important for epidemic spread. Removing PPRM (Figure~\ref{fig:attention_matrices_no_pprm}) produces similar attention patterns, confirming that PPRM primarily affects prediction refinement rather than spatial dependency learning. In contrast, removing EAGAM (Figure~\ref{fig:attention_matrices_no_eagam}) results in attention patterns that largely mirror the input correlation matrix, demonstrating the critical importance of EAGAM for learning adaptive spatial representations.
 
 The observed variations in performance across datasets highlight the complexity of epidemic forecasting and underscore the importance of model selection based on the specific characteristics of the epidemic and the forecasting requirements. They also point to potential directions for future research, such as developing more adaptive modelling approaches that can dynamically adapt to changing epidemic dynamics and incorporate exogenous factors such as policy interventions and behavioural changes.
 
-\begin{figure*}[htbp]
+\begin{figure*}[!htbp]
   \centering
   \includegraphics[width=0.9\textwidth]{figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png}
-  \caption{Attention matrices learned by MSAGAT-Net on the Japan-Prefectures dataset for 5-day forecasting,adjacency matrix (left), input correlation (center), and learned attention (right).}
+  \caption{Attention matrices learned by MSAGAT-Net on the Japan-Prefectures dataset for 5-day forecasting: adjacency matrix (left), input correlation (center), and learned attention (right).}
   \label{fig:attention_matrices_none}
 \end{figure*}
 
-\begin{figure*}[htbp]
+\begin{figure*}[!htbp]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figs/matrices_MSTAGAT-Net.japan.w-20.h-5.no_pprm.png}
+  \caption{Attention matrices learned by MSAGAT-Net without PPRM on the Japan-Prefectures dataset for 5-day forecasting: adjacency matrix (left), input correlation (center), and learned attention (right).}
+  \label{fig:attention_matrices_no_pprm}
+\end{figure*}
+
+\begin{figure*}[!htbp]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figs/matrices_MSTAGAT-Net.japan.w-20.h-5.no_agam.png}
+  \caption{Attention matrices learned by MSAGAT-Net without EAGAM on the Japan-Prefectures dataset for 5-day forecasting: adjacency matrix (left), input correlation (center), and learned attention (right).}
+  \label{fig:attention_matrices_no_eagam}
+\end{figure*}
+
+\begin{figure*}[!htbp]
     \centering
     \subfloat[3-day Horizon RMSE]{
         \includegraphics[width=0.45\textwidth]{figs/rmse_only_japan_h3.pdf}
@@ -1205,7 +1204,7 @@ The observed variations in performance across datasets highlight the complexity 
     \label{fig:ablation:rmse}
 \end{figure*}
 
-\begin{figure*}[htbp]
+\begin{figure*}[!htbp]
     \centering
     \subfloat[10-day Horizon RMSE]{
         \includegraphics[width=0.45\textwidth]{figs/rmse_only_japan_h10.pdf}
@@ -1220,19 +1219,11 @@ The observed variations in performance across datasets highlight the complexity 
     \label{fig:ablation:rmse_long}
 \end{figure*}
 
-\subsubsection{Ablation Study}
+\subsection{Ablation Study}
 
 To evaluate the contribution of each key component in MSAGAT-Net, we conducted a comprehensive ablation study on the Japan-Prefectures dataset, systematically removing one component at a time while keeping the others intact. Table~\ref{tab:ablation} presents the results across different forecast horizons, providing valuable insights into the relative importance of each component.
 
-The results of the ablation study are consistent with our expectations based on the architectural design and the characteristics of the datasets. The removal of EAGAM leads to a noticeable degradation in performance across most scenarios, highlighting the importance of adaptive spatial modeling in capturing the complex inter-regional dependencies that are crucial for accurate epidemic forecasting. This is particularly evident in the Japan-Prefectures dataset, where the model's ability to learn and adapt spatial relationships significantly impacts forecasting performance.
-
-The impact of removing DMTFM is less detrimental than anticipated, and in some cases, it even improves performance slightly. This suggests that the temporal dynamics of the epidemic in the considered datasets might be adequately captured by the remaining components of the model, and that the multi-scale processing, while beneficial, is not always critical. It also indicates the potential for overfitting when introducing additional complexity without sufficient data.
-
-The PPRM shows varying importance depending on the dataset and the forecast horizon. Its removal notably harms the model's performance in the LTLA-COVID dataset for longer horizons, emphasising the value of progressive refinement in adapting predictions based on the most recent data. However, for shorter horizons, the impact is less pronounced, indicating that the benefits of progressive refinement are more significant when the model needs to extrapolate further into the future.
-
-These findings underscore the complexity of epidemic forecasting and the need for models that can adapt to the specific characteristics of the data and the underlying epidemic processes. They also highlight the potential for further improving forecasting performance through more targeted and adaptive modeling approaches that consider the unique spatiotemporal dynamics of different epidemics.
-
-\begin{table*}[htbp]
+\begin{table*}[!htbp]
     \centering
     \caption{Ablation study results on the Japan-Prefectures dataset, showing the impact of removing key components of MSAGAT-Net on forecasting performance across different horizons.}
     \label{tab:ablation}
@@ -1250,11 +1241,11 @@ These findings underscore the complexity of epidemic forecasting and the need fo
             & \textbf{Value} & \textbf{\% Change} 
             & \textbf{Value} & \textbf{\% Change} \\
         \midrule
-        % Full Model
-        % & MAE  & 321.45  &  & 398.12  &  & 462.37  &  & 511.22  &  \\
-        % & RMSE & 1045.23 &  & 1112.67 &  & 1347.20 &  & 1338.45 &  \\
-        % & PCC  & 0.885   &  & 0.884   &  & 0.827   &  & 0.778   &  \\
-        % & R²   & 0.732   &  & 0.724   &  & 0.569   &  & 0.356   &  \\
+        % \multirow{4}{*}{Full Model}
+        % & MAE  & 324.45  & -- & 392.12  & -- & 462.37  & -- & 511.22  & -- \\
+        % & RMSE & 1045.23 & -- & 1087.67 & -- & 1338.20 & -- & 1338.45 & -- \\
+        % & PCC  & 0.885   & -- & 0.884   & -- & 0.827   & -- & 0.778   & -- \\
+        % & R²   & 0.741   & -- & 0.724   & -- & 0.569   & -- & 0.356   & -- \\
         % \midrule
         \multirow{4}{*}{Without EAGAM}
         & MAE  & 328.57  & (+1.30\%) & 388.46  & (-0.86\%) & 613.53  & (+32.77\%) & 655.12  & (+28.06\%) \\
@@ -1278,34 +1269,105 @@ These findings underscore the complexity of epidemic forecasting and the need fo
     }
 \end{table*}
 
-The results of the ablation study are consistent with our expectations based on the architectural design and the characteristics of the datasets. The removal of the Adaptive Graph Attention Module (AGAM) leads to a noticeable degradation in performance of RMSE in the short term (3 days: +5. 28\%) and medium term forecasts (5 days: +2. 48\%), with a particularly dramatic impact for longer term forecasts (10 days: +23. 12\% RMSE, -22. 54\% PCC, -38. 14\% R2), as clearly visible in Figure~\ref{fig:ablation:rmse_h10}. This escalating pattern suggests that spatial dependencies become increasingly crucial for longer-term influenza forecasting, likely reflecting the complex spatial transmission dynamics of seasonal influenza across Japan's diverse prefectures.
+\begin{table*}[!htbp]
+    \centering
+    \caption{Ablation study results on LTLA-Timeseries dataset (COVID-19) with window size 20 across different forecast horizons. Values in parentheses indicate percentage change relative to the full model.}
+    \label{tab:ablation_ltla}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{llcccccc}
+        \toprule
+        \multirow{2}{*}{\textbf{Model Variant}} & \multirow{2}{*}{\textbf{Metric}} 
+            & \multicolumn{2}{c}{\textbf{3-day Horizon}}
+            & \multicolumn{2}{c}{\textbf{7-day Horizon}}
+            & \multicolumn{2}{c}{\textbf{14-day Horizon}} \\
+        \cmidrule(lr){3-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8}
+        & & \textbf{Value} & \textbf{\% Change} 
+            & \textbf{Value} & \textbf{\% Change} 
+            & \textbf{Value} & \textbf{\% Change} \\
+        \midrule
+        % \multirow{4}{*}{Full Model}
+        % & MAE  & 47.61  & -- & 83.16  & -- & 106.42  & -- \\
+        % & RMSE & 106.22 & -- & 163.42 & -- & 196.12  & -- \\
+        % & PCC  & 0.909  & -- & 0.728   & -- & 0.516   & -- \\
+        % & R²   & 0.761  & -- & 0.434   & -- & 0.185   & -- \\
+        % \midrule
+        \multirow{4}{*}{Without EAGAM}
+        & MAE  & 48.10  & (+1.02\%) & 79.22  & (-4.73\%) & 136.12  & (+27.91\%) \\
+        & RMSE & 104.14 & (-1.98\%) & 161.47 & (-1.20\%) & 234.92 & (+19.81\%) \\
+        & PCC  & 0.910   & (+0.14\%) & 0.760   & (+4.34\%) & 0.564   & (+9.20\%) \\
+        & R²   & 0.770   & (+1.23\%) & 0.447   & (+3.13\%) & -0.170   & (-191.99\%) \\
+        \midrule
+        \multirow{4}{*}{Without DMTFM}
+        & MAE  & 47.34  & (-0.59\%) & 81.21  & (-2.34\%) & 100.30  & (-5.75\%)  \\
+        & RMSE & 105.55 & (-0.65\%) & 161.76 & (-1.03\%) & 194.86 & (-0.62\%)  \\
+        & PCC  & 0.910   & (+0.14\%) & 0.742   & (+1.81\%) & 0.573   & (+10.85\%)  \\
+        & R²   & 0.764   & (+0.41\%) & 0.445   & (+2.67\%) & 0.195   & (+5.48\%)  \\
+        \midrule
+        \multirow{4}{*}{Without PPRM}
+        & MAE  & 82.02  & (+72.25\%)  & 97.20  & (+16.90\%) & 112.40  & (+5.62\%)  \\
+        & RMSE & 177.67 & (+67.23\%)  & 192.89 & (+18.02\%)  & 205.95 & (+5.03\%)  \\
+        & PCC  & 0.731   & (-19.57\%)  & 0.643   & (-11.78\%)  & 0.480   & (-7.15\%)  \\
+        & R²   & 0.331   & (-56.52\%)  & 0.211   & (-51.30\%)  & 0.101   & (-45.50\%)  \\
+        \bottomrule
+    \end{tabular}%
+    }
+\end{table*}
 
-In stark contrast, for the LTLA-Timeseries dataset (COVID-19), the removal of AGAM unexpectedly improves the performance for short- and medium-term forecasts (3-day: -1.98\% RMSE; 7-day: -1.20\% RMSE), while only becoming detrimental for long-term predictions (14 days: +19. 81\% RMSE, -191. 99\% R2). This catastrophic collapse in the R² value for 14-day forecasts (from positive to -0.170) indicates that without adaptive spatial modelling, the model loses all ability to explain the variance in long-term COVID-19 patterns. This suggests that while simpler spatial modelling may be sufficient for short-term COVID-19 forecasting in the UK context, adaptive attention becomes absolutely essential for longer horizons, possibly due to the emergence of complex spatial patterns in COVID-19 transmission over extended time periods.
+\begin{figure*}[!htbp]
+    \centering
+    \subfloat[3-day Horizon Component Impact]{
+        \includegraphics[width=0.48\textwidth]{figs/component_impact_japan_h3.pdf}
+        \label{fig:component_impact_japan_h3}
+    }
+    \hfill
+    \subfloat[5-day Horizon Component Impact]{
+        \includegraphics[width=0.48\textwidth]{figs/component_impact_japan_h5.pdf}
+        \label{fig:component_impact_japan_h5}
+    }
+    \\
+    \subfloat[10-day Horizon Component Impact]{
+        \includegraphics[width=0.48\textwidth]{figs/component_impact_japan_h10.pdf}
+        \label{fig:component_impact_japan_h10}
+    }
+    \hfill
+    \subfloat[15-day Horizon Component Impact]{
+        \includegraphics[width=0.48\textwidth]{figs/component_impact_japan_h15.pdf}
+        \label{fig:component_impact_japan_h15}
+    }
+    \caption{Component impact analysis across different forecast horizons for the Japan-Prefectures dataset, showing the relative contribution of each MSAGAT-Net module to overall forecasting performance.}
+    \label{fig:component_impact_japan}
+\end{figure*}
 
-The removal of MTFM leads to slight changes in RMSE across all horizons for the Japan-Prefectures dataset (3-day: +1.57\%; 5-day: -0.87\%; 10-day: +0.68\%), with negligible impacts on correlation metrics, as evidenced in all panels of Figure~\ref{fig:ablation:rmse}. More notably, removal of MTFM actually improves MAE across multiple horizons (3-day: -2.70\%; 5-day: -6.94\%), suggesting that simpler temporal modelling might reduce absolute error in some cases. For the 15-day horizon, removing MTFM appears to noticeably improve performance, suggesting that simpler temporal processing may be advantageous for very long-term forecasts.
+The ablation study reveals compelling insights into the role of each architectural component, with results that both validate our design principles and challenge conventional assumptions about model complexity. The removal of EAGAM demonstrates markedly different behaviour across the two epidemiological contexts examined.
 
-Similarly, for the LTLA-Timeseries dataset, MTFM removal consistently results in slight RMSE improvements (3-day: -0.65\%; 7-day: -1.03\%; 14-day: -0.62\%), with notable gains in correlation metrics for longer horizons (14-day: +10.85\% PCC, +5.48\% R²).
+For the Japan-Prefectures dataset, EAGAM removal produces a cascading degradation in forecasting performance that intensifies with prediction horizon. Short-term forecasts suffer modest deterioration (3-day: +5.28\% RMSE; 5-day: +2.48\% RMSE), whilst longer-term predictions experience severe degradation (10-day: +23.12\% RMSE, -22.54\% PCC, -38.14\% R²), as illustrated in Figure~\ref{fig:ablation:rmse_h10}. This escalating pattern reveals that spatial dependencies become increasingly critical for extended influenza forecasting, likely reflecting the progressive importance of inter-prefectural transmission dynamics as the prediction horizon extends.
 
-These consistent findings across two very different epidemiological contexts suggest that complex multi-scale processing may be less critical than initially hypothesised for epidemic forecasting. The relatively stable temporal patterns of disease transmission might be adequately captured by simpler temporal models, and the additional complexity of multi-scale processing might introduce noise or lead to overfitting in some cases.
+The LTLA-Timeseries dataset presents a strikingly different picture. Here, EAGAM removal paradoxically improves short- and medium-term forecasting performance (3-day: -1.98\% RMSE; 7-day: -1.20\% RMSE), suggesting that simpler spatial representations may be more appropriate for immediate COVID-19 predictions in the UK context. However, this advantage completely reverses for longer horizons, where EAGAM removal causes severe deterioration (14-day: +19.81\% RMSE, -191.99\% R²). The catastrophic collapse of the R² coefficient from positive values to -0.170 indicates that without adaptive spatial attention, the model entirely loses its capacity to explain variance in long-term COVID-19 patterns, highlighting the critical importance of sophisticated spatial modelling for extended pandemic forecasting.
 
-The removal of the Progressive Prediction Module (PPM) reveals the most dramatic and divergent effects between the two datasets:
+The analysis of DMTFM reveals perhaps the most surprising findings of our study, challenging the intuitive assumption that increased temporal complexity necessarily improves forecasting performance. For the Japan-Prefectures dataset, DMTFM removal produces mixed effects on RMSE across different horizons (3-day: +1.57\%; 5-day: -0.87\%; 10-day: +0.68\%), with minimal impact on correlation metrics, as demonstrated across all panels of Figure~\ref{fig:ablation:rmse}. More intriguingly, DMTFM removal consistently improves MAE performance (3-day: -2.70\%; 5-day: -6.94\%), suggesting that whilst multi-scale temporal processing may capture broader patterns, it can occasionally amplify prediction errors in absolute terms.
 
-PPRM removal degrades performance for short-term forecasts (3-day: +2.81\% RMSE, +7.57\% MAE), as shown in Figure~\ref{fig:ablation:rmse_h3}, but surprisingly improves performance for medium- and longer-term horizons (5-day: -1.01\% RMSE, -13.43\% MAE; 10-day: -3.60\% RMSE, -3.55\% MAE), which is visible in Figures~\ref{fig:ablation:rmse_h5} and \ref{fig:ablation:rmse_h10}. In particular, PPRM removal consistently improves correlation metrics across all horizons (PCC: +2.15\%, +1.43\%, +2.95\%), suggesting that direct prediction better captures the underlying trends even when it occasionally increases the absolute error. This pattern indicates that progressive refinement helps with immediate influenza forecasts, but direct prediction becomes more effective for longer horizons in this context.
+The LTLA-Timeseries dataset reinforces this counter-intuitive pattern, with DMTFM removal consistently improving RMSE performance across all horizons (3-day: -0.65\%; 7-day: -1.03\%; 14-day: -0.62\%) and delivering substantial gains in correlation metrics for extended forecasts (14-day: +10.85\% PCC, +5.48\% R²). This consistent improvement across both datasets suggests a fundamental insight: the temporal dynamics of epidemic spread may be more regular and predictable than initially anticipated, with complex multi-scale processing potentially introducing unnecessary complexity that obscures rather than clarifies underlying patterns.
 
-For the LTLA-Timeseries dataset, PPRM removal catastrophically degrades performance across all horizons, with particularly severe impacts on shorter forecasts (3-day: +67.23\% RMSE, -56.52\% R²; 7-day: +18.02\% RMSE, -51.30\% R²; 14-day: +5.03\% RMSE, -45.50\% R²). This dramatic contrast with the Japan results indicates that progressive prediction is absolutely essential for COVID-19 forecasting in the UK context. The consistent pattern of diminishing importance of PPRM as the horizon extends to 15 days (67. 23\% 18. 02\% 5. 03\% for RMSE degradation) suggests that although progressive prediction remains beneficial for all COVID-19 forecasts, its relative importance decreases for longer horizons, potentially due to the inherent unpredictability of long-term COVID-19 patterns regardless of prediction strategy.
+These findings across two distinct epidemiological contexts suggest that sophisticated temporal feature extraction may be less beneficial than conventional wisdom suggests for epidemic forecasting. The inherently structured nature of disease transmission dynamics appears to be adequately captured through simpler temporal representations, whilst the additional computational overhead and parameter complexity of multi-scale processing may introduce noise or promote overfitting, particularly in scenarios with limited training data.
 
-These non-linear patterns highlight the complex interplay between spatial dependencies, temporal patterns, and prediction strategies across different time scales, and underscore the potential benefits of horizon-specific architectural optimisation.
+The examination of PPRM produces the most striking and divergent results across our two epidemiological contexts, revealing fundamental differences in how progressive refinement affects forecasting across disease types. For the Japan-Prefectures dataset, PPRM exhibits a fascinating dual behaviour whereby its removal impairs short-term forecasting accuracy (3-day: +2.81\% RMSE, +7.57\% MAE), yet paradoxically enhances performance for extended horizons (5-day: -1.01\% RMSE, -13.43\% MAE; 10-day: -3.60\% RMSE, -3.55\% MAE). The consistent improvement in correlation metrics across all horizons (PCC: +2.15\%, +1.43\%, +2.95\%) suggests that for influenza forecasting, direct prediction mechanisms may better capture underlying epidemiological trends than iterative refinement, particularly as temporal distance increases.
+
+The LTLA-Timeseries dataset presents a dramatically contrasting scenario, where PPRM removal results in catastrophic performance degradation across all prediction horizons. The impact is most severe for immediate forecasts (3-day: +67.23\% RMSE, -56.52\% R²; 7-day: +18.02\% RMSE, -51.30\% R²), though substantial deterioration persists even for extended predictions (14-day: +5.03\% RMSE, -45.50\% R²). This stark contrast with the influenza results reveals that progressive prediction refinement is indispensable for COVID-19 forecasting in the UK context. The systematic pattern of decreasing PPRM importance with extended horizons (67.23\% → 18.02\% → 5.03\% RMSE degradation) suggests that whilst progressive refinement remains beneficial across all COVID-19 prediction tasks, its relative contribution diminishes for longer horizons, possibly reflecting the inherent stochasticity of extended pandemic dynamics.
+
+These complex patterns illuminate the intricate relationships between spatial dependencies, temporal dynamics, and prediction methodologies across varying time scales, whilst underscoring the substantial potential benefits of developing horizon-specific and disease-specific architectural optimisations. Figure~\ref{fig:component_impact_japan} provides a comprehensive visual summary of these component contributions across different forecast horizons, clearly demonstrating the varying importance and interactions of each architectural module.
 
 % ---------- SECTION V: CONCLUSION ----------
 \section{Conclusion}
 
-In this paper, we presented MSAGAT-Net, a novel Multi-Scale Temporal Graph Attention Network for spatiotemporal epidemic forecasting. Our approach successfully addresses the key challenges of computational efficiency, multi-scale temporal modeling, and accurate multi-horizon prediction through three innovative components: EAGAM, DMTFM, and PPRM.
+This paper introduces MSAGAT-Net, a novel Multi-Scale Temporal Graph Attention Network that advances the state of spatiotemporal epidemic forecasting through three synergistic architectural innovations comprising the Efficient Adaptive Graph Attention Module (EAGAM), the Dilated Multi-Scale Temporal Feature Module (DMTFM), and the Progressive Prediction Refinement Module (PPRM). Additionally, we contribute two novel epidemic forecasting datasets (LTLA-COVID and NHS-ICUBeds) following established graph construction methodologies, providing valuable benchmarks for future research. Our approach successfully addresses the fundamental challenges of computational scalability, multi-scale temporal dependency modelling, and accurate multi-horizon prediction that have long constrained epidemic forecasting systems.
 
-Our extensive experiments across diverse epidemic datasets demonstrate that MSAGAT-Net outperforms strong baselines, achieving substantial improvements in both accuracy metrics and computational efficiency. The linearized attention mechanism in EAGAM enables scaling to large numbers of regions while maintaining modeling capacity. The multi-scale temporal processing captures both short-term fluctuations and long-term trends crucial for epidemic dynamics.
+Comprehensive evaluation across diverse epidemiological contexts demonstrates MSAGAT-Net's superior performance, achieving up to 11.2\% improvement in RMSE over strong baselines including DCRNN, LSTNet, CNNRNN-Res, Cola-GNN, and EpiGNN on the Japan-Prefectures dataset, whilst maintaining computational efficiency through linearised attention mechanisms that scale linearly with the number of spatial regions. The model's effectiveness extends across multiple diseases and geographical contexts, from seasonal influenza in Japan to COVID-19 transmission in UK local authorities.
 
-Perhaps most significantly, our ablation studies reveal complex, non-monotonic relationships between component importance and forecast horizons, challenging conventional assumptions about spatiotemporal modeling. These findings suggest that optimal architectures may need to be tailored to specific diseases and prediction horizons, opening new avenues for adaptive model design.
+Perhaps most significantly, our extensive ablation studies unveil profound insights that challenge conventional assumptions about spatiotemporal architecture design. We demonstrate that component importance exhibits complex, disease-specific and horizon-dependent patterns whereby spatial attention becomes increasingly critical for extended influenza forecasting yet can impair short-term COVID-19 predictions, sophisticated temporal processing occasionally degrades performance compared to simpler alternatives, and progressive refinement proves essential for pandemic forecasting whilst being counterproductive for endemic disease prediction. These findings fundamentally reshape our understanding of optimal architectural choices in epidemic modelling, revealing that the conventional pursuit of increased model complexity may not universally improve forecasting performance.
 
-Future work will explore automatic architecture search for horizon-specific optimization, incorporation of external factors such as mobility data and policy interventions, and extension to multi-variate forecasting including hospitalizations and resource utilisation. The efficiency and interpretability of MSAGAT-Net make it a promising tool for real-time epidemic surveillance and public health decision support.
+The implications extend beyond technical contributions to practical epidemic preparedness. Our results suggest that effective forecasting systems should employ disease-specific and horizon-adaptive architectures rather than one-size-fits-all approaches. This insight opens compelling avenues for future research, including automatic neural architecture search for epidemic-specific optimisation, integration of dynamic external factors such as mobility patterns and policy interventions, and extension to comprehensive multi-variate forecasting encompassing hospitalisation rates and healthcare resource utilisation.
+
+The computational efficiency, interpretability, and demonstrated effectiveness of MSAGAT-Net position it as a valuable tool for real-time epidemic surveillance and evidence-based public health decision-making. As the global community continues to face emerging infectious disease threats, architectures that can adapt to the unique characteristics of different pathogens and prediction requirements will prove increasingly essential for effective pandemic preparedness and response.
 
 % ---------- REFERENCES ----------
 \bibliographystyle{IEEEtran}

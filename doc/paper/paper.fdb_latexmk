@@ -1,14 +1,15 @@
 # Fdb version 4
-["bibtex paper"] 1758121413.42921 "paper.aux" "paper.bbl" "paper" 1758121416.0114 0
-  "./ref.bib" 1758068146 80360 c85f51b901d7e5c7b9c8f4ccfe9feec3 ""
+["bibtex paper"] 1758142865.6219 "paper.aux" "paper.bbl" "paper" 1758142868.50652 0
+  "./ref.bib" 1758142865 80391 148d737f71ee944188c09fec0529ef54 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/bibtex/bst/ieeetran/IEEEtran.bst" 1440622569 57748 7c8250ecf02814ce6ddc0cdbb63df1dd ""
-  "paper.aux" 1758121415 15618 c5b0634162d73031079b917e7fc37187 "pdflatex"
+  "paper.aux" 1758142867 19439 33efa42cc282652edbfe97db71d17b3a "pdflatex"
   (generated)
   "paper.bbl"
   "paper.blg"
   (rewritten before read)
-["pdflatex"] 1758121413.7155 "c:/Users/ajaoo/Documents/GitHub/MSAGAT-Net/doc/paper/paper.tex" "paper.pdf" "paper" 1758121416.01197 0
+["pdflatex"] 1758142865.94531 "c:/Users/ajaoo/Documents/GitHub/MSAGAT-Net/doc/paper/paper.tex" "paper.pdf" "paper" 1758142868.5071 0
   "C:/Users/ajaoo/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1758063013 503103 29760d0ab7bbc844815e5302ceb8159a ""
+  "C:/Users/ajaoo/AppData/Local/MiKTeX/fonts/pk/ljfour/jknappen/ec/dpi600/tcrm1000.pk" 1754347595 11548 5a6a023eff2ae3b17a9a7710c57278f8 ""
   "C:/Users/ajaoo/AppData/Local/MiKTeX/fonts/tfm/public/rsfs/rsfs10.tfm" 1749306967 688 37338d6ab346c2f1466b29e195316aa4 ""
   "C:/Users/ajaoo/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1755287065 13257295 def1a4c4fc2441ff31aecb3b6c578743 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc" 1458473887 4993 80dc9bab7f31fb78a000ccfed0e27cab ""
@@ -34,6 +35,8 @@
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/tfm/adobe/times/zptmcm7t.tfm" 1136772254 2172 1d00c2a0d10f23031be62329457a870c ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/tfm/adobe/times/zptmcm7v.tfm" 1136772254 1032 20febbd0f0c9a48eb78616f897008286 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/tfm/adobe/times/zptmcm7y.tfm" 1136772254 1520 ad7b3c1a480a03b3e41b5fbb13d938f2 ""
+  "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/tfm/jknappen/ec/ecrm1000.tfm" 993062122 3148 7e594c8240c71e432203f65ab5f95a51 ""
+  "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/tfm/jknappen/ec/tcrm1000.tfm" 993062508 1436 c7f957a372ef2fbe93c0982f96625e12 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1233951854 916 f87d7c45f9c908e672703b83b72241a3 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/tfm/public/amsfonts/symbols/msbm10.tfm" 1233951854 908 2921f8a10601f252058503cc6570e581 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmex10.tfm" 1136765053 992 662f679a0b3d2d53c1b94050fdaa3f50 ""
@@ -225,17 +228,23 @@
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/tools/xspace.sty" 1749468414 4545 d7bb86d489a8ad5263e4c34304c03aee ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/ajaoo/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1729265222 55384 b454dec21c2d9f45ec0b793f0995b992 ""
-  "c:/Users/ajaoo/Documents/GitHub/MSAGAT-Net/doc/paper/paper.tex" 1758121407 116969 fd2abe6e13cebb08aefa1e149563c8da ""
+  "c:/Users/ajaoo/Documents/GitHub/MSAGAT-Net/doc/paper/paper.tex" 1758138765 123916 6537f8232f1ee2ef01cd3082445aa91d ""
+  "figs/component_impact_japan_h10.pdf" 1749432512 16010 7ff4a32c8348c70fe5d7e88589d487a3 ""
+  "figs/component_impact_japan_h15.pdf" 1749432512 17706 2a5458e19043a5f88856fa6b633333a3 ""
+  "figs/component_impact_japan_h3.pdf" 1749432512 17036 723719d78159580bbfa817d7109db009 ""
+  "figs/component_impact_japan_h5.pdf" 1749432512 16636 d2e03d2704507cb52373e0bc25838318 ""
+  "figs/matrices_MSTAGAT-Net.japan.w-20.h-5.no_agam.png" 1749432512 46570 bb68b5812f55ed13f9ab2b6af8e20d4f ""
+  "figs/matrices_MSTAGAT-Net.japan.w-20.h-5.no_pprm.png" 1749432512 67358 c356c2f021bdba055bb0541db7dbc0f9 ""
   "figs/matrices_MSTAGAT-Net.japan.w-20.h-5.none.png" 1749432512 62525 d32af78f86ca02e8081b0e0811d29ee3 ""
   "figs/mtfm_diagram.pdf" 1749432512 90140 67a1780033d419d11ce981fac5f759f9 ""
   "figs/rmse_only_japan_h10.pdf" 1749432512 17897 051f8dd9536409e47bfb2b066811b44c ""
   "figs/rmse_only_japan_h15.pdf" 1749432512 17869 2b2fc1c2e16430d157d86fe5217dacc8 ""
   "figs/rmse_only_japan_h3.pdf" 1749432512 17819 df2856f6b687801f28bad8bfa99cf816 ""
   "figs/rmse_only_japan_h5.pdf" 1749432512 16912 e6bbc5d57fd405d63ef3e25af7eafa91 ""
-  "paper.aux" 1758121415 15618 c5b0634162d73031079b917e7fc37187 "pdflatex"
-  "paper.bbl" 1758121413 11410 8381ab0706b89ffefa5afd2853458860 "bibtex paper"
-  "paper.out" 1758121415 6384 b641ac77aee2d6edcb0b3252562f58ea "pdflatex"
-  "paper.tex" 1758121407 116969 fd2abe6e13cebb08aefa1e149563c8da ""
+  "paper.aux" 1758142867 19439 33efa42cc282652edbfe97db71d17b3a "pdflatex"
+  "paper.bbl" 1758142865 11428 698b06022e00cd198d930ebe27946177 "bibtex paper"
+  "paper.out" 1758142867 6574 e8d47bcd008bcaf94b651ec77badd043 "pdflatex"
+  "paper.tex" 1758138765 123916 6537f8232f1ee2ef01cd3082445aa91d ""
   (generated)
   "paper.aux"
   "paper.log"

@@ -80,7 +80,8 @@ M.~Kim, J.~H. Kim, and B.~Jang, ``Forecasting {{Epidemic Spread With Recurrent
 \bibitem{zhiweidingBiologyInformedRecurrentNeural2023}
 {Zhiwei Ding}, {Feng Sha}, {Yi Zhang}, and {Zhouwang Yang},
   ``Biology-{{Informed Recurrent Neural Network}} for {{Pandemic Prediction
-  Using Multimodal Data}},'' vol.~8, no.~2, pp. 158--158, Apr. 2023.
+  Using Multimodal Data}},'' \emph{Biomimetics}, vol.~8, no.~2, pp. 158--158,
+  2023.
 
 \bibitem{lijingwangCausalGNNCausalBasedGraph2022}
 {Lijing Wang}, {Lijing Wang}, {Aniruddha Adiga}, {Aniruddha Adiga}, {Jiangzhuo

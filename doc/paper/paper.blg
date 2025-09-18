@@ -13,39 +13,38 @@ Database file #1: ref.bib
 -- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
 -- http://www.michaelshell.org/tex/ieeetran/bibtex/
 -- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
-Warning--empty journal in zhiweidingBiologyInformedRecurrentNeural2023
 
 Done.
 You've used 38 entries,
             4087 wiz_defined-function locations,
-            1054 strings with 16553 characters,
-and the built_in function-call counts, 33567 in all, are:
-= -- 2707
+            1055 strings with 16564 characters,
+and the built_in function-call counts, 33599 in all, are:
+= -- 2713
 > -- 965
 < -- 280
 + -- 541
 - -- 202
 * -- 1654
-:= -- 4773
+:= -- 4782
 add.period$ -- 80
 call.type$ -- 38
 change.case$ -- 39
 chr.to.int$ -- 624
-cite$ -- 39
-duplicate$ -- 2393
-empty$ -- 2517
+cite$ -- 38
+duplicate$ -- 2395
+empty$ -- 2520
 format.name$ -- 217
-if$ -- 7871
+if$ -- 7880
 int.to.chr$ -- 0
 int.to.str$ -- 38
 missing$ -- 432
 newline$ -- 141
 num.names$ -- 38
-pop$ -- 999
+pop$ -- 998
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 2
-skip$ -- 2577
+skip$ -- 2582
 stack$ -- 0
 substring$ -- 1643
 swap$ -- 2060
@@ -53,8 +52,7 @@ text.length$ -- 72
 text.prefix$ -- 0
 top$ -- 5
 type$ -- 38
-warning$ -- 1
+warning$ -- 0
 while$ -- 136
 width$ -- 40
-write$ -- 404
-(There was 1 warning)
+write$ -- 405
