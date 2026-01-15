@@ -118,8 +118,16 @@ def visualize_matrices(
     attn = None
 
     # Try different ways to access attention based on model type
+    # MSTAGAT_Net with learned low-rank graph bias (U @ V)
+    if hasattr(model, "spatial_module") and hasattr(model.spatial_module, "u") and hasattr(model.spatial_module, "v"):
+        # Compute learned adjacency from low-rank factors
+        u = model.spatial_module.u.detach()  # [heads, N, r]
+        v = model.spatial_module.v.detach()  # [heads, r, N]
+        graph_bias = torch.matmul(u, v)  # [heads, N, N]
+        # Average over attention heads
+        attn = graph_bias.mean(dim=0).cpu().numpy()  # [N, N]
     # Original MSTAGAT_Net
-    if hasattr(model, "spatial_module") and hasattr(model.spatial_module, "attn"):
+    elif hasattr(model, "spatial_module") and hasattr(model.spatial_module, "attn"):
         attn = model.spatial_module.attn.detach().cpu().numpy()
 
     # LocationAwareMSAGAT_Net
@@ -311,6 +319,11 @@ def plot_loss_curves(train_losses, val_losses, save_path: str, args=None, logger
 # -------------------------
 # Metrics Saving
 # -------------------------
+# Consolidated results file names
+ALL_RESULTS_CSV = "all_results.csv"
+ALL_RESULTS_TXT = "all_results.txt"
+
+
 def save_metrics(
     metrics: dict,
     save_path: str,
@@ -319,28 +332,70 @@ def save_metrics(
     horizon: int = None,
     logger=None,
     model_name: str = None,
+    ablation: str = None,
 ):
     """
-    Append or create CSV file for recorded metrics.
+    Append metrics to consolidated CSV and TXT files.
+    
+    Args:
+        metrics: Dictionary of metric values
+        save_path: Path for individual file (used to extract directory)
+        dataset: Dataset name
+        window: Window size
+        horizon: Prediction horizon
+        logger: Logger object
+        model_name: Model name
+        ablation: Ablation variant (none, no_agam, no_mtfm, no_pprm)
     """
+    results_dir = os.path.dirname(save_path)
+    os.makedirs(results_dir, exist_ok=True)
+    
+    # Build the record
     info = {
         "model": model_name or "MSTAGAT",
+        "dataset": dataset or "",
+        "window": window or 0,
+        "horizon": horizon or 0,
+        "ablation": ablation or "none",
         "timestamp": time.strftime("%Y%m%d_%H%M%S"),
     }
-    if dataset:
-        info["dataset"] = dataset
-    if window:
-        info["window"] = window
-    if horizon:
-        info["horizon"] = horizon
     data = {
         **info,
         **{k: v for k, v in metrics.items() if not isinstance(v, np.ndarray)},
     }
+    
+    # Append to consolidated CSV
+    csv_path = os.path.join(results_dir, ALL_RESULTS_CSV)
     df = pd.DataFrame([data])
-    if os.path.exists(save_path):
-        df_old = pd.read_csv(save_path)
+    
+    if os.path.exists(csv_path):
+        df_old = pd.read_csv(csv_path)
+        # Remove duplicate entries (same dataset, window, horizon, ablation)
+        mask = ~(
+            (df_old['dataset'] == dataset) & 
+            (df_old['window'] == window) & 
+            (df_old['horizon'] == horizon) & 
+            (df_old['ablation'] == (ablation or "none"))
+        )
+        df_old = df_old[mask]
         df = pd.concat([df_old, df], ignore_index=True)
-    df.to_csv(save_path, index=False)
+    
+    # Sort for consistent ordering
+    df = df.sort_values(['dataset', 'window', 'horizon', 'ablation']).reset_index(drop=True)
+    df.to_csv(csv_path, index=False)
+    
+    # Append to consolidated TXT (human-readable log)
+    txt_path = os.path.join(results_dir, ALL_RESULTS_TXT)
+    txt_line = (
+        f"[{info['timestamp']}] {info['model']} | "
+        f"Dataset: {info['dataset']}, Window: {info['window']}, "
+        f"Horizon: {info['horizon']}, Ablation: {info['ablation']} | "
+        f"MAE: {metrics.get('mae', 0):.4f}, RMSE: {metrics.get('rmse', 0):.4f}, "
+        f"PCC: {metrics.get('pcc', 0):.4f}, R2: {metrics.get('R2', 0):.4f}\n"
+    )
+    with open(txt_path, 'a', encoding='utf-8') as f:
+        f.write(txt_line)
+    
     if logger:
-        logger.info(f"Metrics saved to {save_path}")
+        logger.info(f"Metrics appended to {csv_path}")
+        logger.info(f"Log appended to {txt_path}")

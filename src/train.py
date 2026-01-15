@@ -310,7 +310,7 @@ _, mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, v
 print('Final TEST MAE {:5.4f} std {:5.4f} RMSE {:5.4f} RMSEs {:5.4f} PCC {:5.4f} PCCs {:5.4f} MAPE {:5.4f} R2 {:5.4f} R2s {:5.4f} Var {:5.4f} Vars {:5.4f} Peak {:5.4f}'.format(
     mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae))
 
-# Save final metrics using utils.save_metrics
+# Save final metrics using utils.save_metrics (appends to consolidated all_results.csv)
 results_csv = os.path.join(RESULTS_DIR, f"final_metrics_{log_token}.csv")
 save_metrics({
     'mae': mae,
@@ -325,8 +325,8 @@ save_metrics({
     'Var': var,
     'Vars': var_states,
     'Peak': peak_mae
-}, results_csv, args.dataset, args.window, args.horizon, logger, model_name)
-print(f"Saved final metrics to {results_csv}")
+}, results_csv, args.dataset, args.window, args.horizon, logger, model_name, args.ablation)
+print(f"Saved final metrics to consolidated all_results.csv")
 
 if args.record != '':
     with open("result/result.txt", "a", encoding="utf-8") as f:

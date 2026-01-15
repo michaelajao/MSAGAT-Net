@@ -15,6 +15,11 @@ SAVE_DIR = os.path.join(BASE_DIR, 'save_all')
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 TRAIN_SCRIPT = os.path.join(BASE_DIR, 'src', 'train.py')
 
+# Consolidated file names
+ALL_RESULTS_CSV = "all_results.csv"
+ALL_ABLATION_SUMMARY_CSV = "all_ablation_summary.csv"
+ALL_ABLATION_REPORT_TXT = "all_ablation_report.txt"
+
 # Dataset configurations
 DATASET_CONFIGS = [
     ('japan', 'japan-adj', [3, 5, 10, 15]),
@@ -26,7 +31,7 @@ DATASET_CONFIGS = [
     ('ltla_timeseries', 'ltla-adj', [3, 7, 14]),
 ]
 ABLATIONS = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
-MODELS = ['msagat', 'linformer']  # Compare standard vs Linformer variants
+MODELS = ['msagat']
 DEFAULT_WINDOW = 20
 
 def setup_logging():
@@ -48,7 +53,23 @@ def setup_logging():
     return logger
 
 def find_metrics_file(dataset, window, horizon, ablation, model='msagat'):
-    """Find existing metrics file for given configuration."""
+    """Find existing metrics file for given configuration.
+    First checks consolidated all_results.csv, then falls back to individual files.
+    """
+    # First check consolidated file
+    consolidated_path = os.path.join(METRICS_DIR, ALL_RESULTS_CSV)
+    if os.path.exists(consolidated_path):
+        df = pd.read_csv(consolidated_path)
+        mask = (
+            (df['dataset'] == dataset) & 
+            (df['window'] == window) & 
+            (df['horizon'] == horizon) & 
+            (df['ablation'] == ablation)
+        )
+        if mask.any():
+            return consolidated_path  # Return consolidated path if entry exists
+    
+    # Fallback to individual files for backward compatibility
     if model == 'msagat':
         pattern = f"final_metrics_*{dataset}*w-{window}*h-{horizon}*{ablation}.csv"
     else:
@@ -57,9 +78,23 @@ def find_metrics_file(dataset, window, horizon, ablation, model='msagat'):
     return matches[0] if matches else None
 
 def load_metrics(dataset, window, horizon, ablation, model='msagat'):
-    """Load metrics DataFrame from CSV file."""
+    """Load metrics DataFrame from consolidated or individual CSV file."""
+    # First try consolidated file
+    consolidated_path = os.path.join(METRICS_DIR, ALL_RESULTS_CSV)
+    if os.path.exists(consolidated_path):
+        df = pd.read_csv(consolidated_path)
+        mask = (
+            (df['dataset'] == dataset) & 
+            (df['window'] == window) & 
+            (df['horizon'] == horizon) & 
+            (df['ablation'] == ablation)
+        )
+        if mask.any():
+            return df[mask].iloc[[0]]  # Return single row as DataFrame
+    
+    # Fallback to individual files
     path = find_metrics_file(dataset, window, horizon, ablation, model)
-    if not path or not os.path.exists(path):
+    if not path or not os.path.exists(path) or path == consolidated_path:
         return None
     return pd.read_csv(path)
 
@@ -107,71 +142,50 @@ def generate_ablation_summary(dataset, window, horizon, model='msagat'):
     if not records:
         return None
     
-    # Save summary
+    # Create summary DataFrame
     summary = pd.DataFrame.from_dict(records, orient='index')
+    summary['dataset'] = dataset
+    summary['window'] = window
+    summary['horizon'] = horizon
+    summary['model'] = model
+    summary['ablation'] = summary.index
+    summary = summary.reset_index(drop=True)
+    
     os.makedirs(METRICS_DIR, exist_ok=True)
-    model_suffix = f".{model}" if model != 'msagat' else ""
-    out_path = os.path.join(METRICS_DIR, f"ablation_summary_{dataset}.w-{window}.h-{horizon}{model_suffix}.csv")
     
-    summary.to_csv(out_path)
-    logger.info(f"Saved summary: {out_path}")
+    # Append to consolidated ablation summary CSV
+    consolidated_csv = os.path.join(METRICS_DIR, ALL_ABLATION_SUMMARY_CSV)
+    if os.path.exists(consolidated_csv):
+        df_old = pd.read_csv(consolidated_csv)
+        # Remove existing entries for this dataset/window/horizon
+        mask = ~(
+            (df_old['dataset'] == dataset) & 
+            (df_old['window'] == window) & 
+            (df_old['horizon'] == horizon)
+        )
+        df_old = df_old[mask]
+        summary = pd.concat([df_old, summary], ignore_index=True)
     
-    # Generate text report
+    # Sort and save
+    summary = summary.sort_values(['dataset', 'window', 'horizon', 'ablation']).reset_index(drop=True)
+    summary.to_csv(consolidated_csv, index=False)
+    logger.info(f"Ablation summary appended to: {consolidated_csv}")
+    
+    # Append to consolidated text report
+    consolidated_txt = os.path.join(METRICS_DIR, ALL_ABLATION_REPORT_TXT)
     report_lines = [
-        f"Ablation Report for {dataset} (horizon={horizon}, model={model})",
+        f"\n{'='*60}",
+        f"Ablation Report for {dataset} (window={window}, horizon={horizon}, model={model})",
+        f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         "=" * 60,
-        summary.to_string()
+        summary[summary['dataset'] == dataset].to_string(),
+        ""
     ]
-    report_path = os.path.join(METRICS_DIR, f"ablation_report_{dataset}.w-{window}.h-{horizon}{model_suffix}.txt")
-    with open(report_path, 'w') as f:
+    with open(consolidated_txt, 'a', encoding='utf-8') as f:
         f.write("\n".join(report_lines))
-    logger.info(f"Saved report: {report_path}")
+    logger.info(f"Ablation report appended to: {consolidated_txt}")
     
-    return summary
-
-def generate_model_comparison(dataset, window, horizon):
-    """Generate comparison between different model variants."""
-    records = {}
-    
-    for model in MODELS:
-        # Load baseline (none ablation) metrics for each model
-        df = load_metrics(dataset, window, horizon, 'none', model)
-        if df is None:
-            continue
-            
-        records[model.upper()] = {m.upper(): get_metric(df, m) for m in ['mae', 'rmse', 'pcc', 'r2']}
-    
-    if len(records) < 2:
-        return None
-    
-    # Calculate improvements from msagat to linformer
-    if 'MSAGAT' in records and 'LINFORMER' in records:
-        for m in ['MAE', 'RMSE', 'PCC', 'R2']:
-            base_val = records['MSAGAT'][m]
-            lin_val = records['LINFORMER'][m]
-            if base_val and not pd.isna(lin_val):
-                records['LINFORMER'][f"{m}_CHANGE"] = 100 * (lin_val - base_val) / base_val
-    
-    # Save comparison
-    comparison = pd.DataFrame.from_dict(records, orient='index')
-    os.makedirs(METRICS_DIR, exist_ok=True)
-    out_path = os.path.join(METRICS_DIR, f"model_comparison_{dataset}.w-{window}.h-{horizon}.csv")
-    
-    comparison.to_csv(out_path)
-    logger.info(f"Saved model comparison: {out_path}")
-    
-    # Generate text report
-    report_lines = [
-        f"Model Comparison for {dataset} (horizon={horizon})",
-        "=" * 60,
-        comparison.to_string()
-    ]
-    report_path = os.path.join(METRICS_DIR, f"model_comparison_{dataset}.w-{window}.h-{horizon}.txt")
-    with open(report_path, 'w') as f:
-        f.write("\n".join(report_lines))
-    logger.info(f"Saved model comparison report: {report_path}")
-    
-    return comparison
+    return summary[summary['dataset'] == dataset]
 
 def build_train_command(dataset, sim_mat, window, horizon, ablation, model='msagat'):
     """Build training command with essential arguments."""
@@ -189,6 +203,9 @@ def build_train_command(dataset, sim_mat, window, horizon, ablation, model='msag
         '--lr', '1e-3',
         '--weight_decay', '5e-4',
         '--dropout', '0.2',
+        '--hidden_dim', '32',
+        '--attention_heads', '4',
+        '--bottleneck_dim', '8',
         '--mylog'
     ]
     
@@ -235,15 +252,10 @@ def main():
     run_all_experiments()
     
     # Generate summaries
-    logger.info("Generating ablation summaries and model comparisons")
+    logger.info("Generating ablation summaries")
     for dataset, _, horizons in DATASET_CONFIGS:
         for horizon in horizons:
-            # Generate ablation summaries for each model
-            for model in MODELS:
-                generate_ablation_summary(dataset, DEFAULT_WINDOW, horizon, model)
-            
-            # Generate model comparisons
-            generate_model_comparison(dataset, DEFAULT_WINDOW, horizon)
+            generate_ablation_summary(dataset, DEFAULT_WINDOW, horizon, 'msagat')
     
     logger.info("All experiments complete")
 

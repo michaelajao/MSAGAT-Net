@@ -1,0 +1,6 @@
+2026-01-14 17:20:15,615 INFO: Logging to c:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\logs\run_experiments_20260114_172015.log
+2026-01-14 17:20:15,615 INFO: Starting batch experiments
+2026-01-14 17:20:15,615 INFO: Skipping existing: japan h=3 ablation=none model=msagat
+2026-01-14 17:20:15,615 INFO: Skipping existing: japan h=3 ablation=no_agam model=msagat
+2026-01-14 17:20:15,615 INFO: Skipping existing: japan h=3 ablation=no_mtfm model=msagat
+2026-01-14 17:20:15,615 INFO: Skipping existing: japan h=3 ablation=no_pprm model=msagat
