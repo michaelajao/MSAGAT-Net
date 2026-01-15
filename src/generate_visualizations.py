@@ -329,55 +329,7 @@ def fig_component_importance_heatmap():
 
 
 # =============================================================================
-# FIGURE 4: PERFORMANCE COMPARISON HEATMAP
-# =============================================================================
-def fig_performance_heatmap():
-    """Create heatmaps showing performance metrics across datasets and horizons."""
-    setup_style()
-    
-    for metric in ['rmse', 'pcc']:
-        data = []
-        for ds, horizons in DATASET_CONFIGS:
-            for h in horizons:
-                df = load_metrics(ds, h, 'none')
-                if df is not None:
-                    val = get_metric(df, metric)
-                    if not np.isnan(val):
-                        data.append({
-                            'Dataset': DATASET_NAMES.get(ds, ds),
-                            'Horizon': h,
-                            metric.upper(): val
-                        })
-        
-        if not data:
-            continue
-        
-        df = pd.DataFrame(data)
-        pivot = df.pivot_table(
-            values=metric.upper(),
-            index='Dataset',
-            columns='Horizon',
-            aggfunc='first'
-        )
-        
-        # Color map based on metric direction
-        if metric in ['rmse', 'mae']:
-            cmap = 'YlOrRd_r'  # Lower is better
-        else:
-            cmap = 'YlGn'  # Higher is better
-        
-        fig, ax = plt.subplots(figsize=(8, 5))
-        sns.heatmap(pivot, annot=True, fmt='.4f', cmap=cmap,
-                   linewidths=0.5, ax=ax, cbar_kws={'label': METRIC_NAMES[metric]})
-        
-        ax.set_xlabel('Prediction Horizon (days)')
-        ax.set_ylabel('')
-        plt.tight_layout()
-        save_fig(fig, f'fig4_performance_heatmap_{metric}')
-
-
-# =============================================================================
-# FIGURE 5: COMPONENT CONTRIBUTION BY DATASET
+# FIGURE 4: COMPONENT CONTRIBUTION BY DATASET
 # =============================================================================
 def fig_component_contribution():
     """Create grouped bar chart showing component contribution per dataset."""
@@ -527,13 +479,10 @@ def main():
     print("\n3. Generating component importance heatmap...")
     fig_component_importance_heatmap()
     
-    print("\n4. Generating performance heatmaps...")
-    fig_performance_heatmap()
-    
-    print("\n5. Generating component contribution charts...")
+    print("\n4. Generating component contribution charts...")
     fig_component_contribution()
     
-    print("\n6. Generating component impact charts...")
+    print("\n5. Generating component impact charts...")
     fig_component_impact()
     
     print("\n" + "=" * 60)

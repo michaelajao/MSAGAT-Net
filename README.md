@@ -270,46 +270,6 @@ All metrics are computed both globally and per-region for detailed analysis.
 
 ## Citation
 
-If you use this code in your research, please cite our work:
-
-```bibtex
-@article{msagatnet2025,
-  title={MSAGATNet: Multi-Scale Adaptive Graph Attention Network for Epidemic Forecasting},
-  author={Author Names},
-  journal={Journal Name},
-  year={2025}
-}
-```
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.   # Epidemic datasets and adjacency matrices
-│   ├── japan.txt, japan-adj.txt
-│   ├── australia-covid.txt, australia-adj.txt
-│   ├── spain-covid.txt, spain-adj.txt
-│   ├── state360.txt, state-adj-49.txt
-│   ├── region785.txt, region-adj.txt
-│   ├── nhs_timeseries.txt, nhs-adj.txt
-│   └── ltla_timeseries.txt, ltla-adj.txt
-├── src/                       # Source code
-│   ├── model.py              # MSAGAT-Net implementation
-│   ├── ablation.py           # Ablation study variants
-│   ├── train.py              # Training script
-│   ├── data.py               # Data loading utilities
-│   ├── utils.py              # Visualization and metrics
-│   ├── optimize.py           # Hyperparameter optimization
-│   ├── run_experiments.py    # Batch experiment runner
-│   └── generate_visualizations.py  # Publication figures
-├── report/
-│   ├── figures/              # Training visualizations
-│   ├── results/              # Metrics CSV files
-│   └── paper_figures/        # Publication-quality figures
-├── save/                     # Single training checkpoints
-├── save_all/                 # Batch experiment checkpoints
-├── optim_results/            # Optimization outputs
-├── logs/                     # Training logs
-└── tensorboard/              # TensorBoard log📄 Citation
-
 If you use this code in your research, please cite our paper:
 
 ```bibtex
