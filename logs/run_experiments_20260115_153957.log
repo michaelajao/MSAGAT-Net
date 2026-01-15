@@ -1,0 +1,7 @@
+2026-01-15 15:39:57,007 INFO: Logging to C:\Users\ajaoo\Documents\GitHub\MSAGAT-Net\logs\run_experiments_20260115_153957.log
+2026-01-15 15:39:57,007 INFO: Starting 96 experiments
+2026-01-15 15:39:57,007 INFO: Running: japan w=20 h=3 abl=none
+2026-01-15 15:40:34,460 INFO: Completed: japan w=20 h=3 abl=none
+2026-01-15 15:40:34,487 INFO: Running: japan w=20 h=3 abl=no_agam
+2026-01-15 15:41:00,470 INFO: Completed: japan w=20 h=3 abl=no_agam
+2026-01-15 15:41:00,476 INFO: Running: japan w=20 h=3 abl=no_mtfm
