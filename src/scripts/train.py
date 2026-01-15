@@ -171,13 +171,10 @@ def main():
     # Load data
     data_loader = DataBasicLoader(args)
     
-    # Create model
-    if args.ablation == 'none':
-        logger.info('Using full MSTAGAT-Net model')
-        model = MSTAGAT_Net(args, data_loader)
-    else:
-        logger.info(f'Using MSAGATNet ablation model: {args.ablation}')
-        model = MSAGATNet_Ablation(args, data_loader)
+    # Create model - USE ABLATION CLASS FOR ALL VARIANTS (including 'none')
+    # This ensures fair comparison with identical architecture except ablated components
+    logger.info(f'Using MSAGAT-Net with ablation: {args.ablation}')
+    model = MSAGATNet_Ablation(args, data_loader)
     
     if args.cuda:
         model.cuda()
