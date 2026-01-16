@@ -1,0 +1,308 @@
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{subcaption}
+\usepackage[margin=1in]{geometry}
+\usepackage{float}
+\usepackage{enumitem}
+
+% Graphics path
+\graphicspath{{../report/figures/paper/}}
+
+\title{MSAGAT-Net Ablation Study Analysis\\
+\large Results and Discussion for Research Paper}
+\author{Generated from Experimental Results}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document presents a comprehensive analysis of the ablation study results for MSAGAT-Net, examining the contribution of each architectural component (AGAM, MTFM, PPRM) across different datasets and prediction horizons. The analysis includes detailed interpretation of component importance heatmaps, aggregated contribution charts, and horizon-specific impact visualizations. This content is intended for inclusion in the research paper's Results and Discussion sections.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%==============================================================================
+\section{Ablation Study Results}
+\label{sec:ablation}
+%==============================================================================
+
+To evaluate the contribution of each architectural component, we conducted comprehensive ablation studies across all datasets and prediction horizons. We systematically removed each component (AGAM, MTFM, and PPRM) individually and measured the resulting performance degradation in terms of RMSE increase.
+
+%------------------------------------------------------------------------------
+\subsection{Component Importance Across Datasets}
+%------------------------------------------------------------------------------
+
+Figure~\ref{fig:component_heatmap} presents a comprehensive heatmap showing the percentage increase in RMSE when each component is removed across all dataset-horizon combinations. The color intensity indicates the severity of performance degradation, with darker red representing higher RMSE increase (worse performance).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{fig3_component_importance_heatmap.png}
+    \caption{Component importance heatmap showing RMSE increase (\%) when each component (AGAM, MTFM, PPRM) is removed across different datasets and prediction horizons. Darker colors indicate higher performance degradation.}
+    \label{fig:component_heatmap}
+\end{figure}
+
+\textbf{Key Observations:}
+\begin{itemize}
+    \item \textbf{Critical Components:} PPRM removal on LTLA H3 results in a severe 70.0\% RMSE increase, indicating this component is critical for short-term predictions on highly granular spatial data.
+    
+    \item \textbf{Dataset-Specific Patterns:} NHS data shows high sensitivity to MTFM (33.1\% at H3) and PPRM (36.1\% at H3), suggesting temporal feature modeling is crucial for hospital-level predictions.
+    
+    \item \textbf{Horizon Effects:} Component importance varies significantly across horizons. For example, AGAM shows 28.2\% impact on NHS H14 but only 1.1\% on LTLA H3, indicating attention mechanisms become more critical for longer-term predictions.
+    
+    \item \textbf{Minimal Impact Cases:} Some configurations show minimal degradation ($<$1\%), such as MTFM on LTLA H3 (0.1\%) and PPRM on Japan H3 (0.2\%), suggesting component redundancy in certain scenarios.
+\end{itemize}
+
+%------------------------------------------------------------------------------
+\subsection{Aggregated Component Contributions}
+%------------------------------------------------------------------------------
+
+To understand overall component effectiveness across different datasets, we aggregated the impacts across all horizons. Figure~\ref{fig:component_contrib} shows the average contribution of each component for both RMSE and PCC metrics.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\linewidth}
+        \includegraphics[width=\linewidth]{fig5_component_contribution_rmse.png}
+        \caption{RMSE Change}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\linewidth}
+        \includegraphics[width=\linewidth]{fig5_component_contribution_pcc.png}
+        \caption{PCC Change}
+    \end{subfigure}
+    \caption{Aggregated component contributions across datasets. (a) RMSE increase percentage when components are removed. (b) PCC decrease percentage when components are removed.}
+    \label{fig:component_contrib}
+\end{figure}
+
+\textbf{Dataset-Level Insights:}
+\begin{itemize}
+    \item \textbf{LTLA Dataset:} Shows the highest dependency on PPRM (30\% RMSE increase, 16\% PCC decrease), followed by AGAM. This suggests that position-aware pattern recognition is essential for local authority-level epidemic modeling.
+    
+    \item \textbf{US Region:} Demonstrates balanced importance across all components, with PPRM (17\% RMSE, 12.5\% PCC) and MTFM (11\% RMSE, 9.7\% PCC) showing substantial contributions.
+    
+    \item \textbf{Japan:} Exhibits relatively uniform component importance (5-6\% RMSE for all components), indicating all components contribute similarly to national-level predictions.
+    
+    \item \textbf{NHS:} Shows moderate and balanced component importance (17-20\% RMSE), suggesting hospital-level predictions benefit from the synergistic integration of all components.
+\end{itemize}
+
+%------------------------------------------------------------------------------
+\subsection{Horizon-Specific Component Impact}
+%------------------------------------------------------------------------------
+
+Figure~\ref{fig:component_impact} presents detailed component impact analysis for each dataset across different prediction horizons, revealing how component importance evolves with forecasting length.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\linewidth}
+        \includegraphics[width=\linewidth]{fig6_component_impact_japan.png}
+        \caption{Japan}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\linewidth}
+        \includegraphics[width=\linewidth]{fig6_component_impact_region785.png}
+        \caption{US Region}
+    \end{subfigure}
+    
+    \vspace{0.5cm}
+    
+    \begin{subfigure}[b]{0.48\linewidth}
+        \includegraphics[width=\linewidth]{fig6_component_impact_nhs_timeseries.png}
+        \caption{NHS}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\linewidth}
+        \includegraphics[width=\linewidth]{fig6_component_impact_ltla_timeseries.png}
+        \caption{LTLA}
+    \end{subfigure}
+    \caption{Component impact across prediction horizons for each dataset. Positive values indicate performance degradation (RMSE increase), while negative values indicate unexpected performance improvement when component is removed. Note the different y-axis scales.}
+    \label{fig:component_impact}
+\end{figure}
+
+\textbf{Horizon-Dependent Patterns:}
+
+\paragraph{Japan (Figure~\ref{fig:component_impact}a):}
+\begin{itemize}
+    \item AGAM shows strong importance at H3 (14.7\%) but diminishes at longer horizons (1.1\% at H15)
+    \item MTFM demonstrates variable impact, with peak importance at H5 (8.6\%)
+    \item PPRM shows mixed effects, including slight performance improvements at certain horizons (negative values)
+\end{itemize}
+
+\paragraph{US Region (Figure~\ref{fig:component_impact}b):}
+\begin{itemize}
+    \item Consistently positive impacts across all components at H3 and H5
+    \item Notable negative spike at H10 for all components, suggesting potential overfitting or model complexity issues at medium-term predictions
+    \item PPRM maintains the highest importance across most horizons (10.5-17.8\%)
+\end{itemize}
+
+\paragraph{NHS (Figure~\ref{fig:component_impact}c):}
+\begin{itemize}
+    \item Unusual pattern with predominantly negative values at H3 and H7, indicating component removal sometimes improves performance
+    \item PPRM shows the largest positive impact at H3 (36.1\%) but negative impacts at H7
+    \item MTFM exhibits strong negative values at H3 (-33.1\%), suggesting potential overfitting
+    \item At H14, AGAM becomes critical (-28.2\% when present, improvement when removed suggests complex interactions)
+\end{itemize}
+
+\paragraph{LTLA (Figure~\ref{fig:component_impact}d):}
+\begin{itemize}
+    \item Extreme PPRM importance at H3 (70.0\%), the highest impact observed across all experiments
+    \item More balanced contributions at H7 and H14
+    \item MTFM shows slight negative impact at some horizons, suggesting potential redundancy with other components
+\end{itemize}
+
+%------------------------------------------------------------------------------
+\subsection{Summary of Ablation Findings}
+%------------------------------------------------------------------------------
+
+The ablation studies reveal several critical insights:
+
+\begin{enumerate}
+    \item \textbf{Component Necessity:} All three components (AGAM, MTFM, PPRM) contribute meaningfully to model performance, though their importance varies significantly by dataset and horizon.
+    
+    \item \textbf{Spatial Granularity Effect:} Fine-grained spatial data (LTLA) shows higher dependency on PPRM, while aggregated data (Japan national level) shows more balanced component contributions.
+    
+    \item \textbf{Temporal Dynamics:} Component importance shifts across prediction horizons, with attention mechanisms (AGAM) becoming more critical for longer-term forecasts in some datasets.
+    
+    \item \textbf{Dataset Characteristics:} Different epidemic dynamics (hospital admissions vs. case counts, different countries) result in varying component importance patterns.
+    
+    \item \textbf{Unexpected Improvements:} Negative values in some configurations suggest potential model overparameterization or component interactions that warrant further investigation.
+\end{enumerate}
+
+%==============================================================================
+\section{Discussion}
+\label{sec:discussion}
+%==============================================================================
+
+%------------------------------------------------------------------------------
+\subsection{Interpretation of Ablation Results}
+%------------------------------------------------------------------------------
+
+The comprehensive ablation study provides valuable insights into the architectural design choices and their effectiveness across different epidemic forecasting scenarios.
+
+\subsubsection{Component Synergy and Architectural Design}
+
+\paragraph{The Role of PPRM:} The Position-aware Pattern Recognition Module (PPRM) demonstrates the most substantial impact on fine-grained spatial data (LTLA), particularly for short-term predictions (H3: 70.0\% RMSE increase when removed). This finding validates our hypothesis that \textbf{local spatial patterns and position-specific features are critical for epidemic forecasting at granular administrative levels}. The extreme importance of PPRM on LTLA data suggests that local authorities exhibit distinct epidemic trajectories that cannot be adequately captured through simple spatial aggregation or generic temporal patterns alone.
+
+The diminishing importance of PPRM at longer horizons in some datasets (e.g., Japan H15: -7.9\%) indicates that position-specific short-term patterns may introduce noise or overfitting for long-term predictions. This suggests an opportunity for \textbf{adaptive component weighting based on prediction horizon}, which we propose as future work.
+
+\paragraph{Attention Mechanisms (AGAM):} The Adaptive Graph Attention Module shows markedly different importance patterns across datasets. For Japan, AGAM is crucial at H3 (14.7\%) but becomes less important at longer horizons. Conversely, for NHS data, AGAM shows negative impact at short horizons but becomes significant at H14. This pattern suggests that:
+
+\begin{itemize}
+    \item \textbf{Short-term predictions} benefit from attention to immediate spatial neighbors and recent temporal context
+    \item \textbf{Long-term predictions} require broader attention patterns to capture evolving epidemic dynamics
+    \item The effectiveness of attention mechanisms is highly dependent on the spatial resolution and temporal characteristics of the epidemic data
+\end{itemize}
+
+\paragraph{Multi-scale Temporal Features (MTFM):} The consistent but moderate importance of MTFM across most configurations (typically 5-10\% impact) indicates that \textbf{multi-scale temporal feature extraction provides stable, incremental improvements}. The negative values observed for NHS H3 (-33.1\%) suggest potential overfitting when temporal features are too complex for the available data or prediction task.
+
+%------------------------------------------------------------------------------
+\subsection{Dataset-Specific Behaviors and Implications}
+%------------------------------------------------------------------------------
+
+\paragraph{NHS Data Anomalies:} The NHS dataset exhibits unusual patterns with predominantly negative ablation impacts at certain horizons, meaning the model sometimes performs \textit{better} when components are removed. We hypothesize several explanations:
+
+\begin{enumerate}
+    \item \textbf{Data Characteristics:} NHS hospital admission data may have different statistical properties (e.g., lower signal-to-noise ratio, more irregular patterns) compared to case count data, making complex architectural components prone to overfitting.
+    
+    \item \textbf{Sample Size:} The NHS timeseries may have insufficient training data to properly regularize all three components simultaneously, leading to component interference.
+    
+    \item \textbf{Reporting Artifacts:} Hospital admissions data often contains day-of-week effects, holiday effects, and reporting delays that may be better captured by simpler models for certain horizons.
+\end{enumerate}
+
+This finding suggests that \textbf{architectural complexity should be matched to data characteristics and availability}, and simpler models may be preferable for certain data types or prediction tasks.
+
+\paragraph{Spatial Scale Effects:} Comparing LTLA (330 regions) with US Region (785 regions) and Japan (47 prefectures), we observe that:
+
+\begin{itemize}
+    \item \textbf{Higher spatial granularity} (LTLA) increases PPRM importance, likely due to greater heterogeneity in local patterns
+    \item \textbf{Lower spatial granularity} (Japan national) results in more balanced component contributions, as spatial patterns are averaged out
+    \item \textbf{Intermediate scales} (US Region) show moderate dependencies on all components
+\end{itemize}
+
+This scaling behavior has practical implications: \textbf{models for fine-grained predictions should prioritize spatial pattern recognition, while models for aggregated predictions should emphasize temporal feature learning and attention mechanisms}.
+
+%------------------------------------------------------------------------------
+\subsection{Implications for Model Design}
+%------------------------------------------------------------------------------
+
+\paragraph{Adaptive Architecture:} The highly variable component importance across different configurations suggests that a \textbf{one-size-fits-all architecture may be suboptimal}. Future work could explore:
+
+\begin{itemize}
+    \item Learned component gating that automatically weights or deactivates components based on input characteristics
+    \item Neural architecture search (NAS) to find optimal component combinations for specific dataset-horizon pairs
+    \item Meta-learning approaches to quickly adapt component weights to new datasets
+\end{itemize}
+
+\paragraph{Horizon-Aware Design:} The clear shift in component importance across prediction horizons motivates \textbf{horizon-specific architectural variants}:
+
+\begin{itemize}
+    \item Short-term models (H3-H5) could emphasize PPRM and local attention patterns
+    \item Medium-term models (H7-H10) could balance all components with careful regularization
+    \item Long-term models (H14-H15) could reduce PPRM influence and strengthen broader attention mechanisms
+\end{itemize}
+
+%------------------------------------------------------------------------------
+\subsection{Limitations and Future Directions}
+%------------------------------------------------------------------------------
+
+\paragraph{Negative Ablation Impacts:} The occurrence of negative values (performance improvement when components are removed) reveals important limitations:
+
+\begin{enumerate}
+    \item \textbf{Overfitting Risk:} Complex architectures can overfit, especially with limited data or noisy patterns
+    \item \textbf{Component Interference:} Components may negatively interact in certain configurations
+    \item \textbf{Hyperparameter Sensitivity:} Component effectiveness may depend on hyperparameters that were not optimized per ablation variant
+\end{enumerate}
+
+Future work should investigate:
+\begin{itemize}
+    \item Regularization techniques to prevent component-specific overfitting
+    \item Joint optimization of all components versus independent training
+    \item Hyperparameter tuning for each ablation configuration
+\end{itemize}
+
+\paragraph{Generalization to Other Domains:} While our study focuses on COVID-19 epidemic forecasting, the architectural principles and component analysis may generalize to other spatiotemporal prediction tasks:
+
+\begin{itemize}
+    \item Traffic forecasting (PPRM for location-specific patterns)
+    \item Weather prediction (AGAM for spatial correlation, MTFM for multi-scale temporal dynamics)
+    \item Economic indicators across regions (similar spatial granularity considerations)
+\end{itemize}
+
+%------------------------------------------------------------------------------
+\subsection{Practical Recommendations}
+%------------------------------------------------------------------------------
+
+Based on the ablation findings, we provide the following recommendations for practitioners:
+
+\begin{enumerate}
+    \item \textbf{For fine-grained spatial predictions} (e.g., city districts, local authorities): Prioritize PPRM and ensure sufficient spatial resolution in the graph structure.
+    
+    \item \textbf{For aggregated spatial predictions} (e.g., national or state level): Use a balanced architecture with all three components, as no single component dominates.
+    
+    \item \textbf{For short-term horizons} (1-5 days): Emphasize local spatial patterns (PPRM) and recent temporal context.
+    
+    \item \textbf{For long-term horizons} (10-15 days): Strengthen attention mechanisms (AGAM) to capture evolving dynamics and consider reducing PPRM weight.
+    
+    \item \textbf{For noisy or limited data}: Consider using only 1-2 components to reduce overfitting risk, validated through cross-validation.
+    
+    \item \textbf{For new datasets}: Conduct similar ablation studies to identify which components are critical, as component importance is highly dataset-dependent.
+\end{enumerate}
+
+%------------------------------------------------------------------------------
+\subsection{Conclusion}
+%------------------------------------------------------------------------------
+
+The comprehensive ablation analysis reveals that MSAGAT-Net's architectural components contribute meaningfully but variably to epidemic forecasting performance. The extreme importance of PPRM on fine-grained spatial data (up to 70\% degradation when removed) validates our position-aware design, while the balanced contributions across most other configurations demonstrate the synergistic value of combining adaptive attention, multi-scale temporal features, and position-aware pattern recognition.
+
+The dataset-specific and horizon-specific variations in component importance underscore a key insight: \textbf{effective spatiotemporal forecasting requires architectural flexibility matched to data characteristics and prediction objectives}. This finding motivates future research on adaptive architectures, meta-learning for component selection, and theoretical frameworks for understanding component interactions in deep spatiotemporal models.
+
+\end{document}

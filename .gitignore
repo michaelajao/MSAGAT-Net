@@ -47,6 +47,10 @@ events.out.tfevents.*
 report/results/
 report/figures/
 
+# Hyperparameter Optimization
+src/optimize.py
+optim_results/
+
 # Old/backup results
 reportOLD/
 
