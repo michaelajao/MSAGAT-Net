@@ -312,7 +312,7 @@ ALL_RESULTS_TXT = "all_results.txt"
 
 def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
                  window: int = None, horizon: int = None, logger=None,
-                 model_name: str = None, ablation: str = None):
+                 model_name: str = None, ablation: str = None, seed: int = None):
     """
     Append metrics to consolidated CSV and TXT files in dataset-specific folder.
     
@@ -325,6 +325,7 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
         logger: Logger object
         model_name: Model name
         ablation: Ablation variant
+        seed: Random seed used for experiment
     """
     # Use the dataset-specific directory from save_path
     results_dir = os.path.dirname(save_path)
@@ -337,6 +338,7 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
         "window": window or 0,
         "horizon": horizon or 0,
         "ablation": ablation or "none",
+        "seed": seed or 42,
         "timestamp": time.strftime("%Y%m%d_%H%M%S"),
     }
     
@@ -351,18 +353,19 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
     
     if os.path.exists(csv_path):
         df_old = pd.read_csv(csv_path)
-        # Remove duplicate entries
+        # Remove duplicate entries (now including seed)
         mask = ~(
             (df_old['dataset'] == dataset) & 
             (df_old['window'] == window) & 
             (df_old['horizon'] == horizon) & 
-            (df_old['ablation'] == (ablation or "none"))
+            (df_old['ablation'] == (ablation or "none")) &
+            (df_old['seed'] == (seed or 42))
         )
         df_old = df_old[mask]
         df = pd.concat([df_old, df], ignore_index=True)
     
     # Sort and save
-    df = df.sort_values(['dataset', 'window', 'horizon', 'ablation']).reset_index(drop=True)
+    df = df.sort_values(['dataset', 'window', 'horizon', 'ablation', 'seed']).reset_index(drop=True)
     df.to_csv(csv_path, index=False)
     
     # Append to text log

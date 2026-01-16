@@ -174,7 +174,9 @@ def generate_ablation_summary(dataset: str, window: int, horizon: int,
 
 
 def build_train_command(dataset: str, sim_mat: str, window: int, 
-                        horizon: int, ablation: str, use_cuda: bool = True) -> List[str]:
+                        horizon: int, ablation: str, use_cuda: bool = True,
+                        seed: int = 42, batch_size: int = 64,
+                        save_figures: bool = True) -> List[str]:
     """Build training command with GPU support if available."""
     cmd = [
         sys.executable, TRAIN_SCRIPT,
@@ -184,6 +186,8 @@ def build_train_command(dataset: str, sim_mat: str, window: int,
         '--horizon', str(horizon),
         '--ablation', ablation,
         '--save_dir', SAVE_DIR,
+        '--seed', str(seed),
+        '--batch', str(batch_size),
     ]
     
     # Add CUDA flag if requested (enabled by default in train.py)
@@ -191,11 +195,16 @@ def build_train_command(dataset: str, sim_mat: str, window: int,
     if not use_cuda:
         cmd.append('--no-cuda')
     
+    # Skip figures for multi-seed runs to avoid clutter
+    if not save_figures:
+        cmd.append('--no-figures')
+    
     return cmd
 
 
 def run_experiment(dataset: str, sim_mat: str, window: int, horizon: int,
-                   ablation: str, logger: logging.Logger, skip_existing: bool = True) -> bool:
+                   ablation: str, logger: logging.Logger, skip_existing: bool = True,
+                   seed: int = 42, batch_size: int = 64, save_figures: bool = True) -> bool:
     """Run a single experiment."""
     # Check if already completed
     if skip_existing:
@@ -204,9 +213,10 @@ def run_experiment(dataset: str, sim_mat: str, window: int, horizon: int,
             logger.info(f"Skipping {dataset} w={window} h={horizon} abl={ablation} (exists)")
             return True
     
-    logger.info(f"Running: {dataset} w={window} h={horizon} abl={ablation}")
+    logger.info(f"Running: {dataset} w={window} h={horizon} abl={ablation} seed={seed}")
     
-    cmd = build_train_command(dataset, sim_mat, window, horizon, ablation)
+    cmd = build_train_command(dataset, sim_mat, window, horizon, ablation, 
+                               seed=seed, batch_size=batch_size, save_figures=save_figures)
     
     try:
         subprocess.run(cmd, check=True)
@@ -218,28 +228,42 @@ def run_experiment(dataset: str, sim_mat: str, window: int, horizon: int,
 
 
 def run_all_experiments(configs: List[Tuple], ablations: List[str],
-                        logger: logging.Logger, skip_existing: bool = True):
-    """Run all experiment configurations."""
+                        logger: logging.Logger, skip_existing: bool = True,
+                        seeds: List[int] = None, batch_size: int = 64):
+    """Run all experiment configurations with optional multi-seed support."""
     os.makedirs(SAVE_DIR, exist_ok=True)
     os.makedirs(METRICS_DIR, exist_ok=True)
     
-    total = sum(len(horizons) * len(ablations) for _, _, horizons in configs)
+    if seeds is None:
+        seeds = [42]  # Default single seed
+    
+    total = sum(len(horizons) * len(ablations) * len(seeds) for _, _, horizons in configs)
     completed = 0
     failed = 0
     
-    logger.info(f"Starting {total} experiments")
+    # Only save figures for first seed when running multiple seeds
+    multi_seed = len(seeds) > 1
+    
+    logger.info(f"Starting {total} experiments ({len(seeds)} seeds, batch_size={batch_size})")
+    if multi_seed:
+        logger.info(f"Multi-seed mode: figures only saved for first seed ({seeds[0]})")
     
     for dataset, sim_mat, horizons in configs:
         for horizon in horizons:
             for ablation in ablations:
-                success = run_experiment(
-                    dataset, sim_mat, DEFAULT_WINDOW, horizon, ablation,
-                    logger, skip_existing
-                )
-                if success:
-                    completed += 1
-                else:
-                    failed += 1
+                for i, seed in enumerate(seeds):
+                    # Only save figures for first seed in multi-seed runs
+                    save_figures = (i == 0) if multi_seed else True
+                    
+                    success = run_experiment(
+                        dataset, sim_mat, DEFAULT_WINDOW, horizon, ablation,
+                        logger, skip_existing=False,  # Always run for different seeds
+                        seed=seed, batch_size=batch_size, save_figures=save_figures
+                    )
+                    if success:
+                        completed += 1
+                    else:
+                        failed += 1
             
             # Generate ablation summary after each horizon
             generate_ablation_summary(dataset, DEFAULT_WINDOW, horizon, logger)
@@ -260,6 +284,10 @@ def parse_args():
                         help='Skip existing experiments')
     parser.add_argument('--force', action='store_true',
                         help='Force re-run of all experiments')
+    parser.add_argument('--seeds', nargs='+', type=int, default=[42],
+                        help='Random seeds to use (default: [42]). Use --seeds 42 123 456 789 101112 for 5 seeds')
+    parser.add_argument('--batch-size', type=int, default=64,
+                        help='Batch size (default: 64, increase for better GPU utilization)')
     return parser.parse_args()
 
 
@@ -283,7 +311,25 @@ def main():
     
     skip_existing = not args.force and args.skip_existing
     
-    run_all_experiments(configs, args.ablations, logger, skip_existing)
+    run_all_experiments(configs, args.ablations, logger, skip_existing,
+                        seeds=args.seeds, batch_size=args.batch_size)
+    
+    # Aggregate results if multi-seed run
+    if len(args.seeds) > 1:
+        logger.info("Running result aggregation for multi-seed experiments...")
+        datasets = [d for d, _, _ in configs]
+        horizons = args.horizons if args.horizons else [3, 5, 10, 15]
+        
+        from src.scripts.aggregate_results import generate_aggregate_table, print_markdown_table
+        
+        for dataset in datasets:
+            df = generate_aggregate_table(dataset, horizons, args.ablations)
+            if not df.empty:
+                print_markdown_table(df, dataset)
+                # Save aggregated results
+                output_path = os.path.join(METRICS_DIR, dataset, 'aggregated_results.csv')
+                df.to_csv(output_path, index=False)
+                logger.info(f"Saved aggregated results to: {output_path}")
 
 
 if __name__ == '__main__':

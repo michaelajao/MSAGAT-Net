@@ -131,6 +131,8 @@ def parse_args():
     parser.add_argument('--result', type=int, default=0)
     parser.add_argument('--start_date', type=str, default='2020-01-01',
                         help='Start date for visualization')
+    parser.add_argument('--no-figures', dest='save_figures', action='store_false', default=True,
+                        help='Skip saving figures (useful for multi-seed runs)')
     
     return parser.parse_args()
 
@@ -164,9 +166,9 @@ def main():
     
     logger.info(f'CUDA: {args.cuda}' + (f' (GPU {args.gpu})' if args.cuda else ''))
     
-    # Model naming
+    # Model naming - include seed for multi-seed experiments
     model_name = 'MSTAGAT-Net'
-    log_token = f"{model_name}.{args.dataset}.w-{args.window}.h-{args.horizon}.{args.ablation}"
+    log_token = f"{model_name}.{args.dataset}.w-{args.window}.h-{args.horizon}.{args.ablation}.seed-{args.seed}"
     
     # Load data
     data_loader = DataBasicLoader(args)
@@ -195,20 +197,23 @@ def main():
     os.makedirs(dataset_figures_dir, exist_ok=True)
     os.makedirs(dataset_results_dir, exist_ok=True)
     
-    # Generate visualizations in dataset folder
-    loss_fig_path = os.path.join(dataset_figures_dir, f"loss_curve_{log_token}.png")
-    plot_loss_curves(trainer.train_losses, trainer.val_losses, loss_fig_path, args)
-    logger.info(f"Loss curve saved to {loss_fig_path}")
+    # Generate visualizations only if save_figures is True
+    if args.save_figures:
+        loss_fig_path = os.path.join(dataset_figures_dir, f"loss_curve_{log_token}.png")
+        plot_loss_curves(trainer.train_losses, trainer.val_losses, loss_fig_path, args)
+        logger.info(f"Loss curve saved to {loss_fig_path}")
+        
+        matrices_fig_path = os.path.join(dataset_figures_dir, f"matrices_{log_token}.png")
+        visualize_matrices(data_loader, model, matrices_fig_path, device)
+        logger.info(f"Matrices saved to {matrices_fig_path}")
+        
+        predictions_fig_path = os.path.join(dataset_figures_dir, f"predictions_{log_token}.png")
+        visualize_predictions(final_metrics.y_true, final_metrics.y_pred, predictions_fig_path, logger=logger)
+        logger.info(f"Predictions saved to {predictions_fig_path}")
+    else:
+        logger.info("Skipping figure generation (--no-figures)")
     
-    matrices_fig_path = os.path.join(dataset_figures_dir, f"matrices_{log_token}.png")
-    visualize_matrices(data_loader, model, matrices_fig_path, device)
-    logger.info(f"Matrices saved to {matrices_fig_path}")
-    
-    predictions_fig_path = os.path.join(dataset_figures_dir, f"predictions_{log_token}.png")
-    visualize_predictions(final_metrics.y_true, final_metrics.y_pred, predictions_fig_path, logger=logger)
-    logger.info(f"Predictions saved to {predictions_fig_path}")
-    
-    # Save metrics in dataset folder
+    # Save metrics in dataset folder (always save metrics)
     results_csv = os.path.join(dataset_results_dir, f"final_metrics_{log_token}.csv")
     save_metrics(
         final_metrics.to_dict(),
@@ -218,7 +223,8 @@ def main():
         args.horizon, 
         logger, 
         model_name, 
-        args.ablation
+        args.ablation,
+        args.seed
     )
     print(f"Saved final metrics to {results_csv}")
     

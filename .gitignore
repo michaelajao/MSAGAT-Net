@@ -1,1 +1,73 @@
-tensorboard/*/*
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Model Checkpoints & Weights
+save/
+save_all/
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.pkl
+*.pickle
+
+# Training Logs & TensorBoard
+logs/
+tensorboard/
+*.log
+events.out.tfevents.*
+
+# Experiment Results & Figures
+report/results/
+report/figures/
+
+# Old/backup results
+reportOLD/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+.cache/
+tmp/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Data (optional - uncomment if data is large)
+# data/*.txt
+# data/*.csv
+
+# Old/backup folders
+reportOLD/
+save_all/best_model.pt
+save_all/MSTAGAT-Net.japan.w-20.h-3.none.pt
+logs/*
