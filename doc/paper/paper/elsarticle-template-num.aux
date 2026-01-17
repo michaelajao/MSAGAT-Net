@@ -1,0 +1,212 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\emailauthor{olarinoyem@coventry.ac.uk}{Michael Ajao-olarinoye\corref {cor1}\fnref {fn1}}
+\Newlabel{cor1}{1}
+\providecommand \oddpage@label [2]{}
+\Newlabel{inst1}{a}
+\Newlabel{inst2}{b}
+\Newlabel{inst3}{c}
+\citation{ajao2023deep,da2021covid,giuliani2020modelling,verma2022temporal,ma2024reporting}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{2}{section.1}\protected@file@percent }
+\newlabel{sec:introduction}{{1}{2}{Introduction}{section.1}{}}
+\citation{Panja2022Epicasting,Stone2007Seasonal}
+\citation{heltberg2022spatial,s25082507,DEANGELIS201583}
+\citation{li2017diffusion,zhang2021graph}
+\citation{wu2018deep,lai2018modeling}
+\citation{kimForecastingEpidemicSpread2025,zhiweidingBiologyInformedRecurrentNeural2023}
+\citation{ajao2023deep,zhang2021graph,wu2018deep,lai2018modeling,Ahmadini2025}
+\citation{Kamalov2022ReviewDL,wang2019defsi}
+\citation{lijingwangCausalGNNCausalBasedGraph2022}
+\citation{liuReviewGraphNeural2024a,wang_deepest_2024}
+\citation{dengColaGNNCrosslocationAttention2020a}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{5}{section.2}\protected@file@percent }
+\newlabel{sec:related_work}{{2}{5}{Related Work}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Spatiotemporal Epidemic Modelling}{5}{subsection.2.1}\protected@file@percent }
+\citation{xie2022epignn}
+\citation{gao2021stan}
+\citation{han2025dygraphformer}
+\citation{pu2024dynamic}
+\citation{cao2022mepognn}
+\citation{gao2023evidence}
+\citation{wang2020linformer}
+\citation{Brooks2018Nonmechanistic}
+\citation{Panja2022Epicasting}
+\citation{Stone2007Seasonal}
+\citation{Brooks2018Nonmechanistic}
+\citation{wu2018deep,venna2019novel}
+\citation{wang2019defsi}
+\citation{dengColaGNNCrosslocationAttention2020a}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Multi-Scale Temporal Modelling and Multi-Horizon Forecasting}{7}{subsection.2.2}\protected@file@percent }
+\citation{Luo2023Interpretable,Moss_Zarebski_Dawson_Franklin_Birrell_McCaw_2020}
+\citation{Panja2022Epicasting}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Methodology}{8}{section.3}\protected@file@percent }
+\newlabel{sec:methodology}{{3}{8}{Methodology}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Problem Formulation}{8}{subsection.3.1}\protected@file@percent }
+\citation{chollet2017xception}
+\citation{li2023multi,yu2022traffic}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overview of the MSAGAT-Net architecture. The model processes input through four main modules: Feature Extraction using depthwise separable convolutions, EAGAM with linearised attention and learnable graph bias, DMTFM employing multi-scale dilated convolutions (dilation rates $d \in \{1,2,4\}$), and PPRM for adaptive forecast refinement. The dashed line represents the skip connection from input to PPRM.}}{10}{figure.1}\protected@file@percent }
+\newlabel{fig:msagat_net_architecture}{{1}{10}{Overview of the MSAGAT-Net architecture. The model processes input through four main modules: Feature Extraction using depthwise separable convolutions, EAGAM with linearised attention and learnable graph bias, DMTFM employing multi-scale dilated convolutions (dilation rates $d \in \{1,2,4\}$), and PPRM for adaptive forecast refinement. The dashed line represents the skip connection from input to PPRM}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Feature Extraction}{10}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.1}Depthwise Separable Convolutions}{11}{subsubsection.3.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.2}Low-Rank Feature Projection}{12}{subsubsection.3.2.2}\protected@file@percent }
+\citation{velickovic2017graph}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Efficient Adaptive Graph Attention with Low-Rank Decomposition}{13}{subsection.3.3}\protected@file@percent }
+\citation{puny2020global}
+\citation{kong2023low}
+\citation{yang2023self}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Feature‑extraction pipeline. Independent regional time‑series $\mathbf  {x}^i$ and $\mathbf  {x}^j$ are processed in parallel by depth‑wise and point‑wise convolutions, normalised, flattened, passed through a bottleneck projection ($d_{\text  {bottle}}\!\to \! d_{\text  {hidden}}$), and normalised again to yield region‑level feature vectors $\mathbf  F$.}}{14}{figure.2}\protected@file@percent }
+\newlabel{fig:feature_extraction}{{2}{14}{Feature‑extraction pipeline. Independent regional time‑series $\mathbf {x}^i$ and $\mathbf {x}^j$ are processed in parallel by depth‑wise and point‑wise convolutions, normalised, flattened, passed through a bottleneck projection ($d_{\text {bottle}}\!\to \! d_{\text {hidden}}$), and normalised again to yield region‑level feature vectors $\mathbf F$}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.1}Bottleneck Projection}{15}{subsubsection.3.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.2}Multi-Head Attention Mechanism}{16}{subsubsection.3.3.2}\protected@file@percent }
+\citation{katharopoulos2020transformers}
+\citation{glorot2010understanding}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.3}Learnable Graph Structure}{18}{subsubsection.3.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.4}Graph Bias Message Passing}{18}{subsubsection.3.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.5}Optional Adjacency Prior Integration}{19}{subsubsection.3.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.6}Attention Regularisation}{20}{subsubsection.3.3.6}\protected@file@percent }
+\citation{Stone2007Seasonal,Panja2022Epicasting,Qiu2024MSGNN}
+\citation{dengColaGNNCrosslocationAttention2020a}
+\citation{xie2022epignn}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Dilated Multi-Scale Temporal Feature Module}{21}{subsection.3.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Data flow in the EAGAM module. Input features undergo low-rank QKV projections, followed by linearised attention computation with learnable graph bias for spatial dependency modelling, and low-rank output projection.}}{22}{figure.3}\protected@file@percent }
+\newlabel{fig:eagam_module}{{3}{22}{Data flow in the EAGAM module. Input features undergo low-rank QKV projections, followed by linearised attention computation with learnable graph bias for spatial dependency modelling, and low-rank output projection}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.1}Dilated Convolutions for Multi-scale Processing}{23}{subsubsection.3.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.2}Adaptive Scale Fusion}{24}{subsubsection.3.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.3}Bottleneck Projection and Residual Connection}{24}{subsubsection.3.4.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Data flow in the MTFM module. Spatial features from AGAM are processed through three parallel dilated convolutional branches (dilation rates 1, 2, 4), adaptively fused using learnable weights, and combined with residual connections.}}{25}{figure.4}\protected@file@percent }
+\newlabel{fig:mtfm_module}{{4}{25}{Data flow in the MTFM module. Spatial features from AGAM are processed through three parallel dilated convolutional branches (dilation rates 1, 2, 4), adaptively fused using learnable weights, and combined with residual connections}{figure.4}{}}
+\citation{BENTAIEB20127067,chandra2021evaluation}
+\citation{hochreiter1997long}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Progressive Multi-Horizon Forecast Refinement}{26}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.1}Low-Rank Forecast Projection}{27}{subsubsection.3.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.2}Horizon-Specific Forecasting}{27}{subsubsection.3.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.3}Adaptive Refinement Mechanism}{27}{subsubsection.3.5.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Data flow in the PPRM module. Features are projected through a low-rank bottleneck to generate initial predictions. An adaptive gate learns to balance these model-based forecasts with exponential trend extrapolations based on recent observations.}}{29}{figure.5}\protected@file@percent }
+\newlabel{fig:pprm_module}{{5}{29}{Data flow in the PPRM module. Features are projected through a low-rank bottleneck to generate initial predictions. An adaptive gate learns to balance these model-based forecasts with exponential trend extrapolations based on recent observations}{figure.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experimental Setup}{30}{section.4}\protected@file@percent }
+\newlabel{sec:experiments}{{4}{30}{Experimental Setup}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Computing Environment}{30}{subsection.4.1}\protected@file@percent }
+\newlabel{sec:experimental_setup}{{4.1}{30}{Computing Environment}{subsection.4.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Datasets}{30}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:datasets}{{4.2}{30}{Datasets}{subsection.4.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Overview of the epidemic datasets used in our experimental evaluation. ``Granularity'' indicates the temporal resolution of the epidemic data, whilst ``Size'' represents the product of the number of locations and the number of time steps.}}{31}{table.1}\protected@file@percent }
+\newlabel{tab:datasets}{{1}{31}{Overview of the epidemic datasets used in our experimental evaluation. ``Granularity'' indicates the temporal resolution of the epidemic data, whilst ``Size'' represents the product of the number of locations and the number of time steps}{table.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}Influenza Datasets}{31}{subsubsection.4.2.1}\protected@file@percent }
+\citation{NHS2024HospitalActivity}
+\citation{gao2021stan}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.2}COVID-19 Datasets}{32}{subsubsection.4.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Spatial Graph Construction}{32}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:graph_construction}{{4.3}{32}{Spatial Graph Construction}{subsection.4.3}{}}
+\citation{ajao2023deep,oluwasakin2023data,zeroual2020deep,Kamalov2022ReviewDL}
+\citation{velickovic2017graph,zhang2019spatial,xie2022epignn,dengColaGNNCrosslocationAttention2020a,wang2020linformer}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Training and Optimisation Strategy}{33}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:optimisation}{{4.4}{33}{Training and Optimisation Strategy}{subsection.4.4}{}}
+\newlabel{eq:total_loss}{{48}{33}{Training and Optimisation Strategy}{equation.48}{}}
+\@writefile{loa}{\contentsline {algocf}{\numberline {1}{\ignorespaces MSAGAT-Net Training Algorithm}}{35}{algocf.1}\protected@file@percent }
+\newlabel{alg:MSAGAT-Net_training}{{1}{35}{Training and Optimisation Strategy}{algocf.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Baseline Models}{35}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:baseline_models}{{4.5}{35}{Baseline Models}{subsection.4.5}{}}
+\citation{li2017diffusion}
+\citation{lai2018modeling}
+\citation{wu2018deep}
+\citation{dengColaGNNCrosslocationAttention2020a}
+\citation{xie2022epignn}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Comparison of spatial modelling approaches between MSAGAT-Net and baseline models. ``Requires Adjacency'' indicates whether predefined spatial structure is mandatory; ``Learns Graph'' indicates whether the model discovers spatial patterns from data; ``Adj. Optional'' indicates whether adjacency can be used as prior knowledge when available.}}{37}{table.2}\protected@file@percent }
+\newlabel{tab:baseline_comparison}{{2}{37}{Comparison of spatial modelling approaches between MSAGAT-Net and baseline models. ``Requires Adjacency'' indicates whether predefined spatial structure is mandatory; ``Learns Graph'' indicates whether the model discovers spatial patterns from data; ``Adj. Optional'' indicates whether adjacency can be used as prior knowledge when available}{table.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results and Discussion}{37}{section.5}\protected@file@percent }
+\newlabel{sec:results}{{5}{37}{Results and Discussion}{section.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces RMSE and PCC performance of different methods on three datasets (horizon = 3, 5, 10, 15). Bold = best, underline = second best.}}{38}{table.3}\protected@file@percent }
+\newlabel{tab:performance_table}{{3}{38}{RMSE and PCC performance of different methods on three datasets (horizon = 3, 5, 10, 15). Bold = best, underline = second best}{table.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces RMSE performance of different methods on four datasets (horizon = 3, 7, 14). Bold = best, underline = second best.}}{38}{table.4}\protected@file@percent }
+\newlabel{tab:performance_table_others}{{4}{38}{RMSE performance of different methods on four datasets (horizon = 3, 7, 14). Bold = best, underline = second best}{table.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.0.1}Performance on Influenza Datasets}{38}{subsubsection.5.0.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.0.2}Performance on COVID-19 Datasets}{39}{subsubsection.5.0.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.0.3}Synthesis: When MSAGAT-Net Succeeds}{40}{subsubsection.5.0.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.0.4}Learned Spatial Representations}{41}{subsubsection.5.0.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Attention matrices learned by MSAGAT-Net on the Japan-Prefectures dataset for 5-day forecasting: adjacency matrix (left), input correlation (center), and learned attention (right).}}{42}{figure.6}\protected@file@percent }
+\newlabel{fig:attention_matrices_none}{{6}{42}{Attention matrices learned by MSAGAT-Net on the Japan-Prefectures dataset for 5-day forecasting: adjacency matrix (left), input correlation (center), and learned attention (right)}{figure.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Attention matrices learned by MSAGAT-Net without PPRM on the Japan-Prefectures dataset for 5-day forecasting: adjacency matrix (left), input correlation (center), and learned attention (right).}}{42}{figure.7}\protected@file@percent }
+\newlabel{fig:attention_matrices_no_pprm}{{7}{42}{Attention matrices learned by MSAGAT-Net without PPRM on the Japan-Prefectures dataset for 5-day forecasting: adjacency matrix (left), input correlation (center), and learned attention (right)}{figure.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Ablation Study}{42}{subsection.5.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Ablation study results on the Japan-Prefectures dataset, showing the impact of removing key components of MSAGAT-Net on forecasting performance across different horizons.}}{43}{table.5}\protected@file@percent }
+\newlabel{tab:ablation}{{5}{43}{Ablation study results on the Japan-Prefectures dataset, showing the impact of removing key components of MSAGAT-Net on forecasting performance across different horizons}{table.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Ablation study results on LTLA-Timeseries dataset (COVID-19) with window size 20 across different forecast horizons. Values in parentheses indicate percentage change relative to the full model.}}{43}{table.6}\protected@file@percent }
+\newlabel{tab:ablation_ltla}{{6}{43}{Ablation study results on LTLA-Timeseries dataset (COVID-19) with window size 20 across different forecast horizons. Values in parentheses indicate percentage change relative to the full model}{table.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Attention matrices learned by MSAGAT-Net without EAGAM on the Japan-Prefectures dataset for 5-day forecasting: adjacency matrix (left), input correlation (center), and learned attention (right).}}{44}{figure.8}\protected@file@percent }
+\newlabel{fig:attention_matrices_no_eagam}{{8}{44}{Attention matrices learned by MSAGAT-Net without EAGAM on the Japan-Prefectures dataset for 5-day forecasting: adjacency matrix (left), input correlation (center), and learned attention (right)}{figure.8}{}}
+\newlabel{fig:component_impact_japan_h3}{{9a}{45}{Subfigure 9a}{subfigure.9.1}{}}
+\newlabel{sub@fig:component_impact_japan_h3}{{(a)}{a}{Subfigure 9a\relax }{subfigure.9.1}{}}
+\newlabel{fig:component_impact_japan_h5}{{9b}{45}{Subfigure 9b}{subfigure.9.2}{}}
+\newlabel{sub@fig:component_impact_japan_h5}{{(b)}{b}{Subfigure 9b\relax }{subfigure.9.2}{}}
+\newlabel{fig:component_impact_japan_h10}{{9c}{45}{Subfigure 9c}{subfigure.9.3}{}}
+\newlabel{sub@fig:component_impact_japan_h10}{{(c)}{c}{Subfigure 9c\relax }{subfigure.9.3}{}}
+\newlabel{fig:component_impact_japan_h15}{{9d}{45}{Subfigure 9d}{subfigure.9.4}{}}
+\newlabel{sub@fig:component_impact_japan_h15}{{(d)}{d}{Subfigure 9d\relax }{subfigure.9.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Component impact analysis across different forecast horizons for the Japan-Prefectures dataset, showing the relative contribution of each MSAGAT-Net module to overall forecasting performance.}}{45}{figure.9}\protected@file@percent }
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {3-day Horizon Component Impact}}}{45}{subfigure.9.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {5-day Horizon Component Impact}}}{45}{subfigure.9.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(c)}{\ignorespaces {10-day Horizon Component Impact}}}{45}{subfigure.9.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(d)}{\ignorespaces {15-day Horizon Component Impact}}}{45}{subfigure.9.4}\protected@file@percent }
+\newlabel{fig:component_impact_japan}{{9}{45}{Component impact analysis across different forecast horizons for the Japan-Prefectures dataset, showing the relative contribution of each MSAGAT-Net module to overall forecasting performance}{figure.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Learned vs.\ Predefined Spatial Structure}{47}{subsection.5.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Comparison of MSAGAT-Net with learned spatial structure vs.\ predefined geographical adjacency prior on the Japan-Prefectures dataset (10-day horizon, seed = 42).}}{47}{table.7}\protected@file@percent }
+\newlabel{tab:adj_prior_comparison}{{7}{47}{Comparison of MSAGAT-Net with learned spatial structure vs.\ predefined geographical adjacency prior on the Japan-Prefectures dataset (10-day horizon, seed = 42)}{table.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{48}{section.6}\protected@file@percent }
+\newlabel{sec:conclusion}{{6}{48}{Conclusion}{section.6}{}}
+\bibstyle{elsarticle-num}
+\bibdata{ref}
+\bibcite{ajao2023deep}{{1}{}{{}}{{}}}
+\bibcite{da2021covid}{{2}{}{{}}{{}}}
+\bibcite{giuliani2020modelling}{{3}{}{{}}{{}}}
+\bibcite{verma2022temporal}{{4}{}{{}}{{}}}
+\bibcite{ma2024reporting}{{5}{}{{}}{{}}}
+\bibcite{Panja2022Epicasting}{{6}{}{{}}{{}}}
+\bibcite{Stone2007Seasonal}{{7}{}{{}}{{}}}
+\bibcite{heltberg2022spatial}{{8}{}{{}}{{}}}
+\bibcite{s25082507}{{9}{}{{}}{{}}}
+\bibcite{DEANGELIS201583}{{10}{}{{}}{{}}}
+\bibcite{li2017diffusion}{{11}{}{{}}{{}}}
+\bibcite{zhang2021graph}{{12}{}{{}}{{}}}
+\bibcite{wu2018deep}{{13}{}{{}}{{}}}
+\bibcite{lai2018modeling}{{14}{}{{}}{{}}}
+\bibcite{kimForecastingEpidemicSpread2025}{{15}{}{{}}{{}}}
+\bibcite{zhiweidingBiologyInformedRecurrentNeural2023}{{16}{}{{}}{{}}}
+\bibcite{Ahmadini2025}{{17}{}{{}}{{}}}
+\bibcite{Kamalov2022ReviewDL}{{18}{}{{}}{{}}}
+\bibcite{wang2019defsi}{{19}{}{{}}{{}}}
+\bibcite{lijingwangCausalGNNCausalBasedGraph2022}{{20}{}{{}}{{}}}
+\bibcite{liuReviewGraphNeural2024a}{{21}{}{{}}{{}}}
+\bibcite{wang_deepest_2024}{{22}{}{{}}{{}}}
+\bibcite{dengColaGNNCrosslocationAttention2020a}{{23}{}{{}}{{}}}
+\bibcite{xie2022epignn}{{24}{}{{}}{{}}}
+\bibcite{gao2021stan}{{25}{}{{}}{{}}}
+\bibcite{han2025dygraphformer}{{26}{}{{}}{{}}}
+\bibcite{pu2024dynamic}{{27}{}{{}}{{}}}
+\bibcite{cao2022mepognn}{{28}{}{{}}{{}}}
+\bibcite{gao2023evidence}{{29}{}{{}}{{}}}
+\bibcite{wang2020linformer}{{30}{}{{}}{{}}}
+\bibcite{Brooks2018Nonmechanistic}{{31}{}{{}}{{}}}
+\bibcite{venna2019novel}{{32}{}{{}}{{}}}
+\bibcite{Luo2023Interpretable}{{33}{}{{}}{{}}}
+\bibcite{Moss_Zarebski_Dawson_Franklin_Birrell_McCaw_2020}{{34}{}{{}}{{}}}
+\bibcite{chollet2017xception}{{35}{}{{}}{{}}}
+\bibcite{li2023multi}{{36}{}{{}}{{}}}
+\bibcite{yu2022traffic}{{37}{}{{}}{{}}}
+\bibcite{velickovic2017graph}{{38}{}{{}}{{}}}
+\bibcite{puny2020global}{{39}{}{{}}{{}}}
+\bibcite{kong2023low}{{40}{}{{}}{{}}}
+\bibcite{yang2023self}{{41}{}{{}}{{}}}
+\bibcite{katharopoulos2020transformers}{{42}{}{{}}{{}}}
+\bibcite{glorot2010understanding}{{43}{}{{}}{{}}}
+\bibcite{Qiu2024MSGNN}{{44}{}{{}}{{}}}
+\bibcite{BENTAIEB20127067}{{45}{}{{}}{{}}}
+\bibcite{chandra2021evaluation}{{46}{}{{}}{{}}}
+\bibcite{hochreiter1997long}{{47}{}{{}}{{}}}
+\bibcite{NHS2024HospitalActivity}{{48}{}{{}}{{}}}
+\bibcite{oluwasakin2023data}{{49}{}{{}}{{}}}
+\bibcite{zeroual2020deep}{{50}{}{{}}{{}}}
+\bibcite{zhang2019spatial}{{51}{}{{}}{{}}}
+\providecommand\NAT@force@numbers{}\NAT@force@numbers
+\gdef \@abspage@last{57}

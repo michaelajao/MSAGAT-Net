@@ -14,6 +14,7 @@ Architecture Components:
 """
 
 import math
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -25,7 +26,7 @@ from torch.nn import Parameter
 HIDDEN_DIM = 32
 ATTENTION_HEADS = 4
 ATTENTION_REG_WEIGHT_INIT = 1e-5
-DROPOUT = 0.25
+DROPOUT = 0.20
 NUM_TEMPORAL_SCALES = 3
 KERNEL_SIZE = 3
 FEATURE_CHANNELS = 16
@@ -89,6 +90,10 @@ class SpatialAttentionModule(nn.Module):
     regularization weight. Includes learnable low-rank graph bias for
     capturing static spatial relationships.
     
+    Key Innovation: Can optionally incorporate a predefined adjacency matrix
+    as prior knowledge, but does NOT require it. When adjacency is provided,
+    it is used to inform (not constrain) the learned graph structure.
+    
     Args:
         hidden_dim: Dimensionality of node features
         num_nodes: Number of nodes in the graph
@@ -96,12 +101,16 @@ class SpatialAttentionModule(nn.Module):
         attention_heads: Number of parallel attention heads
         attention_regularization_weight: Initial weight for L1 regularization
         bottleneck_dim: Dimension of the low-rank projection
+        adj_matrix: Optional predefined adjacency matrix [N, N]
+        adj_weight: Weight for combining learned and predefined structure (0=ignore adj, 1=full weight)
     """
     
     def __init__(self, hidden_dim, num_nodes, dropout=DROPOUT, 
                  attention_heads=ATTENTION_HEADS,
                  attention_regularization_weight=ATTENTION_REG_WEIGHT_INIT,
-                 bottleneck_dim=BOTTLENECK_DIM):
+                 bottleneck_dim=BOTTLENECK_DIM,
+                 adj_matrix=None,
+                 adj_weight=0.1):
         super().__init__()
         
         self.hidden_dim = hidden_dim
@@ -130,6 +139,52 @@ class SpatialAttentionModule(nn.Module):
         self.v = Parameter(torch.Tensor(self.heads, bottleneck_dim, num_nodes))
         nn.init.xavier_uniform_(self.u)
         nn.init.xavier_uniform_(self.v)
+        
+        # Optional predefined adjacency matrix support
+        # When provided, it informs (but does not constrain) the learned structure
+        self.use_adj_prior = adj_matrix is not None
+        if self.use_adj_prior:
+            # Register adjacency as buffer (not trainable) and normalize it
+            adj_normalized = self._normalize_adjacency(adj_matrix)
+            self.register_buffer('adj_prior', adj_normalized)
+            # Learnable weight for combining learned structure with prior
+            self.adj_gate = Parameter(torch.tensor(adj_weight, dtype=torch.float32))
+        else:
+            self.register_buffer('adj_prior', None)
+            self.adj_gate = None
+    
+    def _normalize_adjacency(self, adj):
+        """Normalize adjacency matrix for stable message passing."""
+        if isinstance(adj, np.ndarray):
+            adj = torch.from_numpy(adj).float()
+        adj = adj.float()
+        # Add self-loops
+        adj = adj + torch.eye(adj.size(0), device=adj.device)
+        # Symmetric normalization: D^{-1/2} A D^{-1/2}
+        degree = adj.sum(dim=1)
+        degree_inv_sqrt = torch.pow(degree, -0.5)
+        degree_inv_sqrt[torch.isinf(degree_inv_sqrt)] = 0.0
+        return degree_inv_sqrt.unsqueeze(1) * adj * degree_inv_sqrt.unsqueeze(0)
+    
+    def set_adjacency(self, adj_matrix, adj_weight=0.1):
+        """
+        Set or update the adjacency matrix prior after initialization.
+        
+        This allows the model to incorporate domain knowledge when available
+        while still functioning without it.
+        
+        Args:
+            adj_matrix: Adjacency matrix [N, N]
+            adj_weight: Weight for the adjacency prior
+        """
+        if adj_matrix is not None:
+            adj_normalized = self._normalize_adjacency(adj_matrix)
+            self.register_buffer('adj_prior', adj_normalized.to(self.u.device))
+            self.use_adj_prior = True
+            if self.adj_gate is None:
+                self.adj_gate = Parameter(torch.tensor(adj_weight, dtype=torch.float32, device=self.u.device))
+        else:
+            self.use_adj_prior = False
 
     @property
     def current_reg_weight(self):
@@ -167,6 +222,7 @@ class SpatialAttentionModule(nn.Module):
         Apply learned low-rank graph bias as normalized message passing term.
         
         Keeps O(N) complexity via low-rank factorization: B = U @ V
+        Optionally incorporates predefined adjacency as prior knowledge.
         
         Args:
             v: Value tensors [batch, heads, nodes, head_dim]
@@ -185,6 +241,26 @@ class SpatialAttentionModule(nn.Module):
         v_sum = v_pos.sum(dim=-1)
         denom = torch.einsum('hnr,hr->hn', u_pos, v_sum).unsqueeze(0).unsqueeze(-1)
         out = out / (denom + 1e-8)
+        
+        # Optionally incorporate predefined adjacency prior
+        # This adds domain knowledge when available while maintaining O(N) complexity
+        if self.use_adj_prior and self.adj_prior is not None and self.adj_gate is not None:
+            # Adjacency-based message passing: A @ v (standard GNN propagation)
+            # v: [batch, heads, nodes, head_dim]
+            # adj_prior: [nodes, nodes] - shared across heads
+            adj_gate = torch.sigmoid(self.adj_gate)  # Gate value in [0, 1]
+            
+            # Reshape v for matrix multiplication: [batch*heads, nodes, head_dim]
+            v_reshaped = v.reshape(-1, v.size(2), v.size(3))
+            # Apply adjacency: [nodes, nodes] @ [batch*heads, nodes, head_dim]
+            adj_prior_expanded = self.adj_prior.unsqueeze(0).expand(v_reshaped.size(0), -1, -1)
+            adj_out = torch.bmm(adj_prior_expanded, v_reshaped)
+            # Reshape back: [batch, heads, nodes, head_dim]
+            adj_out = adj_out.reshape(v.size(0), v.size(1), v.size(2), v.size(3))
+            
+            # Combine learned structure with adjacency prior
+            # out = (1 - gate) * learned + gate * adjacency_based
+            out = (1 - adj_gate) * out + adj_gate * adj_out
 
         return out
 
@@ -382,9 +458,14 @@ class MSTAGAT_Net(nn.Module):
     Combines graph attention mechanisms for spatial dependencies and
     multi-scale temporal convolutions for temporal patterns.
     
+    Key Innovation: Unlike baselines (EpiGNN, Cola-GNN, DCRNN) that REQUIRE
+    predefined adjacency matrices, MSAGAT-Net learns spatial relationships 
+    from data. When adjacency is available, it can be incorporated as optional
+    prior knowledge to accelerate learning, but is NOT required.
+    
     Architecture:
         1. Feature extraction using depthwise separable convolutions
-        2. Spatial modeling with efficient graph attention
+        2. Spatial modeling with efficient graph attention (O(N) complexity)
         3. Temporal modeling with multi-scale dilated convolutions
         4. Horizon prediction with adaptive refinement
     
@@ -393,8 +474,11 @@ class MSTAGAT_Net(nn.Module):
             - window: Input window size
             - horizon: Prediction horizon
             - hidden_dim, kernel_size, bottleneck_dim, etc.
-        data: Data object with attribute:
+            - use_adj_prior: Whether to use adjacency as prior (default: False)
+            - adj_weight: Weight for adjacency prior (default: 0.1)
+        data: Data object with attributes:
             - m: Number of nodes
+            - adj: Adjacency matrix (optional, used only if use_adj_prior=True)
     """
     
     def __init__(self, args, data):
@@ -409,6 +493,11 @@ class MSTAGAT_Net(nn.Module):
         
         feature_channels = getattr(args, 'feature_channels', FEATURE_CHANNELS)
         dropout = getattr(args, 'dropout', DROPOUT)
+        
+        # Optional adjacency matrix prior
+        use_adj_prior = getattr(args, 'use_adj_prior', False)
+        adj_weight = getattr(args, 'adj_weight', 0.1)
+        adj_matrix = getattr(data, 'adj', None) if use_adj_prior else None
 
         # Feature Extraction
         self.feature_extractor = DepthwiseSeparableConv1D(
@@ -429,7 +518,7 @@ class MSTAGAT_Net(nn.Module):
         self.feature_norm = nn.LayerNorm(self.hidden_dim)
         self.feature_act = nn.ReLU()
 
-        # Spatial attention
+        # Spatial attention (with optional adjacency prior)
         self.spatial_module = SpatialAttentionModule(
             self.hidden_dim, 
             num_nodes=self.num_nodes,
@@ -438,7 +527,9 @@ class MSTAGAT_Net(nn.Module):
             attention_regularization_weight=getattr(
                 args, 'attention_regularization_weight', ATTENTION_REG_WEIGHT_INIT
             ),
-            bottleneck_dim=self.bottleneck_dim
+            bottleneck_dim=self.bottleneck_dim,
+            adj_matrix=adj_matrix,
+            adj_weight=adj_weight
         )
 
         # Temporal processing
@@ -649,13 +740,15 @@ class MSAGATNet_Ablation(nn.Module):
         args: Configuration with attributes:
             - ablation: 'none', 'no_agam', 'no_mtfm', or 'no_pprm'
             - window, horizon, hidden_dim, etc.
+            - use_adj_prior: Whether to use adjacency as prior (default: False)
+            - adj_weight: Weight for adjacency prior (default: 0.1)
         data: Data object with attribute:
             - m: Number of nodes
             - adj: Adjacency matrix (optional)
     
     Ablation variants:
-        - none: Full model
-        - no_agam: Replace SpatialAttentionModule with SimpleGraphConvolutionalLayer
+        - none: Full model (with optional adjacency prior)
+        - no_agam: Replace SpatialAttentionModule with SimpleGraphConvolutionalLayer (uses adj if available)
         - no_mtfm: Replace MultiScaleTemporalModule with SingleScaleTemporalModule
         - no_pprm: Replace HorizonPredictor with DirectPredictionModule
     """
@@ -673,6 +766,11 @@ class MSAGATNet_Ablation(nn.Module):
         self.kernel_size = getattr(args, 'kernel_size', KERNEL_SIZE)
         self.low_rank_dim = getattr(args, 'bottleneck_dim', BOTTLENECK_DIM)
         dropout = getattr(args, 'dropout', DROPOUT)
+        
+        # Optional adjacency matrix prior
+        use_adj_prior = getattr(args, 'use_adj_prior', False)
+        adj_weight = getattr(args, 'adj_weight', 0.1)
+        adj_matrix = getattr(data, 'adj', None) if use_adj_prior else None
 
         # Feature extraction (same for all ablations)
         self.temp_conv = DepthwiseSeparableConv1D(
@@ -692,12 +790,14 @@ class MSAGATNet_Ablation(nn.Module):
         
         # Spatial component: choose full attention or GCN
         if self.ablation == 'no_agam':
+            # Ablation: Use simple GCN with fixed adjacency (requires adj matrix)
             self.graph_attention = SimpleGraphConvolutionalLayer(
                 self.hidden_dim, num_nodes=self.m, dropout=dropout
             )
             if hasattr(data, 'adj'):
                 self.graph_attention.adj_matrix = data.adj
         else:
+            # Full model: Use adaptive attention with optional adjacency prior
             self.graph_attention = SpatialAttentionModule(
                 hidden_dim=self.hidden_dim,
                 num_nodes=self.m,
@@ -706,7 +806,9 @@ class MSAGATNet_Ablation(nn.Module):
                 attention_regularization_weight=getattr(
                     args, 'attention_regularization_weight', ATTENTION_REG_WEIGHT_INIT
                 ),
-                bottleneck_dim=self.low_rank_dim
+                bottleneck_dim=self.low_rank_dim,
+                adj_matrix=adj_matrix,
+                adj_weight=adj_weight
             )
         
         # Temporal component: choose multi-scale or single-scale

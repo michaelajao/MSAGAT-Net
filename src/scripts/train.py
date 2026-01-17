@@ -20,6 +20,9 @@ import argparse
 import numpy as np
 import torch
 
+# Suppress TensorFlow oneDNN warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # 0=all, 1=filter INFO, 2=filter INFO+WARNING, 3=filter all
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -102,6 +105,12 @@ def parse_args():
                         help='Feature channels')
     parser.add_argument('--bottleneck_dim', type=int, default=8,
                         help='Bottleneck dimension')
+    
+    # Adjacency prior arguments (NEW: optional adjacency incorporation)
+    parser.add_argument('--use_adj_prior', action='store_true', default=False,
+                        help='Use adjacency matrix as optional prior knowledge')
+    parser.add_argument('--adj_weight', type=float, default=0.1,
+                        help='Initial weight for adjacency prior (learnable gate)')
     
     # Device arguments
     parser.add_argument('--seed', type=int, default=42,

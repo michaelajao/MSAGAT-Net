@@ -353,6 +353,9 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
     
     if os.path.exists(csv_path):
         df_old = pd.read_csv(csv_path)
+        # Add seed column if it doesn't exist (backward compatibility)
+        if 'seed' not in df_old.columns:
+            df_old['seed'] = 42  # Default seed for old entries
         # Remove duplicate entries (now including seed)
         mask = ~(
             (df_old['dataset'] == dataset) & 
@@ -364,8 +367,10 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
         df_old = df_old[mask]
         df = pd.concat([df_old, df], ignore_index=True)
     
-    # Sort and save
-    df = df.sort_values(['dataset', 'window', 'horizon', 'ablation', 'seed']).reset_index(drop=True)
+    # Sort and save - only include seed in sort if column exists
+    sort_cols = ['dataset', 'window', 'horizon', 'ablation', 'seed']
+    sort_cols = [c for c in sort_cols if c in df.columns]
+    df = df.sort_values(sort_cols).reset_index(drop=True)
     df.to_csv(csv_path, index=False)
     
     # Append to text log
