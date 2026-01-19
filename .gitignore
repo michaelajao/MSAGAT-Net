@@ -75,3 +75,9 @@ reportOLD/
 save_all/best_model.pt
 save_all/MSTAGAT-Net.japan.w-20.h-3.none.pt
 logs/*
+doc/revised_comparison.md
+doc/paper/paper/elsarticle-template-num.pdf
+doc/*
+.gitignore
+src/epagat_net.py
+doc/paper/paper/elsarticle-template-num.pdf

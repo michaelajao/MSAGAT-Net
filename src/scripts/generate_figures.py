@@ -4,11 +4,24 @@ Generate publication-ready figures for MSAGAT-Net research paper.
 Outputs PNG files formatted for academic publication.
 """
 import os
+import sys
 import glob
+from argparse import Namespace
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import torch
+
+# Add src directory to path
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SRC_DIR = os.path.dirname(SCRIPT_DIR)
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
+
+from data import DataBasicLoader
+from models import MSAGATNet_Ablation  # Use ablation model for loading checkpoints
+from utils import visualize_matrices, visualize_predictions
 
 # =============================================================================
 # CONFIGURATION
@@ -23,13 +36,55 @@ DEFAULT_WINDOW = 20
 ALL_RESULTS_CSV = "all_results.csv"
 ALL_ABLATION_SUMMARY_CSV = "all_ablation_summary.csv"
 
-# Dataset configurations: (name, horizons)
-DATASET_CONFIGS = [
-    ('japan', [3, 5, 10, 15]),
-    ('region785', [3, 5, 10, 15]),
-    ('nhs_timeseries', [3, 7, 14]),
-    ('ltla_timeseries', [3, 7, 14]),
-]
+# Dataset configurations: (name, horizons, use_adj_prior, use_graph_bias, sim_mat)
+# Must match experiments.py DATASET_CONFIGS
+DATASET_CONFIGS_FULL = {
+    'japan': {
+        'horizons': [3, 5, 10, 15],
+        'use_adj_prior': False,
+        'use_graph_bias': False,
+        'sim_mat': 'japan-adj',
+    },
+    'region785': {
+        'horizons': [3, 5, 10, 15],
+        'use_adj_prior': True,
+        'use_graph_bias': True,
+        'sim_mat': 'region-adj',
+    },
+    'state360': {
+        'horizons': [3, 5, 10, 15],
+        'use_adj_prior': False,
+        'use_graph_bias': False,
+        'sim_mat': 'state-adj-49',
+    },
+    'nhs_timeseries': {
+        'horizons': [3, 7, 14],
+        'use_adj_prior': True,
+        'use_graph_bias': True,
+        'sim_mat': 'nhs-adj',
+    },
+    'ltla_timeseries': {
+        'horizons': [3, 7, 14],
+        'use_adj_prior': False,
+        'use_graph_bias': False,
+        'sim_mat': 'ltla-adj',
+    },
+    'australia-covid': {
+        'horizons': [3, 7, 14],
+        'use_adj_prior': True,
+        'use_graph_bias': True,
+        'sim_mat': 'australia-adj',
+    },
+    'spain-covid': {
+        'horizons': [3, 7, 14],
+        'use_adj_prior': True,
+        'use_graph_bias': True,
+        'sim_mat': 'spain-adj',
+    },
+}
+
+# Legacy format for compatibility with existing code
+DATASET_CONFIGS = [(name, cfg['horizons']) for name, cfg in DATASET_CONFIGS_FULL.items()]
 
 # Ablation variants
 ABLATIONS = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
@@ -158,8 +213,8 @@ def setup_style():
     """Configure matplotlib for publication-quality figures."""
     plt.rcdefaults()
     
-    # Colorblind-friendly palette
-    colors = ["#0173B2", "#DE8F05", "#029E73", "#D55E00", "#CC78BC", "#CA9161"]
+    # Colorblind-friendly palette (7 colors for 7 datasets)
+    colors = ["#0173B2", "#DE8F05", "#029E73", "#D55E00", "#CC78BC", "#CA9161", "#949494"]
     sns.set_palette(colors)
     sns.set_style('ticks', {'axes.grid': False})
     
@@ -206,9 +261,10 @@ def fig_performance_vs_horizon():
     """Create line plots showing RMSE and PCC across prediction horizons."""
     setup_style()
     
-    markers = ['o', 's', 'D', '^']
-    linestyles = ['-', '--', '-.', ':']
-    colors = ['#0173B2', '#DE8F05', '#029E73', '#D55E00']
+    # Extended lists to support all 7 datasets
+    markers = ['o', 's', 'D', '^', 'v', 'p', 'h']
+    linestyles = ['-', '--', '-.', ':', '-', '--', '-.']
+    colors = ['#0173B2', '#DE8F05', '#029E73', '#D55E00', '#CC78BC', '#CA9161', '#949494']
     
     for metric in ['rmse', 'pcc']:
         fig, ax = plt.subplots(figsize=(7, 5))
@@ -491,6 +547,219 @@ def fig_component_impact():
 
 
 # =============================================================================
+# DIAGNOSTIC FIGURES (using first seed only)
+# =============================================================================
+
+def get_model_path(dataset: str, horizon: int, ablation: str, seed: int) -> str:
+    """Construct model path based on dataset config."""
+    cfg = DATASET_CONFIGS_FULL[dataset]
+    use_adj = cfg['use_adj_prior']
+    
+    base_name = f"MSTAGAT-Net.{dataset}.w-{DEFAULT_WINDOW}.h-{horizon}.{ablation}.seed-{seed}"
+    if use_adj:
+        base_name += ".with_adj"
+    base_name += ".pt"
+    
+    return os.path.join(BASE_DIR, 'save_all', base_name)
+
+
+def create_data_args(dataset: str, horizon: int, window: int = 20):
+    """Create args namespace for DataBasicLoader."""
+    cfg = DATASET_CONFIGS_FULL[dataset]
+    return Namespace(
+        dataset=dataset,
+        sim_mat=cfg['sim_mat'],
+        window=window,
+        horizon=horizon,
+        train=0.5,
+        val=0.2,
+        test=0.3,
+        cuda=False,
+        save_dir='save_all',
+        extra='',
+        label='',
+        pcc='',
+    )
+
+
+def create_model_for_loading(dataset: str, loader, device, ablation: str = 'none'):
+    """Create model with correct parameters for a dataset."""
+    cfg = DATASET_CONFIGS_FULL[dataset]
+    
+    model_args = Namespace(
+        window=loader.P,
+        horizon=loader.h,
+        hidden_dim=32,
+        kernel_size=3,
+        bottleneck_dim=8,
+        attention_heads=4,
+        dropout=0.2,
+        use_graph_bias=cfg['use_graph_bias'],
+        use_adj_prior=cfg['use_adj_prior'],
+        attention_regularization_weight=1e-5,
+        num_scales=4,  # Match training default
+        feature_channels=16,
+        adaptive=False,
+        ablation=ablation,  # For MSAGATNet_Ablation
+    )
+    
+    # Create a simple data object
+    class DataObj:
+        def __init__(self, m, adj):
+            self.m = m
+            self.adj = adj
+    
+    data_obj = DataObj(loader.m, getattr(loader, 'adj', None))
+    
+    return MSAGATNet_Ablation(model_args, data_obj).to(device)
+
+
+def fig_diagnostic_matrices():
+    """Generate attention/adjacency matrix visualizations for first seed."""
+    print("\n6. Generating diagnostic matrix visualizations (first seed only)...")
+    
+    # Use first seed (5)
+    seed = 5
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # Iterate through datasets
+    for dataset, horizons in DATASET_CONFIGS:
+        # Use first horizon for visualization
+        horizon = horizons[0]
+        
+        # Get correct model path based on dataset config
+        model_path = get_model_path(dataset, horizon, 'none', seed)
+        
+        if not os.path.exists(model_path):
+            print(f"  Warning: Model not found: {model_path}")
+            continue
+        
+        # Load dataset
+        try:
+            args = create_data_args(dataset, horizon, DEFAULT_WINDOW)
+            loader = DataBasicLoader(args)
+        except Exception as e:
+            print(f"  Error loading dataset {dataset}: {e}")
+            continue
+        
+        # Load model
+        try:
+            checkpoint = torch.load(model_path, map_location=device)
+            
+            # Handle both state_dict formats (nested and direct)
+            if 'model_state_dict' in checkpoint:
+                state_dict = checkpoint['model_state_dict']
+            else:
+                state_dict = checkpoint
+            
+            # Create model with correct parameters
+            model = create_model_for_loading(dataset, loader, device)
+            model.load_state_dict(state_dict)
+            model.eval()
+            
+        except Exception as e:
+            print(f"  Error loading model {model_path}: {e}")
+            continue
+        
+        # Generate visualization
+        output_dir = os.path.join(BASE_DIR, 'report', 'figures', dataset)
+        os.makedirs(output_dir, exist_ok=True)
+        
+        save_path = os.path.join(
+            output_dir,
+            f'matrices_{dataset}_h{horizon}_seed{seed}.png'
+        )
+        
+        try:
+            visualize_matrices(loader, model, save_path, device)
+            print(f"  Saved: {save_path}")
+        except Exception as e:
+            print(f"  Error visualizing matrices for {dataset}: {e}")
+
+
+def fig_diagnostic_predictions():
+    """Generate prediction visualizations for first seed."""
+    print("\n7. Generating diagnostic prediction plots (first seed only)...")
+    
+    # Use first seed (5)
+    seed = 5
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # Iterate through datasets
+    for dataset, horizons in DATASET_CONFIGS:
+        # Use first horizon for visualization
+        horizon = horizons[0]
+        
+        # Get correct model path based on dataset config
+        model_path = get_model_path(dataset, horizon, 'none', seed)
+        
+        if not os.path.exists(model_path):
+            print(f"  Warning: Model not found: {model_path}")
+            continue
+        
+        # Load dataset
+        try:
+            args = create_data_args(dataset, horizon, DEFAULT_WINDOW)
+            loader = DataBasicLoader(args)
+        except Exception as e:
+            print(f"  Error loading dataset {dataset}: {e}")
+            continue
+        
+        # Load model
+        try:
+            checkpoint = torch.load(model_path, map_location=device)
+            
+            # Handle both state_dict formats (nested and direct)
+            if 'model_state_dict' in checkpoint:
+                state_dict = checkpoint['model_state_dict']
+            else:
+                state_dict = checkpoint
+            
+            # Create model with correct parameters
+            model = create_model_for_loading(dataset, loader, device)
+            model.load_state_dict(state_dict)
+            model.eval()
+            
+        except Exception as e:
+            print(f"  Error loading model {model_path}: {e}")
+            continue
+        
+        # Generate predictions
+        try:
+            # Get test data
+            X_test, y_test, idx_test = loader.test
+            X_test = torch.tensor(X_test, dtype=torch.float32).to(device)
+            idx_test = torch.tensor(idx_test, dtype=torch.long).to(device) if idx_test is not None else None
+            
+            with torch.no_grad():
+                y_pred, _ = model(X_test, idx_test)
+            
+            y_pred = y_pred.cpu().numpy()
+            y_test_np = y_test
+            
+            # Take first prediction step
+            if y_pred.ndim == 3:
+                y_pred = y_pred[:, 0, :]  # [batch, nodes]
+            if y_test_np.ndim == 3:
+                y_test_np = y_test_np[:, 0, :]  # [batch, nodes]
+            
+            # Visualize
+            output_dir = os.path.join(BASE_DIR, 'report', 'figures', dataset)
+            os.makedirs(output_dir, exist_ok=True)
+            
+            save_path = os.path.join(
+                output_dir,
+                f'predictions_{dataset}_h{horizon}_seed{seed}.png'
+            )
+            
+            visualize_predictions(y_test_np, y_pred, save_path, regions=5)
+            print(f"  Saved: {save_path}")
+            
+        except Exception as e:
+            print(f"  Error generating predictions for {dataset}: {e}")
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 def main():
@@ -516,8 +785,16 @@ def main():
     print("\n5. Generating component impact charts...")
     fig_component_impact()
     
+    print("\n6. Generating diagnostic matrix visualizations...")
+    fig_diagnostic_matrices()
+    
+    print("\n7. Generating diagnostic prediction plots...")
+    fig_diagnostic_predictions()
+    
     print("\n" + "=" * 60)
-    print(f"All figures saved to: {OUT_DIR}")
+    print(f"All figures saved to:")
+    print(f"  - Publication: {OUT_DIR}")
+    print(f"  - Diagnostics: {BASE_DIR}/report/figures/{{dataset}}/")
     print("=" * 60)
 
 

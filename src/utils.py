@@ -312,7 +312,8 @@ ALL_RESULTS_TXT = "all_results.txt"
 
 def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
                  window: int = None, horizon: int = None, logger=None,
-                 model_name: str = None, ablation: str = None, seed: int = None):
+                 model_name: str = None, ablation: str = None, seed: int = None,
+                 use_adj_prior: bool = False):
     """
     Append metrics to consolidated CSV and TXT files in dataset-specific folder.
     
@@ -326,6 +327,7 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
         model_name: Model name
         ablation: Ablation variant
         seed: Random seed used for experiment
+        use_adj_prior: Whether adjacency prior was used
     """
     # Use the dataset-specific directory from save_path
     results_dir = os.path.dirname(save_path)
@@ -339,6 +341,7 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
         "horizon": horizon or 0,
         "ablation": ablation or "none",
         "seed": seed or 42,
+        "use_adj": use_adj_prior,
         "timestamp": time.strftime("%Y%m%d_%H%M%S"),
     }
     
@@ -356,29 +359,44 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
         # Add seed column if it doesn't exist (backward compatibility)
         if 'seed' not in df_old.columns:
             df_old['seed'] = 42  # Default seed for old entries
-        # Remove duplicate entries (now including seed)
+        # Add use_adj column if it doesn't exist (backward compatibility)
+        if 'use_adj' not in df_old.columns:
+            df_old['use_adj'] = False  # Default for old entries
+        # Remove duplicate entries (now including seed and use_adj)
         mask = ~(
             (df_old['dataset'] == dataset) & 
             (df_old['window'] == window) & 
             (df_old['horizon'] == horizon) & 
             (df_old['ablation'] == (ablation or "none")) &
-            (df_old['seed'] == (seed or 42))
+            (df_old['seed'] == (seed or 42)) &
+            (df_old['use_adj'] == use_adj_prior)
         )
         df_old = df_old[mask]
         df = pd.concat([df_old, df], ignore_index=True)
     
     # Sort and save - only include seed in sort if column exists
-    sort_cols = ['dataset', 'window', 'horizon', 'ablation', 'seed']
+    sort_cols = ['dataset', 'window', 'horizon', 'ablation', 'seed', 'use_adj']
     sort_cols = [c for c in sort_cols if c in df.columns]
     df = df.sort_values(sort_cols).reset_index(drop=True)
     df.to_csv(csv_path, index=False)
     
-    # Append to text log
+    # Append to text log with header
     txt_path = os.path.join(results_dir, ALL_RESULTS_TXT)
+    
+    # Add header if file doesn't exist or is empty
+    if not os.path.exists(txt_path) or os.path.getsize(txt_path) == 0:
+        header = (
+            "# MSTAGAT-Net Experiment Results\n"
+            "# Format: [Timestamp] Model | Dataset, Window, Horizon, Ablation, Seed | Metrics\n"
+            "# " + "="*80 + "\n"
+        )
+        with open(txt_path, 'w', encoding='utf-8') as f:
+            f.write(header)
+    
     txt_line = (
         f"[{info['timestamp']}] {info['model']} | "
         f"Dataset: {info['dataset']}, Window: {info['window']}, "
-        f"Horizon: {info['horizon']}, Ablation: {info['ablation']} | "
+        f"Horizon: {info['horizon']}, Ablation: {info['ablation']}, Seed: {info['seed']} | "
         f"MAE: {metrics.get('mae', 0):.4f}, RMSE: {metrics.get('rmse', 0):.4f}, "
         f"PCC: {metrics.get('pcc', 0):.4f}, R2: {metrics.get('R2', 0):.4f}\n"
     )

@@ -32,6 +32,51 @@ KERNEL_SIZE = 3
 FEATURE_CHANNELS = 16
 BOTTLENECK_DIM = 8
 
+# Graph size thresholds for adaptive configuration
+SMALL_GRAPH_THRESHOLD = 20   # <= 20 nodes: use adj prior + graph bias
+LARGE_GRAPH_THRESHOLD = 40   # >= 40 nodes: disable graph bias for efficiency
+
+
+def get_adaptive_config(num_nodes):
+    """
+    Get adaptive hyperparameters based on graph size.
+    
+    Rationale from experiments:
+    - Small graphs (<20 nodes): Benefit from adjacency prior and graph bias
+    - Large graphs (>40 nodes): Pure learned attention performs better
+    - Very large graphs (>200 nodes): Need larger hidden dimensions
+    
+    Args:
+        num_nodes: Number of nodes in the graph
+        
+    Returns:
+        dict: Recommended hyperparameters for the graph size
+    """
+    config = {
+        'hidden_dim': HIDDEN_DIM,
+        'bottleneck_dim': BOTTLENECK_DIM,
+        'use_graph_bias': True,
+        'use_adj_prior': False,
+    }
+    
+    if num_nodes <= SMALL_GRAPH_THRESHOLD:
+        # Small graphs: Use all priors
+        config['use_graph_bias'] = True
+        config['use_adj_prior'] = True
+    elif num_nodes >= LARGE_GRAPH_THRESHOLD:
+        # Large graphs: Learned attention only
+        config['use_graph_bias'] = False
+        config['use_adj_prior'] = False
+    
+    # Scale hidden dim for very large graphs
+    if num_nodes > 200:
+        config['hidden_dim'] = 64
+        config['bottleneck_dim'] = 16
+    elif num_nodes > 100:
+        config['hidden_dim'] = 48
+        config['bottleneck_dim'] = 12
+        
+    return config
 
 # =============================================================================
 # CORE BUILDING BLOCKS
@@ -103,6 +148,9 @@ class SpatialAttentionModule(nn.Module):
         bottleneck_dim: Dimension of the low-rank projection
         adj_matrix: Optional predefined adjacency matrix [N, N]
         adj_weight: Weight for combining learned and predefined structure (0=ignore adj, 1=full weight)
+        use_graph_bias: Whether to integrate graph bias into forward pass (True) or use
+                        for regularization only (False). Setting to False makes the model
+                        behave like MAGATFN, which can be better for large graphs.
     """
     
     def __init__(self, hidden_dim, num_nodes, dropout=DROPOUT, 
@@ -110,7 +158,8 @@ class SpatialAttentionModule(nn.Module):
                  attention_regularization_weight=ATTENTION_REG_WEIGHT_INIT,
                  bottleneck_dim=BOTTLENECK_DIM,
                  adj_matrix=None,
-                 adj_weight=0.1):
+                 adj_weight=0.1,
+                 use_graph_bias=True):
         super().__init__()
         
         self.hidden_dim = hidden_dim
@@ -118,6 +167,7 @@ class SpatialAttentionModule(nn.Module):
         self.head_dim = hidden_dim // self.heads
         self.num_nodes = num_nodes
         self.bottleneck_dim = bottleneck_dim
+        self.use_graph_bias = use_graph_bias  # Whether to add graph bias to forward pass
 
         # Learnable attention regularization weight (log-domain for positivity)
         self.log_attention_reg_weight = nn.Parameter(
@@ -291,9 +341,11 @@ class SpatialAttentionModule(nn.Module):
         # Use LINEAR attention - O(N) complexity
         output = self._compute_linear_attention(q, k, v)
 
-        # Integrate learned graph bias (still O(N) via low-rank ops)
-        graph_bias_out = self._compute_graph_bias_message_passing(v)
-        output = output + self.dropout(graph_bias_out)
+        # Conditionally integrate learned graph bias (still O(N) via low-rank ops)
+        # When use_graph_bias=False, model behaves like MAGATFN (bias for regularization only)
+        if self.use_graph_bias:
+            graph_bias_out = self._compute_graph_bias_message_passing(v)
+            output = output + self.dropout(graph_bias_out)
 
         # Dense view of graph bias (used for plotting/regularization only)
         graph_bias = torch.matmul(self.u, self.v)
@@ -305,23 +357,31 @@ class SpatialAttentionModule(nn.Module):
         # Reshape output to original dimensions
         output = output.transpose(1, 2).contiguous().view(B, N, H)
 
-        # Low-rank projection for output
-        output = self.out_proj_low(output)
-        output = self.out_proj_high(output)
+        # Low-rank projection for output with RESIDUAL CONNECTION
+        # This helps gradient flow and stabilizes training for deeper models
+        projected = self.out_proj_low(output)
+        projected = self.out_proj_high(projected)
+        output = output + projected  # Residual connection
 
         return output, attn_reg_loss
 
 
 class MultiScaleTemporalModule(nn.Module):
     """
-    Multi-Scale Temporal Module using dilated convolutions.
+    Multi-Scale Feature Fusion Module (MTFM) using dilated convolutions.
     
-    Captures temporal patterns at different time scales through
-    dilated convolutions with adaptive fusion.
+    NOTE: Despite the name "Temporal", after feature extraction the time
+    dimension has been flattened into the feature dimension. These convolutions
+    operate over the NODE dimension, capturing multi-scale SPATIAL patterns
+    across nodes at different receptive fields.
+    
+    This is intentional: it allows the module to capture spatial dependencies
+    at different scales (local neighborhoods vs. global patterns) while the
+    temporal information is already encoded in the feature vectors.
     
     Args:
-        hidden_dim: Dimensionality of node features
-        num_scales: Number of temporal scales (dilation rates)
+        hidden_dim: Dimensionality of node features  
+        num_scales: Number of scales (different dilation rates)
         kernel_size: Size of the convolutional kernel
         dropout: Dropout probability
     """
@@ -383,20 +443,26 @@ class MultiScaleTemporalModule(nn.Module):
 
 class HorizonPredictor(nn.Module):
     """
-    Horizon Predictor for multi-step forecasting with refinement.
+    Horizon Predictor for multi-step forecasting with adaptive refinement.
     
     Generates predictions for multiple future time steps with optional
-    refinement based on the last observed value.
+    refinement based on the last observed value using exponential decay.
+    
+    Key Innovation: Uses a LEARNABLE decay rate that adapts to the dataset's
+    temporal dynamics, rather than a fixed rate that may not be optimal
+    across different epidemic patterns.
     
     Args:
         hidden_dim: Dimensionality of node features
         horizon: Number of future time steps to predict
         bottleneck_dim: Dimension for bottleneck layers
         dropout: Dropout probability
+        init_decay_rate: Initial decay rate for exponential smoothing (default: 0.1)
+        learnable_decay: Whether to make decay rate learnable (default: True)
     """
     
     def __init__(self, hidden_dim, horizon, bottleneck_dim=BOTTLENECK_DIM, 
-                 dropout=DROPOUT):
+                 dropout=DROPOUT, init_decay_rate=0.1, learnable_decay=True):
         super().__init__()
         
         self.hidden_dim = hidden_dim
@@ -419,6 +485,23 @@ class HorizonPredictor(nn.Module):
             nn.Sigmoid()
         )
         
+        # Learnable decay rate (log-domain for positivity constraint)
+        # Higher decay = faster forgetting of last observed value
+        if learnable_decay:
+            self.log_decay_rate = nn.Parameter(
+                torch.tensor(math.log(init_decay_rate), dtype=torch.float32)
+            )
+        else:
+            self.register_buffer(
+                'log_decay_rate', 
+                torch.tensor(math.log(init_decay_rate), dtype=torch.float32)
+            )
+    
+    @property
+    def decay_rate(self):
+        """Current decay rate (always positive via exp transform)."""
+        return torch.exp(self.log_decay_rate)
+        
     def forward(self, x, last_step=None):
         """
         Args:
@@ -432,14 +515,14 @@ class HorizonPredictor(nn.Module):
         if last_step is not None:
             gate = self.refine_gate(x)
             
-            # Fixed decay rate (proven optimal)
-            decay_rate = 0.1
+            # Adaptive decay rate (learnable or fixed based on init)
+            decay = self.decay_rate
             
             last_step = last_step.unsqueeze(-1)
             time_steps = torch.arange(1, self.horizon + 1, device=x.device).float()
             time_decay = time_steps.view(1, 1, self.horizon)
             
-            progressive_part = last_step * torch.exp(-decay_rate * time_decay)
+            progressive_part = last_step * torch.exp(-decay * time_decay)
             final_pred = gate * initial_pred + (1 - gate) * progressive_part
         else:
             final_pred = initial_pred
@@ -479,6 +562,7 @@ class MSTAGAT_Net(nn.Module):
         data: Data object with attributes:
             - m: Number of nodes
             - adj: Adjacency matrix (optional, used only if use_adj_prior=True)
+            - adaptive: If True, automatically configure based on graph size (default: False)
     """
     
     def __init__(self, args, data):
@@ -487,17 +571,37 @@ class MSTAGAT_Net(nn.Module):
         self.num_nodes = data.m
         self.window = args.window
         self.horizon = args.horizon
-        self.hidden_dim = getattr(args, 'hidden_dim', HIDDEN_DIM)
+        
+        # Check if adaptive configuration is requested
+        use_adaptive = getattr(args, 'adaptive', False)
+        if use_adaptive:
+            adaptive_config = get_adaptive_config(self.num_nodes)
+            print(f"[ADAPTIVE] Graph size: {self.num_nodes} nodes")
+            print(f"[ADAPTIVE] Config: hidden_dim={adaptive_config['hidden_dim']}, "
+                  f"use_graph_bias={adaptive_config['use_graph_bias']}, "
+                  f"use_adj_prior={adaptive_config['use_adj_prior']}")
+        else:
+            adaptive_config = {}
+        
+        # Use adaptive config as defaults, but allow explicit overrides
+        self.hidden_dim = getattr(args, 'hidden_dim', None) or adaptive_config.get('hidden_dim', HIDDEN_DIM)
         self.kernel_size = getattr(args, 'kernel_size', KERNEL_SIZE)
-        self.bottleneck_dim = getattr(args, 'bottleneck_dim', BOTTLENECK_DIM)
+        self.bottleneck_dim = getattr(args, 'bottleneck_dim', None) or adaptive_config.get('bottleneck_dim', BOTTLENECK_DIM)
         
         feature_channels = getattr(args, 'feature_channels', FEATURE_CHANNELS)
         dropout = getattr(args, 'dropout', DROPOUT)
         
-        # Optional adjacency matrix prior
-        use_adj_prior = getattr(args, 'use_adj_prior', False)
+        # Optional adjacency matrix prior (adaptive or explicit)
+        use_adj_prior = getattr(args, 'use_adj_prior', adaptive_config.get('use_adj_prior', False))
         adj_weight = getattr(args, 'adj_weight', 0.1)
         adj_matrix = getattr(data, 'adj', None) if use_adj_prior else None
+        
+        # Whether to use graph bias in forward pass (adaptive or explicit)
+        # If explicitly set via args, use that; otherwise use adaptive config
+        if hasattr(args, 'use_graph_bias') and args.use_graph_bias is not None:
+            use_graph_bias = args.use_graph_bias
+        else:
+            use_graph_bias = adaptive_config.get('use_graph_bias', True)
 
         # Feature Extraction
         self.feature_extractor = DepthwiseSeparableConv1D(
@@ -529,7 +633,8 @@ class MSTAGAT_Net(nn.Module):
             ),
             bottleneck_dim=self.bottleneck_dim,
             adj_matrix=adj_matrix,
-            adj_weight=adj_weight
+            adj_weight=adj_weight,
+            use_graph_bias=use_graph_bias
         )
 
         # Temporal processing
@@ -798,6 +903,8 @@ class MSAGATNet_Ablation(nn.Module):
                 self.graph_attention.adj_matrix = data.adj
         else:
             # Full model: Use adaptive attention with optional adjacency prior
+            # use_graph_bias: When False, behaves like MAGATFN (bias for regularization only)
+            use_graph_bias = getattr(args, 'use_graph_bias', True)
             self.graph_attention = SpatialAttentionModule(
                 hidden_dim=self.hidden_dim,
                 num_nodes=self.m,
@@ -808,7 +915,8 @@ class MSAGATNet_Ablation(nn.Module):
                 ),
                 bottleneck_dim=self.low_rank_dim,
                 adj_matrix=adj_matrix,
-                adj_weight=adj_weight
+                adj_weight=adj_weight,
+                use_graph_bias=use_graph_bias
             )
         
         # Temporal component: choose multi-scale or single-scale
@@ -888,7 +996,7 @@ __all__ = [
     'ATTENTION_REG_WEIGHT_INIT',
     'DROPOUT',
     'NUM_TEMPORAL_SCALES',
-    'KERNEL_SIZE',
+    'KERNEL_SIZE',                                                                                                                                         
     'FEATURE_CHANNELS',
     'BOTTLENECK_DIM',
     # Building blocks

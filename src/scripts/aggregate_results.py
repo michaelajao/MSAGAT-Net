@@ -99,6 +99,46 @@ def generate_aggregate_table(dataset: str, horizons: List[int],
     return pd.DataFrame(records)
 
 
+def append_averages_to_txt(dataset: str, horizons: List[int], ablations: List[str]):
+    """Append average results to the txt file."""
+    dataset_dir = os.path.join(METRICS_DIR, dataset)
+    txt_path = os.path.join(dataset_dir, 'all_results.txt')
+    
+    if not os.path.exists(txt_path):
+        return
+    
+    # Collect averages
+    avg_lines = []
+    avg_lines.append("\n" + "#" + "="*80 + "\n")
+    avg_lines.append("# AVERAGED RESULTS (Mean ± Std across all seeds)\n")
+    avg_lines.append("#" + "="*80 + "\n")
+    
+    for horizon in horizons:
+        for ablation in ablations:
+            df = find_seed_results(dataset, horizon, ablation)
+            
+            if df.empty or 'seed' not in df.columns or len(df) < 2:
+                continue
+            
+            agg = aggregate_metrics(df)
+            seeds_str = ", ".join(map(str, agg['seeds']))
+            
+            avg_line = (
+                f"[AVERAGE] MSTAGAT-Net | "
+                f"Dataset: {dataset}, Window: 20, "
+                f"Horizon: {horizon}, Ablation: {ablation}, Seeds: [{seeds_str}] | "
+                f"MAE: {agg.get('mae_mean', 0):.4f}±{agg.get('mae_std', 0):.4f}, "
+                f"RMSE: {agg.get('rmse_mean', 0):.4f}±{agg.get('rmse_std', 0):.4f}, "
+                f"PCC: {agg.get('pcc_mean', 0):.4f}±{agg.get('pcc_std', 0):.4f}, "
+                f"R2: {agg.get('R2_mean', 0):.4f}±{agg.get('R2_std', 0):.4f}\n"
+            )
+            avg_lines.append(avg_line)
+    
+    # Append to file
+    with open(txt_path, 'a', encoding='utf-8') as f:
+        f.writelines(avg_lines)
+
+
 def format_mean_std(mean: float, std: float, precision: int = 2) -> str:
     """Format as mean ± std."""
     return f"{mean:.{precision}f} ± {std:.{precision}f}"
@@ -185,6 +225,10 @@ def main():
         
         if args.format in ['latex', 'both']:
             print_latex_table(df, dataset)
+        
+        # Append averages to txt file
+        print(f"Appending averages to {dataset}/all_results.txt...")
+        append_averages_to_txt(dataset, args.horizons, args.ablations)
     
     # Save combined results
     if all_results and args.output:

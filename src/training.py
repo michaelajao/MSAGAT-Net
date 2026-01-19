@@ -189,8 +189,13 @@ def evaluate(model, data_loader, batch_size: int, horizon: int,
     if compute_pcc:
         pcc_tmp = []
         for k in range(data_loader.m):
-            corr, _ = pearsonr(y_true_states[:, k], y_pred_states[:, k])
-            pcc_tmp.append(corr)
+            # Check if either array is constant (no variance)
+            if np.std(y_true_states[:, k]) < 1e-10 or np.std(y_pred_states[:, k]) < 1e-10:
+                # Correlation undefined for constant arrays, use 0
+                pcc_tmp.append(0.0)
+            else:
+                corr, _ = pearsonr(y_true_states[:, k], y_pred_states[:, k])
+                pcc_tmp.append(corr)
         pcc_states = np.mean(np.array(pcc_tmp))
     else:
         pcc_states = 1.0
@@ -207,7 +212,11 @@ def evaluate(model, data_loader, batch_size: int, horizon: int,
     mape = np.mean(np.abs((y_pred_flat - y_true_flat) / (y_true_flat + 1e-5))) / 1e7
     
     if compute_pcc:
-        pcc, _ = pearsonr(y_true_flat, y_pred_flat)
+        # Check if either array is constant
+        if np.std(y_true_flat) < 1e-10 or np.std(y_pred_flat) < 1e-10:
+            pcc = 0.0
+        else:
+            pcc, _ = pearsonr(y_true_flat, y_pred_flat)
     else:
         pcc = 1.0
         
