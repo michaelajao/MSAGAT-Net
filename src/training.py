@@ -421,12 +421,3 @@ class Trainer:
             self.model.load_state_dict(
                 torch.load(model_path, map_location='cpu')
             )
-
-
-__all__ = [
-    'TrainingConfig',
-    'MetricsResult',
-    'train_epoch',
-    'evaluate',
-    'Trainer',
-]

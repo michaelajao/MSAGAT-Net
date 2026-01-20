@@ -406,20 +406,3 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
     if logger:
         logger.info(f"Metrics appended to {csv_path}")
         logger.info(f"Log appended to {txt_path}")
-
-
-# =============================================================================
-# EXPORTS
-# =============================================================================
-
-__all__ = [
-    'get_laplace_matrix',
-    'peak_error',
-    'setup_visualization_style',
-    'visualize_matrices',
-    'visualize_predictions',
-    'plot_loss_curves',
-    'save_metrics',
-    'ALL_RESULTS_CSV',
-    'ALL_RESULTS_TXT',
-]

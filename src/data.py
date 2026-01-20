@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.autograd import Variable
-from typing import Optional, Dict, List, Tuple, Iterator
+from typing import Dict, List, Tuple, Iterator
 
 
 class DataBasicLoader:
@@ -262,6 +262,3 @@ class DataBasicLoader:
                 
             yield [Variable(X), Variable(Y), index]
             start_idx += batch_size
-
-
-__all__ = ['DataBasicLoader']

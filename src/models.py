@@ -2,13 +2,13 @@
 MSAGAT-Net Model Architectures
 
 This module contains all neural network architectures for the MSAGAT-Net framework:
-- Core building blocks (attention, temporal modules, convolutions)
+- Core building blocks (attention, spatial modules, convolutions)
 - Main MSTAGAT_Net model
 - Ablation study variants (MSAGATNet_Ablation)
 
 Architecture Components:
     1. SpatialAttentionModule: Graph attention with O(N) linear complexity
-    2. MultiScaleTemporalModule: Dilated convolutions at multiple scales
+    2. MultiScaleSpatialModule: Dilated convolutions at multiple scales
     3. HorizonPredictor: Progressive multi-step prediction with refinement
     4. DepthwiseSeparableConv1D: Efficient feature extraction
 """
@@ -867,38 +867,3 @@ class MSAGATNet_Ablation(nn.Module):
         predictions = predictions.transpose(1, 2)
         
         return predictions, attn_reg_loss
-
-
-# =============================================================================
-# EXPORTS
-# =============================================================================
-
-__all__ = [
-    # Constants
-    'HIDDEN_DIM',
-    'ATTENTION_HEADS',
-    'ATTENTION_REG_WEIGHT_INIT',
-    'DROPOUT',
-    'NUM_TEMPORAL_SCALES',
-    'KERNEL_SIZE',
-    'FEATURE_CHANNELS',
-    'BOTTLENECK_DIM',
-    # Building blocks
-    'DepthwiseSeparableConv1D',
-    'SpatialAttentionModule',
-    'MultiScaleSpatialModule',
-    'MultiScaleTemporalModule',  # Deprecated alias for backward compatibility
-    'HorizonPredictor',
-    # Main models
-    'MSTAGAT_Net',
-    # Ablation components
-    'SimpleGraphConvolutionalLayer',
-    'SingleScaleSpatialModule',
-    'SingleScaleTemporalModule',  # Deprecated alias for backward compatibility
-    'DirectPredictionModule',
-    'MSAGATNet_Ablation',
-]
-
-# Backward compatibility aliases
-MultiScaleTemporalModule = MultiScaleSpatialModule
-SingleScaleTemporalModule = SingleScaleSpatialModule
