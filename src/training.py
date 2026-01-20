@@ -405,12 +405,13 @@ class Trainer:
     
     def _save_checkpoint(self):
         """Save model checkpoint."""
+        os.makedirs(self.config.save_dir, exist_ok=True)
         model_path = os.path.join(self.config.save_dir, f'{self.log_token}.pt')
         torch.save(self.model.state_dict(), model_path)
         
-        # Backup best model
+        # Backup best model - use torch.save instead of shutil.copy for Windows compatibility
         best_path = os.path.join(self.config.save_dir, 'best_model.pt')
-        shutil.copy(model_path, best_path)
+        torch.save(self.model.state_dict(), best_path)
         print(f'Best validation epoch: {self.best_epoch}')
     
     def _load_best_checkpoint(self):

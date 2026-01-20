@@ -4,6 +4,8 @@
 # This script runs ALL experiments for the paper:
 # 1. Main experiments (Tables 1 & 2) - All datasets with their respective horizons
 # 2. Ablation studies (Tables 3 & 4) - All datasets with horizons [3, 7, 14]
+# 3. (Optional) Aggregate results
+# 4. (Optional) Generate publication figures
 #
 # Total experiments:
 # - Main: 7 datasets * avg 3.4 horizons * 5 seeds ≈ 120 experiments
@@ -40,6 +42,14 @@ $all_datasets = @(
     "ltla_timeseries"
 )
 
+# Output directory for checkpoints
+$save_dir = "save_final"
+
+# What to run
+# NOTE: For the final training sweep, keep these False (experiments only).
+$run_aggregate_results = $false
+$run_generate_figures = $false
+
 Write-Host "[CONFIG] Datasets:" -ForegroundColor Yellow
 foreach ($ds in $all_datasets) {
     Write-Host "  - $ds" -ForegroundColor Gray
@@ -60,7 +70,7 @@ Write-Host "[LOG] $main_log" -ForegroundColor Gray
 Write-Host ""
 
 $datasets_str = $all_datasets -join " "
-$main_cmd = "python -m src.scripts.experiments --datasets $datasets_str --experiment main --seeds 5 30 45 123 1000"
+$main_cmd = "python -m src.scripts.experiments --datasets $datasets_str --experiment main --seeds 5 30 45 123 1000 --cpu --save_dir $save_dir"
 
 Write-Host "[CMD] $main_cmd" -ForegroundColor Cyan
 Write-Host ""
@@ -87,7 +97,7 @@ Write-Host "[RUNNING] Ablation studies for all datasets with horizons [3, 7, 14]
 Write-Host "[LOG] $ablation_log" -ForegroundColor Gray
 Write-Host ""
 
-$ablation_cmd = "python -m src.scripts.experiments --datasets $datasets_str --experiment ablation --seeds 5"
+$ablation_cmd = "python -m src.scripts.experiments --datasets $datasets_str --experiment ablation --seeds 5 --cpu --save_dir $save_dir"
 
 Write-Host "[CMD] $ablation_cmd" -ForegroundColor Cyan
 Write-Host ""
@@ -104,6 +114,7 @@ Write-Host ""
 # ============================================================================
 # PART 3: AGGREGATE RESULTS
 # ============================================================================
+if ($run_aggregate_results) {
 Write-Host "=" * 80 -ForegroundColor Green
 Write-Host "PART 3: AGGREGATING RESULTS" -ForegroundColor Green
 Write-Host "=" * 80 -ForegroundColor Green
@@ -125,10 +136,15 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "[ERROR] Aggregation failed with exit code $LASTEXITCODE" -ForegroundColor Red
 }
 Write-Host ""
+} else {
+    Write-Host "[SKIP] Aggregating results (disabled)" -ForegroundColor Yellow
+    Write-Host ""
+}
 
 # ============================================================================
 # PART 4: GENERATE PUBLICATION FIGURES
 # ============================================================================
+if ($run_generate_figures) {
 Write-Host "=" * 80 -ForegroundColor Green
 Write-Host "PART 4: GENERATING PUBLICATION FIGURES" -ForegroundColor Green
 Write-Host "=" * 80 -ForegroundColor Green
@@ -150,6 +166,10 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "[ERROR] Figure generation failed with exit code $LASTEXITCODE" -ForegroundColor Red
 }
 Write-Host ""
+} else {
+    Write-Host "[SKIP] Generating figures (disabled)" -ForegroundColor Yellow
+    Write-Host ""
+}
 
 # ============================================================================
 # FINAL SUMMARY
@@ -166,16 +186,20 @@ foreach ($ds in $all_datasets) {
 Write-Host ""
 
 Write-Host "Configuration:" -ForegroundColor Yellow
-Write-Host "  Main experiments: All datasets with dataset-specific horizons, 3 seeds" -ForegroundColor Gray
+Write-Host "  Main experiments: All datasets with dataset-specific horizons, 5 seeds" -ForegroundColor Gray
 Write-Host "  Ablation studies: All datasets with horizons [3, 7, 14], 1 seed" -ForegroundColor Gray
+Write-Host "  Aggregate results: $run_aggregate_results" -ForegroundColor Gray
+Write-Host "  Generate figures: $run_generate_figures" -ForegroundColor Gray
 Write-Host ""
 
 Write-Host "Outputs saved:" -ForegroundColor Yellow
 Write-Host "  Logs: $main_log" -ForegroundColor Gray
 Write-Host "        $ablation_log" -ForegroundColor Gray
-Write-Host "  Model checkpoints: save_final/" -ForegroundColor Gray
+Write-Host "  Model checkpoints: $save_dir/" -ForegroundColor Gray
 Write-Host "  Results CSVs: report/results/{dataset}/all_results.csv" -ForegroundColor Gray
-Write-Host "  Publication figures: report/figures/paper/" -ForegroundColor Gray
+if ($run_generate_figures) {
+    Write-Host "  Publication figures: report/figures/paper/" -ForegroundColor Gray
+}
 Write-Host ""
 
 Write-Host "=" * 80 -ForegroundColor Cyan

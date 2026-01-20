@@ -511,11 +511,12 @@ The challenge lies in designing this function $f$ to effectively capture both sp
     \node[submodule=yellow] (bias) at ([yshift=-0.3cm]eagam.center) {Learnable Graph Bias};
 
     % DMTFM
-    \node[module=violet, minimum width=4.5cm] (dmtm) at (2.0, 0.5) {};
+    \node[module=violet, minimum width=5.5cm] (dmtm) at (2.0, 0.5) {};
     \node[label, above=2pt, right=0.3cm of dmtm] {DMTFM};
-    \node[submodule=violet, text width=1.2cm] (s1) at ([xshift=-1.5cm]dmtm.center) {$d=1$};
-    \node[submodule=violet, text width=1.2cm] (s2) at ([xshift=0cm]dmtm.center) {$d=2$};
-    \node[submodule=violet, text width=1.2cm] (s3) at ([xshift=1.5cm]dmtm.center) {$d=4$};
+    \node[submodule=violet, text width=1.0cm] (s1) at ([xshift=-2.0cm]dmtm.center) {$d=1$};
+    \node[submodule=violet, text width=1.0cm] (s2) at ([xshift=-0.7cm]dmtm.center) {$d=2$};
+    \node[submodule=violet, text width=1.0cm] (s3) at ([xshift=0.6cm]dmtm.center) {$d=4$};
+    \node[submodule=violet, text width=1.0cm] (s4) at ([xshift=1.9cm]dmtm.center) {$d=8$};
     
     % PPRM
     \node[module=green] (ppm) at (2.0, -2.2) {};
@@ -536,7 +537,7 @@ The challenge lies in designing this function $f$ to effectively capture both sp
     \draw[dashedarrow] (input) |- ([yshift=-4.5cm]input.south) -| ([xshift=-0.5cm]ppm.west) -- (ppm);
     
     \end{tikzpicture}
-    \caption{Overview of the MSAGAT-Net architecture. The model processes input through four main modules: Feature Extraction using depthwise separable convolutions, EAGAM with linearised attention and learnable graph bias, DMTFM employing multi-scale dilated convolutions (dilation rates $d \in \{1,2,4\}$), and PPRM for adaptive forecast refinement. The dashed line represents the skip connection from input to PPRM.}
+    \caption{Overview of the MSAGAT-Net architecture. The model processes input through four main modules: Feature Extraction using depthwise separable convolutions, EAGAM with linearised attention and learnable graph bias, DMTFM employing multi-scale dilated convolutions (dilation rates $d \in \{1,2,4,8\}$), and PPRM for adaptive forecast refinement. The dashed line represents the skip connection from input to PPRM.}
     \label{fig:msagat_net_architecture}
 \end{figure}
 
@@ -977,7 +978,7 @@ The increasing dilation rates create an exponentially expanding receptive field 
 \text{RF} = k + (k - 1) \times (d - 1) = 1 + (k - 1) \times d
 \end{equation}
 
-With our configuration of $k = 3$, this yields receptive fields of 3, 5, and 9 time steps for scales 1, 2, and 3 respectively. Scale 1 ($d^{(1)} = 1$) captures immediate temporal dependencies spanning 3 time steps, scale 2 ($d^{(2)} = 2$) captures medium-range dependencies spanning 5 time steps (approximately one week at daily resolution), and scale 3 ($d^{(3)} = 4$) captures longer-range dependencies spanning 9 time steps (over one week), enabling the model to capture weekly periodicity common in epidemic reporting patterns.
+With our configuration of $k = 3$, this yields receptive fields of 3, 5, 9, and 17 time steps for scales 1, 2, 3, and 4 respectively. Scale 1 ($d^{(1)} = 1$) captures immediate temporal dependencies spanning 3 time steps, scale 2 ($d^{(2)} = 2$) captures medium-range dependencies spanning 5 time steps (approximately one week at daily resolution), scale 3 ($d^{(3)} = 4$) captures longer-range dependencies spanning 9 time steps (over one week), and scale 4 ($d^{(4)} = 8$) captures extended patterns spanning 17 time steps (over two weeks), enabling the model to capture weekly and bi-weekly periodicity common in epidemic reporting patterns.
 
 This multi-scale approach allows the model to efficiently capture a wide range of temporal dependencies without requiring deep sequential processing, which is particularly advantageous for epidemic time-series that often exhibit both rapid changes and gradual trends.
 
@@ -1005,135 +1006,10 @@ where $\mathbf{H}_{\text{fused}} \in \mathbb{R}^{B \times d_{\text{hidden}} \tim
 \centering
 \includegraphics[width=0.7\textwidth]{figs/DMTFM.png}
 % \caption{Flow of data in the MTFM architecture.}
-\caption{Data flow in the MTFM module. Spatial features from AGAM are processed through three parallel dilated convolutional branches (dilation rates 1, 2, 4), adaptively fused using learnable weights, and combined with residual connections.}
+\caption{Data flow in the MTFM module. Spatial features from AGAM are processed through four parallel dilated convolutional branches (dilation rates 1, 2, 4, 8), adaptively fused using learnable weights, and combined with residual connections.}
 \label{fig:mtfm_module}
 \end{figure}
 
-
-% \begin{figure*}[!t]
-% \centering
-% \resizebox{0.85\textwidth}{!}{%
-% \begin{tikzpicture}[
-%     node distance=0.8cm and 1.2cm,
-%     % Node styles
-%     inputnode/.style={ellipse, draw=purple!60, fill=purple!10, thick, 
-%                       minimum width=2.2cm, minimum height=1.2cm, align=center,
-%                       font=\small},
-%     processbox/.style={rectangle, draw=gray!70, fill=gray!15, thick,
-%                        rounded corners=3pt, minimum width=2.2cm, minimum height=0.9cm,
-%                        align=center, font=\small},
-%     scaleblock/.style={rectangle, draw=green!60!black, fill=green!20, thick,
-%                        rounded corners=2pt, minimum width=2.8cm, minimum height=0.7cm,
-%                        align=center, font=\small},
-%     fusionbox/.style={rectangle, draw=blue!60, fill=blue!10, thick,
-%                       rounded corners=3pt, minimum width=2.8cm, minimum height=0.9cm,
-%                       align=center, font=\small},
-%     lowrankbox/.style={rectangle, draw=green!70!black, fill=green!25, thick,
-%                        rounded corners=2pt, minimum width=2.2cm, minimum height=0.65cm,
-%                        align=center, font=\footnotesize},
-%     highrankbox/.style={rectangle, draw=green!50!black, fill=green!35, thick,
-%                         rounded corners=2pt, minimum width=2.2cm, minimum height=0.65cm,
-%                         align=center, font=\footnotesize},
-%     normbox/.style={rectangle, draw=magenta!70, fill=magenta!25, thick,
-%                     rounded corners=3pt, minimum width=3cm, minimum height=0.9cm,
-%                     align=center, font=\small},
-%     outputnode/.style={ellipse, draw=purple!60, fill=purple!10, thick,
-%                        minimum width=2.2cm, minimum height=1cm, align=center,
-%                        font=\small},
-%     structbox/.style={rectangle, draw=orange!60, fill=orange!8, thick,
-%                       rounded corners=3pt, minimum width=2.4cm, align=center,
-%                       font=\footnotesize, inner sep=6pt},
-%     structitem/.style={rectangle, draw=#1!70, fill=#1!20, thick,
-%                        rounded corners=2pt, minimum width=2cm, minimum height=0.5cm,
-%                        align=center, font=\footnotesize},
-%     adaptbox/.style={rectangle, draw=cyan!60, fill=cyan!15, thick,
-%                      rounded corners=2pt, minimum width=2.2cm, minimum height=0.55cm,
-%                      align=center, font=\footnotesize},
-%     branchbox/.style={rectangle, draw=gray!50, fill=white, dashed, thick,
-%                       rounded corners=4pt, inner sep=10pt},
-%     arrow/.style={->, thick, >=stealth, draw=gray!70},
-%     skiparrow/.style={->, thick, >=stealth, draw=gray!50, dashed}
-% ]
-
-% % Input node
-% \node[inputnode] (input) {Features\\$\mathbf{O}_{\text{final}} \in \mathbb{R}^{B \times N \times d}$};
-
-% % Reshape
-% \node[processbox, below=of input] (reshape1) {Reshape for\\Conv1D};
-
-% % Multi-scale branches container
-% \node[branchbox, below=1.2cm of reshape1, minimum width=4cm, minimum height=4.2cm] (branchcontainer) {};
-% \node[above=0.1cm of branchcontainer.north, font=\small\bfseries, text=gray!70] {Multi-scale Temporal Branches};
-
-% % Scale branches (3 scales only!)
-% \node[scaleblock, below=1.5cm of reshape1] (scale1) {Scale 1 (dilation 1)};
-% \node[scaleblock, below=0.4cm of scale1] (scale2) {Scale 2 (dilation 2)};
-% \node[scaleblock, below=0.4cm of scale2] (scale3) {Scale 3 (dilation 4)};
-
-% % Scale structure box (to the right)
-% \node[structbox, right=2.5cm of scale1, yshift=-0.8cm] (structcontainer) {
-%     \textbf{Scale Structure}\\[4pt]
-%     \tikz{
-%         \node[structitem=blue] (conv) {Dilated Conv1D};
-%         \node[structitem=orange, below=0.15cm of conv] (bn) {BatchNorm};
-%         \node[structitem=green, below=0.15cm of bn] (relu) {ReLU};
-%         \node[structitem=cyan, below=0.15cm of relu] (drop) {Dropout};
-%     }
-% };
-
-% % Adaptive Scale Fusion container
-% \node[branchbox, right=2.5cm of scale3, yshift=0.5cm, minimum width=3.2cm, minimum height=2cm] (fusioncontainer) {};
-% \node[above=0.1cm of fusioncontainer.north, font=\small\bfseries, text=gray!70] {Adaptive Scale Fusion};
-
-% \node[fusionbox] at (fusioncontainer.center) (fusion) {Scale Fusion};
-% \node[adaptbox, below=0.3cm of fusion] (weights) {Adaptive Weights\\$\boldsymbol{\alpha} = \text{softmax}(\mathbf{w})$};
-
-% % Reshape after fusion
-% \node[processbox, below=1.2cm of fusioncontainer] (reshape2) {Reshape};
-
-% % Low-rank bottleneck container
-% \node[branchbox, below=0.8cm of reshape2, minimum width=3cm, minimum height=2.2cm] (bottleneckcontainer) {};
-% \node[above=0.1cm of bottleneckcontainer.north, font=\small\bfseries, text=gray!70] {Low-Rank Bottleneck};
-
-% \node[lowrankbox] at ([yshift=0.4cm]bottleneckcontainer.center) (lowrank) {Low-Rank ($d \to d_b$)};
-% \node[highrankbox, below=0.35cm of lowrank] (highrank) {High-Rank ($d_b \to d$)};
-
-% % LayerNorm + Residual
-% \node[normbox, below=1.2cm of bottleneckcontainer] (layernorm) {\textbf{LayerNorm + Residual}};
-
-% % Output
-% \node[outputnode, below=0.8cm of layernorm] (output) {Features $\mathbf{H}_{\text{final}}$};
-
-% % Arrows - main flow
-% \draw[arrow] (input) -- (reshape1);
-% \draw[arrow] (reshape1) -- (scale1);
-% \draw[arrow] (scale1) -- (scale2);
-% \draw[arrow] (scale2) -- (scale3);
-
-% % Arrows from scales to fusion
-% \draw[arrow] (scale1.east) -- ++(0.8,0) |- ([yshift=0.3cm]fusion.west);
-% \draw[arrow] (scale2.east) -- ++(0.5,0) |- (fusion.west);
-% \draw[arrow] (scale3.east) -- ++(0.8,0) |- ([yshift=-0.3cm]fusion.west);
-
-% % Continue flow
-% \draw[arrow] (fusion) -- (weights);
-% \draw[arrow] (weights.south) -- ++(0,-0.15) -| (reshape2.north);
-% \draw[arrow] (reshape2) -- (lowrank);
-% \draw[arrow] (lowrank) -- (highrank);
-% \draw[arrow] (highrank.south) -- ++(0,-0.15) -| (layernorm.north);
-% \draw[arrow] (layernorm) -- (output);
-
-% % Skip connection
-% \coordinate (skipstart) at ([xshift=-0.5cm]reshape1.south west);
-% \coordinate (skipend) at ([xshift=-0.5cm]layernorm.north west);
-% \draw[skiparrow] (reshape1.south west) -- ++(-0.5,0) -- ++(0,-9.8) -- ++(0.5,0);
-% \node[font=\footnotesize, text=gray!60] at ([xshift=-1cm, yshift=-5cm]reshape1.south west) {skip};
-
-% \end{tikzpicture}
-% }%
-% \caption{Data flow in the DMTFM module. Spatial features from EAGAM are processed through three parallel dilated convolutional branches (dilation rates 1, 2, 4), adaptively fused using learnable weights, and combined with residual connections.}
-% \label{fig:dmtfm_module}
-% \end{figure*}
 
 \subsubsection{Bottleneck Projection and Residual Connection}
 
@@ -1157,7 +1033,7 @@ We then apply layer normalisation and a residual connection to facilitate gradie
 
 where $\mathbf{H}_{\text{final}} \in \mathbb{R}^{B \times N \times d_{\text{hidden}}}$ is the final output of the DMTFM.
 
-For the DMTFM module, we set the number of temporal scales to $S=3$ with exponentially increasing dilation rates of $\{1, 2, 4\}$ and a convolutional kernel size of $k=3$. This multi-scale configuration enables the module to capture temporal dependencies at multiple granularities, ranging from immediate neighbour relationships (1-step) to medium-range patterns (3-5 time steps) and weekly-scale patterns (7-11 time steps). These scales are particularly well suited to epidemic dynamics, where transmission patterns manifest across multiple temporal horizons. The hidden dimension $d_{\text{hidden}}$ is preserved throughout the module to maintain information capacity, whilst the bottleneck dimension for the fusion projection is set to $d_{\text{bottle}} = 8$ to reduce parameters. To mitigate overfitting on the noisy and often irregular epidemic time-series, we apply dropout with probability 0.20 after each convolutional layer to regularise the model. This dropout rate was determined through preliminary hyperparameter tuning to effectively balance model expressiveness with robustness to noise patterns characteristic of real-world epidemic surveillance data. Figure~\ref{fig:dmtfm_module} presents a detailed representation of this module's architecture. 
+For the DMTFM module, we set the number of temporal scales to $S=4$ with exponentially increasing dilation rates of $\{1, 2, 4, 8\}$ and a convolutional kernel size of $k=3$. This multi-scale configuration enables the module to capture temporal dependencies at multiple granularities, ranging from immediate neighbour relationships (1-step) to medium-range patterns (3-5 time steps), weekly-scale patterns (7-11 time steps), and bi-weekly patterns (15-17 time steps). These scales are particularly well suited to epidemic dynamics, where transmission patterns manifest across multiple temporal horizons. The hidden dimension $d_{\text{hidden}}$ is preserved throughout the module to maintain information capacity, whilst the bottleneck dimension for the fusion projection is set to $d_{\text{bottle}} = 8$ to reduce parameters. To mitigate overfitting on the noisy and often irregular epidemic time-series, we apply dropout with probability 0.2 after each convolutional layer to regularise the model. This dropout rate was determined through preliminary hyperparameter tuning to effectively balance model expressiveness with robustness to noise patterns characteristic of real-world epidemic surveillance data. Figure~\ref{fig:dmtfm_module} presents a detailed representation of this module's architecture. 
 
 
 \subsection{Progressive Multi-Horizon Forecast Refinement}
@@ -1230,7 +1106,7 @@ The final forecasts are then computed as a weighted combination of the model-bas
 
 where $\mathbf{P}_{\text{final}} \in \mathbb{R}^{B \times N \times h}$ represents the refined forecasts for each region across all forecast horizons.
 
-For the PPRM module, we set the bottleneck dimension at $d_{\text{bottle}}=8$ to maintain parameter efficiency while preserving sufficient capacity for the gating and refinement operations. The forecast horizon length $h$ is configurable based on task requirements; in our experiments, we primarily evaluate horizons of $h \in \{3, 5, 7, 10, 14, 15\}$ days, although the architecture supports arbitrary horizon lengths. The exponential decay factor $\gamma$ in the trend projection is set to 0.1, providing a moderate decay rate that was selected through empirical analysis of epidemic progression curves across our datasets and can be adjusted to match specific epidemic characteristics. We apply a dropout rate of 0.20 throughout the forecasting pathway to prevent overfitting, particularly critical for these final layers that directly generate model outputs. This dropout rate was determined through preliminary hyperparameter tuning to effectively regularise the model against the noisy and often irregular patterns characteristic of real-world epidemic surveillance data.
+For the PPRM module, we set the bottleneck dimension at $d_{\text{bottle}}=8$ to maintain parameter efficiency while preserving sufficient capacity for the gating and refinement operations. The forecast horizon length $h$ is configurable based on task requirements; in our experiments, we primarily evaluate horizons of $h \in \{3, 5, 7, 10, 14, 15\}$ days, although the architecture supports arbitrary horizon lengths. The exponential decay factor $\gamma$ in the trend projection is fixed at 0.1, providing a moderate decay rate that was selected through empirical analysis of epidemic progression curves across our datasets. We apply a dropout rate of 0.2 throughout the forecasting pathway to prevent overfitting, particularly critical for these final layers that directly generate model outputs. This dropout rate was determined through preliminary hyperparameter tuning to effectively regularise the model against the noisy and often irregular patterns characteristic of real-world epidemic surveillance data.
 
 
 \begin{figure}
@@ -1345,7 +1221,7 @@ This section presents a comprehensive evaluation of our proposed MSAGAT-Net mode
 \subsection{Computing Environment}
 \label{sec:experimental_setup}
 
-All experiments were conducted on the same high performance computing (HPC) cluster equipped with NVIDIA RTX 8000 GPUs to ensure consistent hardware conditions in all model evaluations. This controlled environment allows for a fair comparison between different approaches and eliminates potential variations due to hardware differences.
+All experiments were conducted on the same high performance computing (HPC) cluster equipped with Intel Xeon Gold 5217 @ 3.00GHz CPUs and NVIDIA RTX 8000 GPUs to ensure consistent hardware conditions in all model evaluations. This controlled environment allows for a fair comparison between different approaches and eliminates potential variations due to hardware differences.
 
 \subsection{Datasets}
 \label{sec:datasets}

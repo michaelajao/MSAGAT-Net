@@ -29,8 +29,7 @@ import sys
 import random
 import logging
 import argparse
-from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 from argparse import Namespace
 
 import numpy as np
@@ -38,11 +37,6 @@ import torch
 
 # Suppress TensorFlow oneDNN warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
-# GPU Performance Optimizations
-torch.backends.cudnn.benchmark = True
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.allow_tf32 = True
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -74,7 +68,7 @@ DATASET_CONFIGS = {
         'horizons': [3, 5, 10, 15],
         'use_adj_prior': False,
         'use_graph_bias': False,
-        'notes': 'Large graph - pure learned attention'
+        'notes': 'Large graph - pure learned attention (best performance)'
     },
     'australia-covid': {
         'sim_mat': 'australia-adj',
@@ -132,7 +126,7 @@ TRAIN_CONFIG = {
     'patience': 100,
     'lr': 1e-3,
     'weight_decay': 5e-4,
-    'batch': 64,
+    'batch': 32,
     'window': 20,
     'dropout': 0.2,
     'num_scales': 4,
@@ -160,7 +154,8 @@ def run_single_experiment(
     save_dir: str = 'save_all',
     use_adj_prior: Optional[bool] = None,
     use_graph_bias: Optional[bool] = None,
-    verbose: bool = True
+    verbose: bool = True,
+    force_cpu: bool = False
 ) -> Dict[str, float]:
     """
     Run a single training experiment.
@@ -174,6 +169,7 @@ def run_single_experiment(
         use_adj_prior: Override dataset config for adjacency prior
         use_graph_bias: Override dataset config for graph bias
         verbose: Print progress
+        force_cpu: Force CPU training even if GPU available
         
     Returns:
         Dictionary of final metrics
@@ -213,7 +209,7 @@ def run_single_experiment(
         adaptive=False,
         seed=seed,
         gpu=0,
-        cuda=torch.cuda.is_available(),
+        cuda=torch.cuda.is_available() and not force_cpu,
         save_dir=save_dir,
         mylog=True,
         extra='',
@@ -231,8 +227,17 @@ def run_single_experiment(
         torch.cuda.set_device(0)
     torch.backends.cudnn.deterministic = True
     
-    # Model naming
+    # Load data
+    data_loader = DataBasicLoader(args)
+    
+    # Create model (final runner uses MSTAGAT-Net only)
+    model = MSAGATNet_Ablation(args, data_loader)
     model_name = 'MSTAGAT-Net'
+    
+    if args.cuda:
+        model.cuda()
+    
+    # Model naming
     log_token = f"{model_name}.{dataset}.w-{args.window}.h-{horizon}.{ablation}.seed-{seed}"
     if adj_prior:
         log_token += '.with_adj'
@@ -240,16 +245,8 @@ def run_single_experiment(
     if verbose:
         print(f"\n{'='*60}")
         print(f"Training: {dataset} | h={horizon} | seed={seed} | ablation={ablation}")
-        print(f"Settings: adj_prior={adj_prior}, graph_bias={graph_bias}")
+        print(f"Model: {model_name} | adj_prior={adj_prior}, graph_bias={graph_bias}")
         print(f"{'='*60}")
-    
-    # Load data
-    data_loader = DataBasicLoader(args)
-    
-    # Create model
-    model = MSAGATNet_Ablation(args, data_loader)
-    if args.cuda:
-        model.cuda()
     
     if verbose:
         params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -327,7 +324,7 @@ def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = 
                         ablation='none',
                         verbose=True
                     )
-                    print(f"  [OK] Completed")
+                    print("  [OK] Completed")
                 except Exception as e:
                     failed += 1
                     print(f"  [FAIL] {e}")
@@ -371,7 +368,7 @@ def run_ablation_experiments(datasets: List[str], seeds: List[int], dry_run: boo
                             ablation=ablation,
                             verbose=True
                         )
-                        print(f"  [OK] Completed")
+                        print("  [OK] Completed")
                     except Exception as e:
                         failed += 1
                         print(f"  [FAIL] {e}")
@@ -422,6 +419,8 @@ Examples:
     parser.add_argument('--ablation', type=str, default='none',
                         choices=['none', 'no_agam', 'no_mtfm', 'no_pprm'],
                         help='Ablation variant')
+    parser.add_argument('--cpu', action='store_true',
+                        help='Force CPU training (disable CUDA)')
     
     # Batch experiment args
     parser.add_argument('--datasets', nargs='+', default=None,
@@ -458,10 +457,11 @@ def main():
             seed=args.seed,
             ablation=args.ablation,
             save_dir=args.save_dir,
+            force_cpu=args.cpu,
             verbose=True
         )
         
-        print(f"\nFinal Metrics:")
+        print("\nFinal Metrics:")
         for k, v in metrics.items():
             if isinstance(v, float):
                 print(f"  {k}: {v:.4f}")

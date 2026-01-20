@@ -26,8 +26,8 @@ from torch.nn import Parameter
 HIDDEN_DIM = 32
 ATTENTION_HEADS = 4
 ATTENTION_REG_WEIGHT_INIT = 1e-5
-DROPOUT = 0.20
-NUM_TEMPORAL_SCALES = 3
+DROPOUT = 0.2
+NUM_TEMPORAL_SCALES = 4
 KERNEL_SIZE = 3
 FEATURE_CHANNELS = 16
 BOTTLENECK_DIM = 8
@@ -129,37 +129,31 @@ class DepthwiseSeparableConv1D(nn.Module):
 
 class SpatialAttentionModule(nn.Module):
     """
-    Spatial Attention Module with LINEAR attention (O(N) complexity).
+    Low-rank Adaptive Graph Attention Module (LR-AGAM).
     
-    Uses ELU+1 kernel trick for efficient linear attention with learnable
-    regularization weight. Includes learnable low-rank graph bias for
-    capturing static spatial relationships.
-    
-    Key Innovation: Can optionally incorporate a predefined adjacency matrix
-    as prior knowledge, but does NOT require it. When adjacency is provided,
-    it is used to inform (not constrain) the learned graph structure.
+    Captures node relationships in a graph structure using an efficient
+    attention mechanism with low-rank decomposition. Computes attention 
+    scores between nodes and updates node representations accordingly.
     
     Args:
         hidden_dim: Dimensionality of node features
         num_nodes: Number of nodes in the graph
-        dropout: Dropout probability
+        dropout: Dropout probability for regularization
         attention_heads: Number of parallel attention heads
-        attention_regularization_weight: Initial weight for L1 regularization
+        attention_regularization_weight: Weight for L1 regularization on attention
         bottleneck_dim: Dimension of the low-rank projection
-        adj_matrix: Optional predefined adjacency matrix [N, N]
-        adj_weight: Weight for combining learned and predefined structure (0=ignore adj, 1=full weight)
-        use_graph_bias: Whether to integrate graph bias into forward pass (True) or use
-                        for regularization only (False). Setting to False makes the model
-                        behave like MAGATFN, which can be better for large graphs.
+        use_adj_prior: Whether to use adjacency matrix as prior for attention
+        use_graph_bias: Whether to use learnable graph structure bias
+        adj_matrix: Predefined adjacency matrix [num_nodes, num_nodes] (optional)
     """
     
     def __init__(self, hidden_dim, num_nodes, dropout=DROPOUT, 
                  attention_heads=ATTENTION_HEADS,
                  attention_regularization_weight=ATTENTION_REG_WEIGHT_INIT,
                  bottleneck_dim=BOTTLENECK_DIM,
-                 adj_matrix=None,
-                 adj_weight=0.1,
-                 use_graph_bias=True):
+                 use_adj_prior=False,
+                 use_graph_bias=True,
+                 adj_matrix=None):
         super().__init__()
         
         self.hidden_dim = hidden_dim
@@ -167,7 +161,8 @@ class SpatialAttentionModule(nn.Module):
         self.head_dim = hidden_dim // self.heads
         self.num_nodes = num_nodes
         self.bottleneck_dim = bottleneck_dim
-        self.use_graph_bias = use_graph_bias  # Whether to add graph bias to forward pass
+        self.use_adj_prior = use_adj_prior
+        self.use_graph_bias = use_graph_bias
 
         # Learnable attention regularization weight (log-domain for positivity)
         self.log_attention_reg_weight = nn.Parameter(
@@ -184,66 +179,31 @@ class SpatialAttentionModule(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
         
-        # Learnable graph structure bias (low-rank factorization)
-        self.u = Parameter(torch.Tensor(self.heads, num_nodes, bottleneck_dim))
-        self.v = Parameter(torch.Tensor(self.heads, bottleneck_dim, num_nodes))
-        nn.init.xavier_uniform_(self.u)
-        nn.init.xavier_uniform_(self.v)
+        # Learnable graph structure bias (low-rank) - only if use_graph_bias is True
+        if self.use_graph_bias:
+            self.u = Parameter(torch.Tensor(self.heads, num_nodes, bottleneck_dim))
+            self.v = Parameter(torch.Tensor(self.heads, bottleneck_dim, num_nodes))
+            nn.init.xavier_uniform_(self.u)
+            nn.init.xavier_uniform_(self.v)
         
-        # Optional predefined adjacency matrix support
-        # When provided, it informs (but does not constrain) the learned structure
-        self.use_adj_prior = adj_matrix is not None
-        if self.use_adj_prior:
-            # Register adjacency as buffer (not trainable) and normalize it
-            adj_normalized = self._normalize_adjacency(adj_matrix)
-            self.register_buffer('adj_prior', adj_normalized)
-            # Learnable weight for combining learned structure with prior
-            self.adj_gate = Parameter(torch.tensor(adj_weight, dtype=torch.float32))
+        # Register adjacency matrix as buffer if using adj_prior
+        if self.use_adj_prior and adj_matrix is not None:
+            if isinstance(adj_matrix, np.ndarray):
+                adj_matrix = torch.from_numpy(adj_matrix).float()
+            # Normalize adjacency matrix and expand for heads
+            adj_norm = adj_matrix / (adj_matrix.sum(dim=-1, keepdim=True) + 1e-8)
+            self.register_buffer('adj_prior', adj_norm.unsqueeze(0).expand(self.heads, -1, -1).clone())
         else:
             self.register_buffer('adj_prior', None)
-            self.adj_gate = None
-    
-    def _normalize_adjacency(self, adj):
-        """Normalize adjacency matrix for stable message passing."""
-        if isinstance(adj, np.ndarray):
-            adj = torch.from_numpy(adj).float()
-        adj = adj.float()
-        # Add self-loops
-        adj = adj + torch.eye(adj.size(0), device=adj.device)
-        # Symmetric normalization: D^{-1/2} A D^{-1/2}
-        degree = adj.sum(dim=1)
-        degree_inv_sqrt = torch.pow(degree, -0.5)
-        degree_inv_sqrt[torch.isinf(degree_inv_sqrt)] = 0.0
-        return degree_inv_sqrt.unsqueeze(1) * adj * degree_inv_sqrt.unsqueeze(0)
-    
-    def set_adjacency(self, adj_matrix, adj_weight=0.1):
-        """
-        Set or update the adjacency matrix prior after initialization.
-        
-        This allows the model to incorporate domain knowledge when available
-        while still functioning without it.
-        
-        Args:
-            adj_matrix: Adjacency matrix [N, N]
-            adj_weight: Weight for the adjacency prior
-        """
-        if adj_matrix is not None:
-            adj_normalized = self._normalize_adjacency(adj_matrix)
-            self.register_buffer('adj_prior', adj_normalized.to(self.u.device))
-            self.use_adj_prior = True
-            if self.adj_gate is None:
-                self.adj_gate = Parameter(torch.tensor(adj_weight, dtype=torch.float32, device=self.u.device))
-        else:
-            self.use_adj_prior = False
 
     @property
     def current_reg_weight(self):
         """Get current learned regularization weight for diagnostics."""
         return torch.exp(self.log_attention_reg_weight).item()
 
-    def _compute_linear_attention(self, q, k, v):
+    def _compute_attention(self, q, k, v):
         """
-        Compute LINEAR attention with O(N) complexity using ELU+1 kernel trick.
+        Compute attention scores and apply them to values.
         
         Args:
             q: Query tensors [batch, heads, nodes, head_dim]
@@ -251,79 +211,32 @@ class SpatialAttentionModule(nn.Module):
             v: Value tensors [batch, heads, nodes, head_dim]
             
         Returns:
-            Attended values with O(N) complexity
+            Attended values
         """
-        # Apply ELU+1 for positive feature map (kernel trick)
+        # Apply ELU activation + 1 for stability
         q = F.elu(q) + 1.0
         k = F.elu(k) + 1.0
         
-        # Compute key-value products: O(N * d²) instead of O(N²)
+        # Compute key-value products
         kv = torch.einsum('bhnd,bhne->bhde', k, v)
         
-        # Normalization for stability
+        # Normalize keys for stability
         ones = torch.ones(k.size(0), k.size(1), k.size(2), 1, device=k.device)
         z = 1.0 / (torch.einsum('bhnd,bhno->bhn', k, ones) + 1e-8)
         
-        # Apply linear attention: O(N * d²)
+        # Apply attention mechanism
         return torch.einsum('bhnd,bhde,bhn->bhne', q, kv, z)
-
-    def _compute_graph_bias_message_passing(self, v):
-        """
-        Apply learned low-rank graph bias as normalized message passing term.
-        
-        Keeps O(N) complexity via low-rank factorization: B = U @ V
-        Optionally incorporates predefined adjacency as prior knowledge.
-        
-        Args:
-            v: Value tensors [batch, heads, nodes, head_dim]
-        Returns:
-            Bias-based message passing [batch, heads, nodes, head_dim]
-        """
-        # Ensure non-negative weights for stable normalization
-        u_pos = F.elu(self.u) + 1.0  # [heads, N, r]
-        v_pos = F.elu(self.v) + 1.0  # [heads, r, N]
-
-        # Compute (U @ V) @ v without materializing NxN
-        tmp = torch.einsum('hrn,bhnd->bhrd', v_pos, v)
-        out = torch.einsum('hnr,bhrd->bhnd', u_pos, tmp)
-
-        # Normalize
-        v_sum = v_pos.sum(dim=-1)
-        denom = torch.einsum('hnr,hr->hn', u_pos, v_sum).unsqueeze(0).unsqueeze(-1)
-        out = out / (denom + 1e-8)
-        
-        # Optionally incorporate predefined adjacency prior
-        # This adds domain knowledge when available while maintaining O(N) complexity
-        if self.use_adj_prior and self.adj_prior is not None and self.adj_gate is not None:
-            # Adjacency-based message passing: A @ v (standard GNN propagation)
-            # v: [batch, heads, nodes, head_dim]
-            # adj_prior: [nodes, nodes] - shared across heads
-            adj_gate = torch.sigmoid(self.adj_gate)  # Gate value in [0, 1]
-            
-            # Reshape v for matrix multiplication: [batch*heads, nodes, head_dim]
-            v_reshaped = v.reshape(-1, v.size(2), v.size(3))
-            # Apply adjacency: [nodes, nodes] @ [batch*heads, nodes, head_dim]
-            adj_prior_expanded = self.adj_prior.unsqueeze(0).expand(v_reshaped.size(0), -1, -1)
-            adj_out = torch.bmm(adj_prior_expanded, v_reshaped)
-            # Reshape back: [batch, heads, nodes, head_dim]
-            adj_out = adj_out.reshape(v.size(0), v.size(1), v.size(2), v.size(3))
-            
-            # Combine learned structure with adjacency prior
-            # out = (1 - gate) * learned + gate * adjacency_based
-            out = (1 - adj_gate) * out + adj_gate * adj_out
-
-        return out
 
     def forward(self, x, mask=None):
         """
-        Forward pass using linear attention with learnable regularization.
+        Forward pass of the spatial attention module.
         
         Args:
             x: Input node features [batch, nodes, hidden_dim]
             mask: Attention mask (optional)
             
         Returns:
-            tuple: (Updated features, regularization loss)
+            tuple: (Updated node features, Attention regularization loss)
         """
         B, N, H = x.shape
 
@@ -334,54 +247,54 @@ class SpatialAttentionModule(nn.Module):
 
         # Separate query, key, value and reshape for multi-head attention
         q, k, v = [tensor.view(B, N, self.heads, self.head_dim) for tensor in qkv]
-        q = q.transpose(1, 2)
+        q = q.transpose(1, 2)  # [B, heads, N, head_dim]
         k = k.transpose(1, 2)
         v = v.transpose(1, 2)
 
-        # Use LINEAR attention - O(N) complexity
-        output = self._compute_linear_attention(q, k, v)
-
-        # Conditionally integrate learned graph bias (still O(N) via low-rank ops)
-        # When use_graph_bias=False, model behaves like MAGATFN (bias for regularization only)
+        # Compute attended values
+        output = self._compute_attention(q, k, v)
+        
+        # Compute attention scores
+        attn_scores = torch.einsum('bhnd,bhmd->bhnm', q, k) / math.sqrt(self.head_dim)
+        
+        # Add graph structure bias if enabled
         if self.use_graph_bias:
-            graph_bias_out = self._compute_graph_bias_message_passing(v)
-            output = output + self.dropout(graph_bias_out)
-
-        # Dense view of graph bias (used for plotting/regularization only)
-        graph_bias = torch.matmul(self.u, self.v)
-
-        # Compute regularization loss with learnable weight
+            adj_bias = torch.matmul(self.u, self.v)
+            attn_scores = attn_scores + adj_bias
+        
+        # Add adjacency prior if enabled
+        if self.use_adj_prior and self.adj_prior is not None:
+            # Scale adjacency prior contribution
+            attn_scores = attn_scores + self.adj_prior.unsqueeze(0) * 0.5
+        
+        # Apply softmax to get attention weights
+        self.attn = F.softmax(attn_scores, dim=-1)
+        
+        # Compute regularization loss on attention weights using learned parameter
         attention_reg_weight = torch.exp(self.log_attention_reg_weight)
-        attn_reg_loss = attention_reg_weight * torch.mean(torch.abs(graph_bias))
+        attn_reg_loss = attention_reg_weight * torch.mean(torch.abs(self.attn))
 
         # Reshape output to original dimensions
         output = output.transpose(1, 2).contiguous().view(B, N, H)
 
-        # Low-rank projection for output with RESIDUAL CONNECTION
-        # This helps gradient flow and stabilizes training for deeper models
-        projected = self.out_proj_low(output)
-        projected = self.out_proj_high(projected)
-        output = output + projected  # Residual connection
+        # Low-rank projection for output
+        output = self.out_proj_low(output)
+        output = self.out_proj_high(output)
 
         return output, attn_reg_loss
 
 
-class MultiScaleTemporalModule(nn.Module):
+class MultiScaleSpatialModule(nn.Module):
     """
-    Multi-Scale Feature Fusion Module (MTFM) using dilated convolutions.
+    Multi-Scale Spatial Feature Module (MSSFM) using dilated convolutions.
     
-    NOTE: Despite the name "Temporal", after feature extraction the time
-    dimension has been flattened into the feature dimension. These convolutions
-    operate over the NODE dimension, capturing multi-scale SPATIAL patterns
-    across nodes at different receptive fields.
-    
-    This is intentional: it allows the module to capture spatial dependencies
-    at different scales (local neighborhoods vs. global patterns) while the
-    temporal information is already encoded in the feature vectors.
+    Despite the historical naming, this module operates on the NODE (spatial) dimension.
+    It uses dilated convolutions at different dilation rates to capture local and global
+    spatial dependencies between nodes. The outputs from different scales are adaptively fused.
     
     Args:
         hidden_dim: Dimensionality of node features  
-        num_scales: Number of scales (different dilation rates)
+        num_scales: Number of spatial scales (different dilation rates)
         kernel_size: Size of the convolutional kernel
         dropout: Dropout probability
     """
@@ -393,7 +306,7 @@ class MultiScaleTemporalModule(nn.Module):
         self.hidden_dim = hidden_dim
         self.num_scales = num_scales
         
-        # Dilated convolutions at different scales
+        # Create multiple dilated convolutional layers with increasing dilation rates
         self.scales = nn.ModuleList([
             nn.Sequential(
                 nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, 
@@ -404,8 +317,8 @@ class MultiScaleTemporalModule(nn.Module):
             ) for i in range(num_scales)
         ])
         
-        # Learnable fusion weights
-        self.fusion_weight = Parameter(torch.ones(num_scales))
+        # Learnable weights for adaptive fusion of scales
+        self.fusion_weight = Parameter(torch.ones(num_scales), requires_grad=True)
         
         # Low-rank projection for fusion
         self.fusion_low = nn.Linear(hidden_dim, BOTTLENECK_DIM)
@@ -414,23 +327,27 @@ class MultiScaleTemporalModule(nn.Module):
 
     def forward(self, x):
         """
+        Apply multi-scale spatial convolutions over the node dimension.
+        
         Args:
             x: Input features [batch, nodes, hidden_dim]
         Returns:
-            Temporally processed features [batch, nodes, hidden_dim]
+            Spatially processed features [batch, nodes, hidden_dim]
         """
-        # Reshape for 1D convolution: [B, N, H] -> [B, H, N]
+        # Reshape for 1D convolution: [batch, hidden_dim, nodes]
         x = x.transpose(1, 2)
         
-        # Apply multi-scale convolutions
+        # Apply different spatial scales (dilated convolutions along node dimension)
         features = [scale(x) for scale in self.scales]
         
-        # Adaptive fusion
+        # Compute adaptive weights for scale fusion
         alpha = F.softmax(self.fusion_weight, dim=0)
-        stacked = torch.stack(features, dim=0)
-        fused = torch.einsum('s,sbhn->bhn', alpha, stacked)
         
-        # Reshape back: [B, H, N] -> [B, N, H]
+        # Stack and fuse multi-scale features
+        stacked = torch.stack(features, dim=1)  # [batch, scales, hidden_dim, nodes]
+        fused = torch.sum(alpha.view(1, self.num_scales, 1, 1) * stacked, dim=1)
+        
+        # Reshape back: [batch, nodes, hidden_dim]
         fused = fused.transpose(1, 2)
         
         # Apply low-rank projection and residual connection
@@ -443,64 +360,43 @@ class MultiScaleTemporalModule(nn.Module):
 
 class HorizonPredictor(nn.Module):
     """
-    Horizon Predictor for multi-step forecasting with adaptive refinement.
+    Progressive Prediction Refinement Module (PPRM).
     
-    Generates predictions for multiple future time steps with optional
-    refinement based on the last observed value using exponential decay.
-    
-    Key Innovation: Uses a LEARNABLE decay rate that adapts to the dataset's
-    temporal dynamics, rather than a fixed rate that may not be optimal
-    across different epidemic patterns.
+    Takes node features and generates predictions for multiple future time steps.
+    Includes an adaptive refinement mechanism that blends model predictions with
+    exponentially decayed extrapolations from the last observed value.
     
     Args:
         hidden_dim: Dimensionality of node features
         horizon: Number of future time steps to predict
         bottleneck_dim: Dimension for bottleneck layers
         dropout: Dropout probability
-        init_decay_rate: Initial decay rate for exponential smoothing (default: 0.1)
-        learnable_decay: Whether to make decay rate learnable (default: True)
     """
     
     def __init__(self, hidden_dim, horizon, bottleneck_dim=BOTTLENECK_DIM, 
-                 dropout=DROPOUT, init_decay_rate=0.1, learnable_decay=True):
+                 dropout=DROPOUT):
         super().__init__()
         
         self.hidden_dim = hidden_dim
         self.horizon = horizon
+        self.bottleneck_dim = bottleneck_dim
         
-        # Prediction head
-        self.predictor = nn.Sequential(
-            nn.Linear(hidden_dim, bottleneck_dim),
+        # Low-rank prediction projection
+        self.predictor_low = nn.Linear(hidden_dim, bottleneck_dim)
+        self.predictor_mid = nn.Sequential(
             nn.LayerNorm(bottleneck_dim),
             nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(bottleneck_dim, horizon)
+            nn.Dropout(dropout)
         )
+        self.predictor_high = nn.Linear(bottleneck_dim, horizon)
         
-        # Refinement gate
+        # Adaptive refinement gate based on last observation
         self.refine_gate = nn.Sequential(
             nn.Linear(hidden_dim, bottleneck_dim),
             nn.ReLU(),
             nn.Linear(bottleneck_dim, horizon),
             nn.Sigmoid()
         )
-        
-        # Learnable decay rate (log-domain for positivity constraint)
-        # Higher decay = faster forgetting of last observed value
-        if learnable_decay:
-            self.log_decay_rate = nn.Parameter(
-                torch.tensor(math.log(init_decay_rate), dtype=torch.float32)
-            )
-        else:
-            self.register_buffer(
-                'log_decay_rate', 
-                torch.tensor(math.log(init_decay_rate), dtype=torch.float32)
-            )
-    
-    @property
-    def decay_rate(self):
-        """Current decay rate (always positive via exp transform)."""
-        return torch.exp(self.log_decay_rate)
         
     def forward(self, x, last_step=None):
         """
@@ -510,19 +406,22 @@ class HorizonPredictor(nn.Module):
         Returns:
             Predictions [batch, nodes, horizon]
         """
-        initial_pred = self.predictor(x)
+        # Generate initial predictions
+        x_low = self.predictor_low(x)
+        x_mid = self.predictor_mid(x_low)
+        initial_pred = self.predictor_high(x_mid)
         
+        # Apply refinement if last observed value is provided
         if last_step is not None:
+            # Compute adaptive gate
             gate = self.refine_gate(x)
             
-            # Adaptive decay rate (learnable or fixed based on init)
-            decay = self.decay_rate
-            
+            # Prepare last step and exponential decay
             last_step = last_step.unsqueeze(-1)
-            time_steps = torch.arange(1, self.horizon + 1, device=x.device).float()
-            time_decay = time_steps.view(1, 1, self.horizon)
+            time_decay = torch.arange(1, self.horizon + 1, device=x.device).float().view(1, 1, self.horizon)
+            progressive_part = last_step * torch.exp(-0.1 * time_decay)
             
-            progressive_part = last_step * torch.exp(-decay * time_decay)
+            # Adaptive fusion of model prediction and exponential decay
             final_pred = gate * initial_pred + (1 - gate) * progressive_part
         else:
             final_pred = initial_pred
@@ -538,31 +437,32 @@ class MSTAGAT_Net(nn.Module):
     """
     Multi-Scale Temporal-Adaptive Graph Attention Network (MSTAGAT-Net)
     
-    Combines graph attention mechanisms for spatial dependencies and
-    multi-scale temporal convolutions for temporal patterns.
+    A spatiotemporal forecasting model with four key components:
+    - TFEM: Temporal Feature Extraction Module (depthwise separable convolutions along time)
+    - LR-AGAM: Low-rank Adaptive Graph Attention Module (spatial attention across nodes)
+    - MSSFM: Multi-Scale Spatial Feature Module (dilated convolutions along nodes)
+    - PPRM: Progressive Prediction Refinement Module (horizon prediction with adaptive blending)
     
-    Key Innovation: Unlike baselines (EpiGNN, Cola-GNN, DCRNN) that REQUIRE
-    predefined adjacency matrices, MSAGAT-Net learns spatial relationships 
-    from data. When adjacency is available, it can be incorporated as optional
-    prior knowledge to accelerate learning, but is NOT required.
+    Data flow:
+    1. Input [B, T, N] → TFEM extracts temporal features → [B, N, D]
+    2. LR-AGAM computes attention across nodes → [B, N, D]
+    3. MSSFM captures multi-scale spatial patterns → [B, N, D]
+    4. PPRM generates predictions → [B, H, N]
     
-    Architecture:
-        1. Feature extraction using depthwise separable convolutions
-        2. Spatial modeling with efficient graph attention (O(N) complexity)
-        3. Temporal modeling with multi-scale dilated convolutions
-        4. Horizon prediction with adaptive refinement
+    Uses adaptive configuration based on graph size:
+    - Small graphs (<=20 nodes): Use adjacency prior + graph bias
+    - Large graphs (>=40 nodes): Learned attention only (no graph bias)
     
     Args:
         args: Model configuration with attributes:
             - window: Input window size
             - horizon: Prediction horizon
             - hidden_dim, kernel_size, bottleneck_dim, etc.
-            - use_adj_prior: Whether to use adjacency as prior (default: False)
-            - adj_weight: Weight for adjacency prior (default: 0.1)
+            - use_adj_prior: Whether to use adjacency as prior
+            - use_graph_bias: Whether to use learnable graph structure bias
         data: Data object with attributes:
             - m: Number of nodes
-            - adj: Adjacency matrix (optional, used only if use_adj_prior=True)
-            - adaptive: If True, automatically configure based on graph size (default: False)
+            - adj: Adjacency matrix (optional)
     """
     
     def __init__(self, args, data):
@@ -571,50 +471,35 @@ class MSTAGAT_Net(nn.Module):
         self.num_nodes = data.m
         self.window = args.window
         self.horizon = args.horizon
-        
-        # Check if adaptive configuration is requested
-        use_adaptive = getattr(args, 'adaptive', False)
-        if use_adaptive:
-            adaptive_config = get_adaptive_config(self.num_nodes)
-            print(f"[ADAPTIVE] Graph size: {self.num_nodes} nodes")
-            print(f"[ADAPTIVE] Config: hidden_dim={adaptive_config['hidden_dim']}, "
-                  f"use_graph_bias={adaptive_config['use_graph_bias']}, "
-                  f"use_adj_prior={adaptive_config['use_adj_prior']}")
-        else:
-            adaptive_config = {}
-        
-        # Use adaptive config as defaults, but allow explicit overrides
-        self.hidden_dim = getattr(args, 'hidden_dim', None) or adaptive_config.get('hidden_dim', HIDDEN_DIM)
+        self.hidden_dim = getattr(args, 'hidden_dim', HIDDEN_DIM)
         self.kernel_size = getattr(args, 'kernel_size', KERNEL_SIZE)
-        self.bottleneck_dim = getattr(args, 'bottleneck_dim', None) or adaptive_config.get('bottleneck_dim', BOTTLENECK_DIM)
+        self.bottleneck_dim = getattr(args, 'bottleneck_dim', BOTTLENECK_DIM)
         
-        feature_channels = getattr(args, 'feature_channels', FEATURE_CHANNELS)
-        dropout = getattr(args, 'dropout', DROPOUT)
+        # Apply adaptive configuration based on graph size
+        adaptive_config = get_adaptive_config(self.num_nodes)
         
-        # Optional adjacency matrix prior (adaptive or explicit)
-        use_adj_prior = getattr(args, 'use_adj_prior', adaptive_config.get('use_adj_prior', False))
-        adj_weight = getattr(args, 'adj_weight', 0.1)
-        adj_matrix = getattr(data, 'adj', None) if use_adj_prior else None
+        # Graph structure options - use adaptive config as defaults, allow explicit overrides
+        self.use_adj_prior = getattr(args, 'use_adj_prior', adaptive_config['use_adj_prior'])
+        self.use_graph_bias = getattr(args, 'use_graph_bias', adaptive_config['use_graph_bias'])
         
-        # Whether to use graph bias in forward pass (adaptive or explicit)
-        # If explicitly set via args, use that; otherwise use adaptive config
-        if hasattr(args, 'use_graph_bias') and args.use_graph_bias is not None:
-            use_graph_bias = args.use_graph_bias
-        else:
-            use_graph_bias = adaptive_config.get('use_graph_bias', True)
+        # Get adjacency matrix if available
+        adj_matrix = getattr(data, 'adj', None)
+        if adj_matrix is not None and not isinstance(adj_matrix, torch.Tensor):
+            adj_matrix = torch.tensor(adj_matrix, dtype=torch.float32)
 
-        # Feature Extraction
+        # Feature Extraction Component (TFEM)
+        self.feature_channels = getattr(args, 'feature_channels', FEATURE_CHANNELS)
         self.feature_extractor = DepthwiseSeparableConv1D(
             in_channels=1, 
-            out_channels=feature_channels,
+            out_channels=self.feature_channels,
             kernel_size=self.kernel_size, 
             padding=self.kernel_size // 2,
-            dropout=dropout
+            dropout=getattr(args, 'dropout', DROPOUT)
         )
-        
+
         # Low-rank projection of extracted features
         self.feature_projection_low = nn.Linear(
-            feature_channels * self.window, self.bottleneck_dim
+            self.feature_channels * self.window, self.bottleneck_dim
         )
         self.feature_projection_high = nn.Linear(
             self.bottleneck_dim, self.hidden_dim
@@ -622,39 +507,38 @@ class MSTAGAT_Net(nn.Module):
         self.feature_norm = nn.LayerNorm(self.hidden_dim)
         self.feature_act = nn.ReLU()
 
-        # Spatial attention (with optional adjacency prior)
+        # Spatial Component (LR-AGAM)
         self.spatial_module = SpatialAttentionModule(
             self.hidden_dim, 
             num_nodes=self.num_nodes,
-            dropout=dropout,
+            dropout=getattr(args, 'dropout', DROPOUT),
             attention_heads=getattr(args, 'attention_heads', ATTENTION_HEADS),
-            attention_regularization_weight=getattr(
-                args, 'attention_regularization_weight', ATTENTION_REG_WEIGHT_INIT
-            ),
             bottleneck_dim=self.bottleneck_dim,
-            adj_matrix=adj_matrix,
-            adj_weight=adj_weight,
-            use_graph_bias=use_graph_bias
+            use_adj_prior=self.use_adj_prior,
+            use_graph_bias=self.use_graph_bias,
+            adj_matrix=adj_matrix if self.use_adj_prior else None
         )
 
-        # Temporal processing
-        self.temporal_module = MultiScaleTemporalModule(
+        # Multi-Scale Spatial Feature Component (MSSFM)
+        self.temporal_module = MultiScaleSpatialModule(
             self.hidden_dim,
             num_scales=getattr(args, 'num_scales', NUM_TEMPORAL_SCALES),
             kernel_size=self.kernel_size,
-            dropout=dropout
+            dropout=getattr(args, 'dropout', DROPOUT)
         )
 
-        # Prediction
+        # Prediction Component (PPRM)
         self.prediction_module = HorizonPredictor(
             self.hidden_dim, 
             self.horizon,
             bottleneck_dim=self.bottleneck_dim,
-            dropout=dropout
+            dropout=getattr(args, 'dropout', DROPOUT)
         )
 
     def forward(self, x, idx=None):
         """
+        Forward pass of the MSTAGAT-Net model.
+        
         Args:
             x: Input time series [batch, time_window, nodes]
             idx: Node indices (optional, unused)
@@ -662,9 +546,9 @@ class MSTAGAT_Net(nn.Module):
             tuple: (Predictions [batch, horizon, nodes], Attention reg loss)
         """
         B, T, N = x.shape
-        x_last = x[:, -1, :]
+        x_last = x[:, -1, :]  # Last observed values
         
-        # Feature extraction
+        # Feature Extraction
         x_temp = x.permute(0, 2, 1).contiguous().view(B * N, 1, T)
         temporal_features = self.feature_extractor(x_temp)
         temporal_features = temporal_features.view(B, N, -1)
@@ -675,15 +559,15 @@ class MSTAGAT_Net(nn.Module):
         features = self.feature_norm(features)
         features = self.feature_act(features)
         
-        # Spatial processing
+        # Spatial Processing (LR-AGAM)
         graph_features, attn_reg_loss = self.spatial_module(features)
         
-        # Temporal processing
+        # Multi-Scale Spatial Feature Processing (MSSFM)
         fusion_features = self.temporal_module(graph_features)
         
-        # Prediction
+        # Prediction (PPRM)
         predictions = self.prediction_module(fusion_features, x_last)
-        predictions = predictions.transpose(1, 2)
+        predictions = predictions.transpose(1, 2)  # [batch, horizon, nodes]
         
         return predictions, attn_reg_loss
 
@@ -750,11 +634,12 @@ class SimpleGraphConvolutionalLayer(nn.Module):
         return x, 0.0
 
 
-class SingleScaleTemporalModule(nn.Module):
+class SingleScaleSpatialModule(nn.Module):
     """
-    Single-scale temporal convolution for ablation study.
+    Single-scale spatial convolution for ablation study.
     
-    Used as ablation replacement for MultiScaleTemporalModule (no_mtfm).
+    Used as ablation replacement for MultiScaleSpatialModule (no_mtfm).
+    Operates on node dimension with a single dilation rate.
     
     Args:
         hidden_dim: Dimension of hidden representations
@@ -785,13 +670,17 @@ class SingleScaleTemporalModule(nn.Module):
 
     def forward(self, x):
         """
+        Apply single-scale spatial convolution over node dimension.
+        
         Args:
             x: Input [batch, nodes, hidden_dim]
         Returns:
             Output [batch, nodes, hidden_dim]
         """
+        # Reshape for 1D convolution over nodes: [B, N, H] -> [B, H, N]
         x = x.transpose(1, 2)
         feat = self.conv(x)
+        # Reshape back: [B, H, N] -> [B, N, H]
         feat = feat.transpose(1, 2)
         return self.fusion(feat)
 
@@ -854,7 +743,7 @@ class MSAGATNet_Ablation(nn.Module):
     Ablation variants:
         - none: Full model (with optional adjacency prior)
         - no_agam: Replace SpatialAttentionModule with SimpleGraphConvolutionalLayer (uses adj if available)
-        - no_mtfm: Replace MultiScaleTemporalModule with SingleScaleTemporalModule
+        - no_mtfm: Replace MultiScaleSpatialModule with SingleScaleSpatialModule
         - no_pprm: Replace HorizonPredictor with DirectPredictionModule
     """
     
@@ -874,7 +763,6 @@ class MSAGATNet_Ablation(nn.Module):
         
         # Optional adjacency matrix prior
         use_adj_prior = getattr(args, 'use_adj_prior', False)
-        adj_weight = getattr(args, 'adj_weight', 0.1)
         adj_matrix = getattr(data, 'adj', None) if use_adj_prior else None
 
         # Feature extraction (same for all ablations)
@@ -903,29 +791,25 @@ class MSAGATNet_Ablation(nn.Module):
                 self.graph_attention.adj_matrix = data.adj
         else:
             # Full model: Use adaptive attention with optional adjacency prior
-            # use_graph_bias: When False, behaves like MAGATFN (bias for regularization only)
             use_graph_bias = getattr(args, 'use_graph_bias', True)
             self.graph_attention = SpatialAttentionModule(
                 hidden_dim=self.hidden_dim,
                 num_nodes=self.m,
                 dropout=dropout,
                 attention_heads=getattr(args, 'attention_heads', ATTENTION_HEADS),
-                attention_regularization_weight=getattr(
-                    args, 'attention_regularization_weight', ATTENTION_REG_WEIGHT_INIT
-                ),
                 bottleneck_dim=self.low_rank_dim,
-                adj_matrix=adj_matrix,
-                adj_weight=adj_weight,
-                use_graph_bias=use_graph_bias
+                use_adj_prior=use_adj_prior,
+                use_graph_bias=use_graph_bias,
+                adj_matrix=adj_matrix
             )
         
-        # Temporal component: choose multi-scale or single-scale
+        # Spatial refinement component: choose multi-scale or single-scale
         if self.ablation == 'no_mtfm':
-            self.temporal_module = SingleScaleTemporalModule(
+            self.spatial_refinement_module = SingleScaleSpatialModule(
                 self.hidden_dim, kernel_size=self.kernel_size, dropout=dropout
             )
         else:
-            self.temporal_module = MultiScaleTemporalModule(
+            self.spatial_refinement_module = MultiScaleSpatialModule(
                 hidden_dim=self.hidden_dim,
                 num_scales=getattr(args, 'num_scales', NUM_TEMPORAL_SCALES),
                 kernel_size=self.kernel_size,
@@ -975,8 +859,8 @@ class MSAGATNet_Ablation(nn.Module):
         # Apply graph attention
         graph_features, attn_reg_loss = self.graph_attention(features)
         
-        # Process temporal patterns
-        fusion_features = self.temporal_module(graph_features)
+        # Apply multi-scale spatial refinement
+        fusion_features = self.spatial_refinement_module(graph_features)
         
         # Generate predictions
         predictions = self.prediction_module(fusion_features, x_last)
@@ -996,19 +880,25 @@ __all__ = [
     'ATTENTION_REG_WEIGHT_INIT',
     'DROPOUT',
     'NUM_TEMPORAL_SCALES',
-    'KERNEL_SIZE',                                                                                                                                         
+    'KERNEL_SIZE',
     'FEATURE_CHANNELS',
     'BOTTLENECK_DIM',
     # Building blocks
     'DepthwiseSeparableConv1D',
     'SpatialAttentionModule',
-    'MultiScaleTemporalModule',
+    'MultiScaleSpatialModule',
+    'MultiScaleTemporalModule',  # Deprecated alias for backward compatibility
     'HorizonPredictor',
     # Main models
     'MSTAGAT_Net',
     # Ablation components
     'SimpleGraphConvolutionalLayer',
-    'SingleScaleTemporalModule',
+    'SingleScaleSpatialModule',
+    'SingleScaleTemporalModule',  # Deprecated alias for backward compatibility
     'DirectPredictionModule',
     'MSAGATNet_Ablation',
 ]
+
+# Backward compatibility aliases
+MultiScaleTemporalModule = MultiScaleSpatialModule
+SingleScaleTemporalModule = SingleScaleSpatialModule
