@@ -70,21 +70,7 @@ desktop.ini
 # data/*.txt
 # data/*.csv
 
-# Old/backup folders
-reportOLD/
-save_all/*
-save/*
-save_all/MSTAGAT-Net.japan.w-20.h-3.none.pt
-logs/*
-doc/revised_comparison.md
-doc/paper/paper/elsarticle-template-num.pdf
-doc/*
-.gitignore
-src/epagat_net.py
-doc/paper/paper/elsarticle-template-num.pdf
-doc/paper/paper/elsarticle-template-num.tex
-doc/paper/paper/elsarticle-template-num.tex
-doc/paper/paper/paper.pdf
-doc/paper/paper/elsarticle-template-num.pdf
-run_all_experiments.ps1
-save_all/best_model.pt
+# Folders to exclude from publishing
+save_all/
+report/
+doc/
