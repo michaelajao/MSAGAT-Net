@@ -1,86 +1,44 @@
-# MSAGATNet: Multi-Scale Adaptive Graph Attention Network for Epidemic Forecasting
+# MSTAGAT-Net: Multi-Scale Temporal Adaptive Graph Attention Network
 
-MSAGATNet is a lightweight spatiotemporal deep learning framework specifically designed for epidemic forecasting across multiple geographical regions. The model combines efficient graph attention for spatial relationships with multi-scale temporal processing for accurate time-series forecasting.
+A lightweight spatiotemporal deep learning framework for epidemic forecasting across multiple geographical regions.
 
-![MSAGAT-Net Architecture](report/figures/msagat_net_overview.png)
+## Overview
 
-## Model Architecture
+MSTAGAT-Net combines efficient graph attention mechanisms for spatial dependencies with multi-scale temporal processing for accurate time-series forecasting. The model achieves state-of-the-art performance with only **~23.6K parameters**.
 
-MSAGATNet consists of three key components:
+## Architecture
 
-1. **Efficient Adaptive Graph Attention Module (EAGAM)**: Captures spatial dependencies between regions with linear complexity O(N) instead of quadratic O(N²)
-2. **Dilated Multi-Scale Temporal Module (DMTM)**: Processes time-series patterns at different temporal resolutions using dilated convolutions
-3. **Progressive Prediction Module (PPM)**: Enables region-aware multi-step forecasting with iterative refinement
+MSTAGAT-Net consists of three key components:
 
-## Key Features
+1. **LR-AGAM (Low-Rank Adaptive Graph Attention Module)**: Captures spatial dependencies between regions with linear complexity O(N)
+2. **MTFM (Multi-Scale Temporal Fusion Module)**: Processes temporal patterns at different resolutions using dilated convolutions
+3. **PPRM (Progressive Prediction Refinement Module)**: Enables region-aware multi-step forecasting with adaptive refinement
 
-- **Linear-time Attention Complexity**: Uses linearized attention with the ELU+1 kernel trick to achieve O(N) complexity
-- **Low-Rank Factorization**: Employs parameter-efficient factorized representations in attention and projection layers
-- **Multi-Scale Processing**: Captures temporal patterns at different resolutions with dilated convolutions
-- **Adaptive Fusion**: Automatically learns optimal weights for combining multi-scale features
-- **Regularized Graph Learning**: Incorporates L1 regularization for interpretable attention patterns
+### Key Features
 
-## Performance Highlights
+- **Linear-time Attention**: O(N) complexity using ELU+1 kernel trick
+- **Low-Rank Factorization**: Parameter-efficient representations
+- **Multi-Scale Processing**: Captures temporal patterns at multiple resolutions
+- **Adaptive Graph Learning**: Optional adjacency prior for small graphs
+- **Regularized Attention**: L1 regularization for interpretable patterns
 
-Our experiments across multiple epidemic datasets show:
-
-- **Superior Forecasting Accuracy**: Lower RMSE and MAE than state-of-the-art models across diverse datasets
-- **Strong Correlation**: Higher Pearson Correlation Coefficient (PCC) and R² scores, indicating better capture of trend dynamics
-- **Computational Efficiency**: Linear-time complexity with respect to the number of regions
-- **Parameter Efficiency**: Significantly fewer parameters than comparable models through factorization techniques
-
-![Performance Across Horizons](report/figures/RMSE_vs_horizon_w20.png)
-
-## Datasets
-
-The repository includes several epidemic datasets:
-- Japan COVID-19 dataset (`japan.txt`) with adjacency information (`japan-adj.txt`)
-- Spain COVID-19 dataset (`spain-covid.txt`) with adjacency information (`spain-adj.txt`)
-- Australia COVID-19 dataset (`australia-covid.txt`) with adjacency information (`australia-adj.txt`)
-- UK NHS regions dataset (`nhs_timeseries.txt`) with adjacency information (`nhs-adj.txt`)
-- US state-level dataset (`state360.txt`) with adjacency information (`state-adj-49.txt`, `state-adj-50.txt`)
-- US region-level dataset (`region785.txt`) with adjacency information (`region-adj.txt`)
-
-## Quick Start
-
-### Installation
+## Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/yourusername/MSAGAT-Net.git
 cd MSAGAT-Net
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-### Training
+### Requirements
+- Python 3.8+
+- PyTorch 1.9+
+- NumPy, Pandas, Scikit-learn
+- Matplotlib, Seaborn (for visualization)
 
-Train the model with optimal parameters:
+## Quick Start
 
-```bash
-python src/train.py \
-  --dataset japan \
-  --sim_mat japan-adj \
-  --window 20 \
-  --horizon 5 \
-  --hidden_dim 16 \
-  --attn_heads 8 \
-  --low_rank_dim 6 \
-  --num_scales 5 \
-  --kernel_size 3 \
-  --temp_conv_out_channels 12 \
-  --dropout 0.249 \
-  --attention_reg_weight 1e-3 \
-  --lr 0.001 \
-  --weight_decay 5e-4 \
-  --cuda \
-  --mylog
-```
-
-```bash
-python src/train.py   --dataset japan   --sim_mat japan-adj   --window 20   --horizon 5   --cuda   --seed 42   --batch 32   --epochs 1500   --lr 1e-3   --weight_decay 5e-4   --dropout 0.20   --patience 100   --lr_patience 20   --lr_factor 0.5   --attention_regularization_weight 1e-4   --num_scales 6   --kernel_size 9   --feature_channels 64   --bottleneck_dim 8
-```
+### Single Training Run
 
 ```bash
 python src/train.py \
@@ -88,373 +46,155 @@ python src/train.py \
   --sim_mat japan-adj \
   --window 20 \
   --horizon 5 \
-  --cuda \
-  --seed 42 \
-  --batch 32 \
-  --epochs 1500 \
-  --lr 1e-3 \
-  --weight_decay 5e-4 \
-  --dropout 0.20 \
-  --patience 100 \
-  --attention_heads 4 \
-  --attention_regularization_weight 1e-5 \
-  --num_scales 4 \
-  --kernel_size 3 \
-  --feature_channels 16 \
-  --bottleneck_dim 8
+  --cuda --gpu 0 \
+  --seed 42
 ```
+
+### Run All Experiments
+
+Run the complete experiment pipeline (7 datasets × 4 ablations × 5 seeds):
 
 ```bash
-python src/train.py \
-  --dataset japan \
-  --sim_mat japan-adj \
-  --window 20 \
-  --horizon 5 \
-  --train 0.5 \
-  --val   0.2 \
-  --test  0.3 \
-  --cuda \
-  --seed   42 \
-  --batch  32 \
-  --epochs 1500 \
-  --lr              1e-3 \
-  --weight_decay    5e-4 \
-  --dropout         0.20 \
-  --patience        100 \
-  --attention_heads                  4 \
-  --attention_regularization_weight  1e-5 \
-  --num_scales      4 \
-  --kernel_size     3 \
-  --feature_channels 16 \
-  --bottleneck_dim  8
+python src/run_full_pipeline.py
 ```
 
+This will:
+1. Train all model configurations
+2. Generate ablation reports
+3. Consolidate metrics
+4. Create publication-ready figures
+
+## Datasets
+
+| Dataset | Regions | Horizons | Description |
+|---------|---------|----------|-------------|
+| Japan | 47 | 3, 5, 10, 15 | COVID-19 cases by prefecture |
+| Australia | 8 | 3, 7, 14 | COVID-19 cases by state |
+| Spain | 17 | 3, 7, 14 | COVID-19 cases by region |
+| NHS | 7 | 3, 7, 14 | UK NHS regional data |
+| LTLA | 307 | 3, 7, 14 | UK local authority data |
+| US Region | 10 | 3, 5, 10, 15 | US regional influenza |
+| US State | 49 | 3, 5, 10, 15 | US state-level influenza |
+
+## Configuration
+
+All settings are centralized in `src/config.py`.
+
+### Model Hyperparameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `hidden_dim` | 32 | Hidden layer dimension |
+| `attention_heads` | 4 | Number of attention heads |
+| `num_scales` | 4 | Temporal scales in MTFM |
+| `kernel_size` | 3 | Convolution kernel size |
+| `bottleneck_dim` | 8 | Low-rank projection dimension |
+| `feature_channels` | 16 | Feature extraction channels |
+| `dropout` | 0.2 | Dropout rate |
+
+### Training Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `epochs` | 1500 | Maximum training epochs |
+| `patience` | 100 | Early stopping patience |
+| `lr` | 1e-3 | Learning rate |
+| `weight_decay` | 5e-4 | L2 regularization |
+| `batch` | 32 | Batch size |
+
+### Graph Structure Options
 
 ```bash
-python src/train.py   --dataset japan   --sim_mat japan-adj   --window 20   --horizon 5  --epochs 1500   --batch 32   --lr 0.001   --weight_decay 5e-4   --dropout 0.2   --patience 100   --hidden_dim 32   --attention_heads 4   --attention_regularization_weight 1e-5   --num_scales 4   --kernel_size 3   --feature_channels 16   --bottleneck_dim 8   --seed 42   --gpu 0   --model msagat   --use_adjacency   --save_dir save   --mylog
+# Use adjacency prior (recommended for small graphs < 20 nodes)
+python src/train.py --dataset australia-covid --use_adj_prior --cuda --gpu 0
+
+# Disable learnable graph bias (for very large graphs)
+python src/train.py --dataset ltla_timeseries --no_graph_bias --cuda --gpu 0
 ```
+
+**Optimal settings by dataset size:**
+- **Small graphs** (< 20 nodes): `--use_adj_prior` (Australia, NHS, Spain, US Region)
+- **Large graphs** (> 40 nodes): Pure learned attention (Japan, US State, LTLA)
+
+## Ablation Studies
+
+Run ablation experiments to evaluate component contributions:
 
 ```bash
-python src/train.py \
-  --dataset region785 \
-  --sim_mat region-adj \
-  --window 20 \
-  --horizon 5 \
-  --train 0.5 \
-  --val 0.2 \
-  --test 0.3 \
-  --epochs 1500 \
-  --batch 32 \
-  --lr 0.004865348445118787 \
-  --weight_decay 1.001411958893656e-05 \
-  --dropout 0.2234645558140993 \
-  --patience 100 \
-  --hidden_dim 32 \
-  --attention_heads 8 \
-  --attention_regularization_weight 3.963070437166054e-05 \
-  --num_scales 5 \
-  --kernel_size 9 \
-  --feature_channels 8 \
-  --bottleneck_dim 12 \
-  --seed 42 \
-  --gpu 0 \
-  --save_dir save \
-  --mylog
-```
-```bash
-python src/train.py \
-  --dataset japan \
-  --sim_mat japan-adj \
-  --window 20 \
-  --horizon 5 \
-  --train 0.5 \
-  --val 0.2 \
-  --test 0.3 \
-  --epochs 1500 \
-  --batch 32 \
-  --lr 0.001893 \
-  --weight_decay 6.72e-5 \
-  --dropout 0.318 \
-  --patience 100 \
-  --hidden_dim 16 \
-  --attention_heads 4 \
-  --attention_regularization_weight 3.15e-4 \
-  --num_scales 4 \
-  --kernel_size 5 \
-  --feature_channels 12 \
-  --bottleneck_dim 8 \
-  --seed 42 \
-  --gpu 0 \
-  --model msagat \
-  --use_adjacency \
-  --save_dir save \
-  --mylog
+# Full model
+python src/train.py --dataset japan --ablation none --cuda --gpu 0
+
+# Without LR-AGAM (spatial attention)
+python src/train.py --dataset japan --ablation no_agam --cuda --gpu 0
+
+# Without MTFM (multi-scale temporal)
+python src/train.py --dataset japan --ablation no_mtfm --cuda --gpu 0
+
+# Without PPRM (progressive prediction)
+python src/train.py --dataset japan --ablation no_pprm --cuda --gpu 0
 ```
 
-```bash
-python src/train.py   --dataset japan  --sim_mat japan-adj   --window 20   --horizon 3   --epochs 1500   --batch 32   --lr 0.005   --weight_decay 6.72e-5   --dropout 0.2   --patience 100   --hidden_dim 16   --attention_heads 4   --num_scales 4   --kernel_size 5   --feature_channels 12   --attention_regularization_weight 3.15e-4   --bottleneck_dim 12   --seed 42   --gpu 0   --model enhanced_msagat   --highway_window 3   --save_dir save   --mylog
-```
-
-
-
-### Prediction
-
-Generate forecasts with a trained model:
-
-```bash
-python src/predict.py \
-  --dataset japan \
-  --sim_mat japan-adj \
-  --window 20 \
-  --horizon 5 \
-  --model_path save/MSAGATNet.japan.w-20.h-5.pt \
-  --output_dir predictions
-```
-
-## Model Variants and Ablation Studies
-
-We conducted comprehensive ablation studies to evaluate the contribution of each major component to the model's performance. The ablation variants include:
-
-- **Full Model**: The complete MSAGAT-Net with all components
-- **No EAGAM**: Removes the Efficient Adaptive Graph Attention Module
-- **No DMTM**: Removes the Dilated Multi-Scale Temporal Module
-- **No PPM**: Removes the Progressive Prediction Module
-
-![Component Importance](report/figures/component_importance_comparison_w20.png)
-
-Our analysis shows that each component contributes significantly to the model's overall performance, with EAGAM showing the most substantial impact on spatial-aware forecasting accuracy.
-
-### Running Ablation Studies
-
-```bash
-# Run the full model
-python src/train_ablation.py --dataset japan --sim_mat japan-adj --window 20 --horizon 5 --ablation none
-
-# Run without Efficient Adaptive Graph Attention Module
-python src/train_ablation.py --dataset japan --sim_mat japan-adj --window 20 --horizon 5 --ablation no_eagam
-
-# Run without Dilated Multi-Scale Temporal Module
-python src/train_ablation.py --dataset japan --sim_mat japan-adj --window 20 --horizon 5 --ablation no_dmtm
-
-# Run without Progressive Prediction Module
-python src/train_ablation.py --dataset japan --sim_mat japan-adj --window 20 --horizon 5 --ablation no_ppm
-```
-
-### Analyzing Ablation Results
-
-After running ablation variants, analyze the results:
-
-```bash
-# Analyze all available ablation results automatically
-python src/analyze_ablations.py --results_dir results --figures_dir report/figures
-```
-
-This generates:
-- Comparison plots showing the impact of each ablation on model performance
-- Component importance visualizations
-- Detailed reports summarizing the findings
-
-## Hyperparameter Optimization
-
-MSAGATNet includes an Optuna-based hyperparameter optimization framework:
-
-```bash
-python src/optimize.py --dataset japan --sim-mat japan-adj --window 20 --horizon 5 --trials 100
-```
-
-The optimization process:
-1. Automatically explores different hyperparameter combinations
-2. Trains and evaluates models with early stopping
-3. Tracks metrics including RMSE, PCC, and parameter efficiency
-4. Saves detailed trial histories and best model checkpoints
-
-## Visualizing Results
-
-Generate publication-quality visualizations:
-
-```bash
-python generate_paper_visualizations.py --results_dir results --output_dir report/figures
-```
-
-This script produces:
-1. Performance comparison plots across datasets and forecast horizons
-2. Component importance visualizations showing which model parts contribute most
-
-## Key Parameters
-
-- `--dataset`: Name of the dataset (e.g., `japan`, `region785`, `state360`)
-- `--sim_mat`: Name of the adjacency matrix file (e.g., `japan-adj`)
-- `--window`: Input window size (default: `20`)
-- `--horizon`: Prediction horizon (default: `5`)
-- `--hidden_dim`: Hidden dimension size (default: `16`)
-- `--attn_heads`: Number of attention heads (default: `8`)
-- `--low_rank_dim`: Dimension for low-rank decompositions (default: `6`)
-- `--num_scales`: Number of temporal scales in multi-scale module (default: `5`)
-- `--kernel_size`: Size of temporal convolution kernel (default: `3`)
-- `--temp_conv_out_channels`: Output channels for temporal convolution (default: `12`)
-- `--dropout`: Dropout rate (default: `0.249`)
-- `--attention_reg_weight`: Weight for attention regularization (default: `1e-3`)
-- `--lr`: Learning rate (default: `0.001`)
-- `--weight_decay`: Weight decay (default: `5e-4`)
-
-## Extended Model Variants
-
-In addition to the original MSAGAT-Net architecture, we have developed and implemented several enhanced models that address specific challenges in spatiotemporal forecasting:
-
-### LocationAwareMSAGAT_Net
-
-An extension of the original model that explicitly incorporates geospatial information through a dedicated location-aware attention mechanism. This variant achieves improved performance on datasets with strong spatial dependencies.
-
-```bash
-# Train the LocationAwareMSAGAT_Net model
-python src/train.py \
-  --dataset region785 \
-  --sim_mat region-adj \
-  --window 20 \
-  --horizon 5 \
-  --model location_aware \
-  --use_adjacency \
-  --cuda \
-  --gpu 0
-```
-
-### DynaGraphNet
-
-DynaGraphNet provides dynamic graph structure learning capabilities, adaptively discovering relationships between nodes based on their feature representations rather than relying solely on predefined adjacency matrices.
-
-Key features:
-- Dynamic graph structure inference from node features
-- Unified relational attention for capturing both spatial and temporal dependencies
-- Optional autoregressive connections for small graphs with strong temporal patterns
-
-```bash
-# Train the DynaGraphNet model
-python src/train.py \
-  --dataset region785 \
-  --sim_mat region-adj \
-  --window 20 \
-  --horizon 5 \
-  --model dynagraph \
-  --cuda \
-  --gpu 0
-
-# With autoregressive connection for small graphs
-python src/train.py \
-  --dataset japan \
-  --sim_mat japan-adj \
-  --window 20 \
-  --horizon 5 \
-  --model dynagraph \
-  --autoregressive \
-  --cuda \
-  --gpu 0
-```
-
-### AFGNet (Adaptive Fusion Graph Network)
-
-AFGNet combines the strengths of both static and dynamic graph approaches through an adaptive fusion mechanism. This model is particularly effective for datasets where both predefined relationships and learned patterns contribute to forecasting accuracy.
-
-Key features:
-- Efficient feature extraction with depthwise separable convolutions
-- Dynamic graph structure inference
-- Adaptive fusion of static and dynamic graph structures
-- Multi-scale temporal pattern encoding
-- Enhanced prediction module with adaptive blending
-
-```bash
-# Train the AFGNet model
-python src/train.py \
-  --dataset japan \
-  --sim_mat japan-adj \
-  --window 20 \
-  --horizon 5 \
-  --model afgnet \
-  --cuda \
-  --gpu 0
-
-# With static adjacency matrix
-python src/train.py \
-  --dataset japan \
-  --sim_mat japan-adj \
-  --window 20 \
-  --horizon 5 \
-  --model afgnet \
-  --use_adjacency \
-  --cuda \
-  --gpu 0
-```
-
-## Model Comparison
-
-Each model variant offers unique strengths for different forecasting scenarios:
-
-1. **MSAGAT-Net (Original)**: Best for general forecasting with efficient parameter usage
-2. **LocationAwareMSAGAT_Net**: Optimal for datasets with strong geographic dependencies
-3. **DynaGraphNet**: Excels when relationships between nodes evolve over time
-4. **AFGNet**: Provides the most flexible approach by adaptively blending static and dynamic graph structures
-
-You can compare model performance across different datasets using:
-
-```bash
-# Run a comprehensive model comparison
-python compare_models.py --datasets japan,region785 --horizons 5,10,15 --output_dir report/figures
-```
-
-## Visualizing Model Outputs
-
-All model variants provide rich visualizations of their learned attention patterns, making it easier to interpret how they capture spatial relationships:
-
-```bash
-# Generate paper-quality visualizations
-python generate_paper_visualizations.py --results_dir results --output_dir report/figures
-```
-
-The visualization outputs include:
-- Learned attention/graph structures
-- Comparisons with geographic adjacency 
-- Prediction accuracy across different time horizons
-
-Check the `report/figures` directory for generated visualizations after training.
-
-## Extended Project Structure
-
-With the addition of the new models, the project structure has been expanded:
+## Project Structure
 
 ```
 MSAGAT-Net/
-├── data/                   # Epidemic datasets and adjacency matrices
-├── optim_results/          # Hyperparameter optimization outputs
-├── report/figures/         # Generated visualizations
-├── results/                # Evaluation metrics and model comparisons
-├── save/                   # Saved model checkpoints 
-├── src/                    # Source code
-│   ├── model.py            # Original MSAGAT-Net implementation
-│   ├── location_aware_model.py  # LocationAwareMSAGAT_Net implementation
-│   ├── dynagraphatnet.py   # DynaGraphNet implementation
-│   ├── AFGNet.py           # AFGNet implementation  
-│   ├── train.py            # Unified training script for all models
-│   ├── train_ablation.py   # Ablation study script
-│   ├── analyze_ablations.py# Ablation analysis script
-│   ├── optimize.py         # Hyperparameter optimization script
-│   └── utils.py            # Utility functions
-├── tensorboard/            # TensorBoard logs
-├── compare_models.py       # Model comparison script
-└── generate_paper_visualizations.py  # Visualization script
+├── data/                    # Datasets and adjacency matrices
+├── src/
+│   ├── config.py           # Central configuration
+│   ├── model.py            # MSTAGAT-Net architecture
+│   ├── ablation.py         # Ablation model variants
+│   ├── data.py             # Data loading utilities
+│   ├── utils.py            # Helper functions
+│   ├── train.py            # Training script
+│   ├── run_experiments.py  # Batch experiment runner
+│   ├── run_full_pipeline.py # Master pipeline script
+│   ├── consolidate_metrics.py # Results aggregation
+│   └── generate_visualizations.py # Figure generation
+├── save_all/               # Saved model checkpoints
+├── report/
+│   ├── results/            # Metrics and reports
+│   └── figures/            # Generated visualizations
+├── logs/                   # Training logs
+└── tensorboard/            # TensorBoard logs
 ```
+
+## Output Files
+
+After running experiments:
+
+- **Models**: `save_all/MSTAGAT-Net.{dataset}.w-{window}.h-{horizon}.{ablation}.seed-{seed}.pt`
+- **Metrics**: `report/results/final_metrics_*.csv`
+- **Reports**: `report/results/ablation_report_*.txt`
+- **Consolidated**: `report/results/all_results.csv`, `all_ablation_summary.csv`
+- **Figures**: `report/figures/paper/` (publication-ready)
+- **Diagnostics**: `report/figures/{dataset}/` (per-dataset visualizations)
+
+## Visualization
+
+Generate publication-ready figures:
+
+```bash
+python src/generate_visualizations.py
+```
+
+Outputs include:
+- Performance vs. horizon plots
+- Ablation study bar charts
+- Component importance heatmaps
+- Attention matrix visualizations
+- Prediction comparisons
 
 ## Citation
 
-If you use this code in your research, please cite our work:
-
 ```bibtex
-@article{msagatnet2025,
-  title={MSAGATNet: Multi-Scale Adaptive Graph Attention Network for Epidemic Forecasting},
-  author={Author Names},
+@article{mstagat2026,
+  title={MSTAGAT-Net: Multi-Scale Temporal Adaptive Graph Attention Network for Epidemic Forecasting},
+  author={Your Name},
   journal={Journal Name},
-  year={2025}
+  year={2026}
 }
 ```
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License - see [LICENSE](LICENSE) for details.

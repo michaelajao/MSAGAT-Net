@@ -9,6 +9,12 @@ import pandas as pd
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
+# Import central configuration
+from config import (
+    DATASET_CONFIGS, ABLATIONS, SEEDS, DEFAULT_WINDOW, TRAIN_CONFIG,
+    get_dataset_list, ABLATION_DESCRIPTIONS
+)
+
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
@@ -21,19 +27,11 @@ SAVE_DIR = os.path.join(BASE_DIR, 'save_all')
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 TRAIN_SCRIPT = os.path.join(BASE_DIR, 'src', 'train.py')
 
-# Datasets and horizons configuration
-DATASET_CONFIGS = [
-    ('japan', 'japan-adj', [3, 5, 10, 15]),
-    ('region785', 'region-adj', [3, 5, 10, 15]),
-    ('state360', 'state-adj-49', [3, 5, 10, 15]),
-    ('australia-covid', 'australia-adj', [3, 7, 14]),
-    ('spain-covid', 'spain-adj', [3, 7, 14]),
-    ('nhs_timeseries', 'nhs-adj', [3, 7, 14]),
-    ('ltla_timeseries', 'ltla-adj', [3, 7, 14]),
-]
-ABLATIONS = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
-DEFAULT_WINDOW = 20
-DEVICE_FLAGS = ['--cuda', '--gpu', '0']
+# Device configuration (CPU for small datasets - faster than GPU overhead)
+DEVICE_FLAGS = []  # CPU mode - remove ['--cuda', '--gpu', '0'] for GPU
+
+# Get dataset list for iteration (converts dict to list of tuples)
+DATASET_LIST = get_dataset_list()
 
 # =============================================================================
 # LOGGING
@@ -76,11 +74,18 @@ def get_metric(df: pd.DataFrame, key: str) -> float:
     return float('nan')
 
 
-def find_metrics_file(dataset: str, window: int, horizon: int, ablation: str) -> Optional[str]:
-    patterns = [
-        f"final_metrics_*{dataset}*w-{window}*h-{horizon}*{ablation}.csv",
-        f"final_metrics_*{dataset}*window-{window}*horizon-{horizon}*{ablation}.csv",
-    ]
+def find_metrics_file(dataset: str, window: int, horizon: int, ablation: str, seed: int = None) -> Optional[str]:
+    """Find metrics file, optionally filtering by seed."""
+    if seed is not None:
+        patterns = [
+            f"final_metrics_*{dataset}*w-{window}*h-{horizon}*{ablation}*seed-{seed}.csv",
+            f"final_metrics_*{dataset}*window-{window}*horizon-{horizon}*{ablation}*seed-{seed}.csv",
+        ]
+    else:
+        patterns = [
+            f"final_metrics_*{dataset}*w-{window}*h-{horizon}*{ablation}.csv",
+            f"final_metrics_*{dataset}*window-{window}*horizon-{horizon}*{ablation}.csv",
+        ]
     for pat in patterns:
         matches = glob.glob(os.path.join(METRICS_DIR, pat))
         if matches:
@@ -138,13 +143,41 @@ def compute_ablation_summary(dataset: str, window: int, horizon: int) -> Optiona
 # =============================================================================
 
 def generate_ablation_report(dataset: str, window: int, horizon: int) -> Optional[str]:
+    """Generate comprehensive ablation report with metadata."""
     summary = compute_ablation_summary(dataset, window, horizon)
     if summary is None:
         return None
+    
     txt = []
-    txt.append(f"Ablation Report for {dataset} (horizon={horizon})")
-    txt.append("="*60)
+    txt.append("="*70)
+    txt.append(f"MSAGAT-Net Ablation Study Report")
+    txt.append("="*70)
+    txt.append(f"Dataset:           {dataset}")
+    txt.append(f"Window Size:       {window}")
+    txt.append(f"Prediction Horizon: {horizon}")
+    txt.append(f"Seeds Used:        {SEEDS}")
+    txt.append(f"Ablation Variants: {ABLATIONS}")
+    txt.append(f"Generated:         {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    txt.append("="*70)
+    txt.append("")
+    txt.append("PERFORMANCE SUMMARY (Averaged across seeds)")
+    txt.append("-"*70)
     txt.append(summary.to_string())
+    txt.append("")
+    txt.append("COMPONENT DESCRIPTIONS:")
+    txt.append("-"*70)
+    txt.append("  none     = Full model with all components")
+    txt.append("  no_agam  = Without Adaptive Graph Attention Module (LR-AGAM)")
+    txt.append("  no_mtfm  = Without Multi-scale Temporal Fusion Module (MTFM)")
+    txt.append("  no_pprm  = Without Progressive Prediction Refinement Module (PPRM)")
+    txt.append("")
+    txt.append("METRICS EXPLANATION:")
+    txt.append("-"*70)
+    txt.append("  *_CHANGE = Percentage change when component is removed")
+    txt.append("  Positive RMSE/MAE change = Performance degradation")
+    txt.append("  Negative PCC/R2 change   = Performance degradation")
+    txt.append("="*70)
+    
     out = os.path.join(METRICS_DIR, f"ablation_report_{dataset}.w-{window}.h-{horizon}.txt")
     try:
         with open(out, 'w') as f:
@@ -166,16 +199,31 @@ def validate_train_script() -> bool:
     return True
 
 
-def build_cmd(dataset: str, sim_mat: str, window: int, horizon: int, ablation: str) -> List[str]:
-    return [
+def build_cmd(dataset: str, sim_mat: str, window: int, horizon: int, ablation: str, seed: int) -> List[str]:
+    """Build training command with optimal settings for each dataset."""
+    # Get dataset-specific configuration
+    dataset_cfg = DATASET_CONFIGS.get(dataset, {})
+    use_adj_prior = dataset_cfg.get('use_adj_prior', False)
+    use_graph_bias = dataset_cfg.get('use_graph_bias', True)
+    
+    cmd = [
         sys.executable, TRAIN_SCRIPT,
         '--dataset', dataset,
         '--sim_mat', sim_mat,
         '--window', str(window),
         '--horizon', str(horizon),
         '--ablation', ablation,
+        '--seed', str(seed),
         '--save_dir', SAVE_DIR,
-    ] + DEVICE_FLAGS
+    ]
+    
+    # Add graph structure options based on dataset config
+    if use_adj_prior:
+        cmd.append('--use_adj_prior')
+    if not use_graph_bias:
+        cmd.append('--no_graph_bias')
+    
+    return cmd + DEVICE_FLAGS
 
 
 def run_train(cmd: List[str]) -> bool:
@@ -189,17 +237,33 @@ def run_train(cmd: List[str]) -> bool:
 
 
 def run_all_experiments():
+    """Run all experiments across datasets, horizons, ablations, and seeds."""
     if not validate_train_script():
         return
     ensure_dir(SAVE_DIR)
-    for dataset, sim_mat, horizons in DATASET_CONFIGS:
+    
+    total_experiments = sum(len(cfg['horizons']) for cfg in DATASET_CONFIGS.values()) * len(ABLATIONS) * len(SEEDS)
+    completed = 0
+    
+    logger.info(f"Total experiments to run: {total_experiments}")
+    logger.info(f"Datasets: {len(DATASET_CONFIGS)}, Ablations: {len(ABLATIONS)}, Seeds: {len(SEEDS)}")
+    
+    for dataset, sim_mat, horizons in DATASET_LIST:
         for h in horizons:
             for abl in ABLATIONS:
-                if find_metrics_file(dataset, DEFAULT_WINDOW, h, abl):
-                    logger.info(f"Skipping existing: {dataset} h={h} ab={abl}")
-                    continue
-                cmd = build_cmd(dataset, sim_mat, DEFAULT_WINDOW, h, abl)
-                run_train(cmd)
+                for seed in SEEDS:
+                    # Check if this specific seed's results exist
+                    if find_metrics_file(dataset, DEFAULT_WINDOW, h, abl, seed):
+                        logger.info(f"Skipping existing: {dataset} h={h} abl={abl} seed={seed}")
+                        completed += 1
+                        continue
+                    
+                    logger.info(f"Progress: {completed}/{total_experiments} - Running: {dataset} h={h} abl={abl} seed={seed}")
+                    cmd = build_cmd(dataset, sim_mat, DEFAULT_WINDOW, h, abl, seed)
+                    success = run_train(cmd)
+                    if success:
+                        completed += 1
+                    logger.info(f"Completed: {completed}/{total_experiments}")
 
 # =============================================================================
 # MAIN
@@ -208,9 +272,20 @@ def run_all_experiments():
 if __name__ == '__main__':
     # Run training
     run_all_experiments()
+    
     # Generate summaries and reports
-    for dataset, _, horizons in DATASET_CONFIGS:
+    for dataset, _, horizons in DATASET_LIST:
         for h in horizons:
             generate_ablation_report(dataset, DEFAULT_WINDOW, h)
+    
     logger.info("All experiments complete.")
-
+    
+    # Consolidate metrics
+    logger.info("Consolidating metrics...")
+    try:
+        import subprocess
+        consolidate_script = os.path.join(SCRIPT_DIR, 'consolidate_metrics.py')
+        subprocess.run([sys.executable, consolidate_script], check=True)
+        logger.info("Metrics consolidated successfully")
+    except Exception as e:
+        logger.error(f"Failed to consolidate metrics: {e}")

@@ -30,15 +30,21 @@ class SpatialAttentionModule(nn.Module):
         attention_heads (int): Number of parallel attention heads
         attention_regularization_weight (float): Weight for L1 regularization on attention
         bottleneck_dim (int): Dimension of the low-rank projection
+        use_adj_prior (bool): Whether to use adjacency matrix as prior for attention
+        use_graph_bias (bool): Whether to use learnable graph structure bias
+        adj_matrix (tensor, optional): Predefined adjacency matrix [num_nodes, num_nodes]
     """
     def __init__(self, hidden_dim, num_nodes, dropout=DROPOUT, attention_heads=ATTENTION_HEADS, 
-                 attention_regularization_weight=ATTENTION_REG_WEIGHT_INIT, bottleneck_dim=BOTTLENECK_DIM):
+                 attention_regularization_weight=ATTENTION_REG_WEIGHT_INIT, bottleneck_dim=BOTTLENECK_DIM,
+                 use_adj_prior=False, use_graph_bias=True, adj_matrix=None):
         super(SpatialAttentionModule, self).__init__()
         self.hidden_dim = hidden_dim
         self.heads = attention_heads
         self.head_dim = hidden_dim // self.heads
         self.num_nodes = num_nodes
         self.bottleneck_dim = bottleneck_dim
+        self.use_adj_prior = use_adj_prior
+        self.use_graph_bias = use_graph_bias
 
         # Make attention regularization weight a learnable parameter (log-domain for positivity)
         self.log_attention_reg_weight = nn.Parameter(torch.tensor(math.log(attention_regularization_weight), dtype=torch.float32))
@@ -53,11 +59,20 @@ class SpatialAttentionModule(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-        # Learnable graph structure bias (low-rank)
-        self.u = Parameter(torch.Tensor(self.heads, num_nodes, bottleneck_dim))
-        self.v = Parameter(torch.Tensor(self.heads, bottleneck_dim, num_nodes))
-        nn.init.xavier_uniform_(self.u)
-        nn.init.xavier_uniform_(self.v)
+        # Learnable graph structure bias (low-rank) - only if use_graph_bias is True
+        if self.use_graph_bias:
+            self.u = Parameter(torch.Tensor(self.heads, num_nodes, bottleneck_dim))
+            self.v = Parameter(torch.Tensor(self.heads, bottleneck_dim, num_nodes))
+            nn.init.xavier_uniform_(self.u)
+            nn.init.xavier_uniform_(self.v)
+        
+        # Register adjacency matrix as buffer if using adj_prior
+        if self.use_adj_prior and adj_matrix is not None:
+            # Normalize adjacency matrix and expand for heads
+            adj_norm = adj_matrix / (adj_matrix.sum(dim=-1, keepdim=True) + 1e-8)
+            self.register_buffer('adj_prior', adj_norm.unsqueeze(0).expand(self.heads, -1, -1).clone())
+        else:
+            self.register_buffer('adj_prior', None)
 
     def _compute_attention(self, q, k, v):
         """
@@ -112,11 +127,21 @@ class SpatialAttentionModule(nn.Module):
         # Compute attended values
         output = self._compute_attention(q, k, v)
         
-        # Compute graph structure bias from low-rank factors
-        adj_bias = torch.matmul(self.u, self.v)
+        # Compute attention scores
+        attn_scores = torch.einsum('bhnd,bhmd->bhnm', q, k) / math.sqrt(self.head_dim)
         
-        # Calculate attention scores with graph bias
-        self.attn = F.softmax(torch.einsum('bhnd,bhmd->bhnm', q, k) / math.sqrt(self.head_dim) + adj_bias, dim=-1)
+        # Add graph structure bias if enabled
+        if self.use_graph_bias:
+            adj_bias = torch.matmul(self.u, self.v)
+            attn_scores = attn_scores + adj_bias
+        
+        # Add adjacency prior if enabled
+        if self.use_adj_prior and self.adj_prior is not None:
+            # Scale adjacency prior contribution
+            attn_scores = attn_scores + self.adj_prior.unsqueeze(0) * 0.5
+        
+        # Apply softmax to get attention weights
+        self.attn = F.softmax(attn_scores, dim=-1)
         
         # Compute regularization loss on attention weights using learned parameter
         attention_reg_weight = torch.exp(self.log_attention_reg_weight)
@@ -358,20 +383,30 @@ class MSTAGAT_Net(nn.Module):
         self.hidden_dim = getattr(args, 'hidden_dim', HIDDEN_DIM)
         self.kernel_size = getattr(args, 'kernel_size', KERNEL_SIZE)
         self.bottleneck_dim = getattr(args, 'bottleneck_dim', BOTTLENECK_DIM)
+        
+        # Graph structure options
+        self.use_adj_prior = getattr(args, 'use_adj_prior', False)
+        self.use_graph_bias = getattr(args, 'use_graph_bias', True)
+        
+        # Get adjacency matrix if available
+        adj_matrix = getattr(data, 'adj', None)
+        if adj_matrix is not None and not isinstance(adj_matrix, torch.Tensor):
+            adj_matrix = torch.tensor(adj_matrix, dtype=torch.float32)
 
         # Feature Extraction Component
         # ----------------------------
         # Extract features from raw time series using depthwise separable convolutions
+        self.feature_channels = getattr(args, 'feature_channels', FEATURE_CHANNELS)
         self.feature_extractor = DepthwiseSeparableConv1D(
             in_channels=1, 
-            out_channels=FEATURE_CHANNELS,
+            out_channels=self.feature_channels,
             kernel_size=self.kernel_size, 
             padding=self.kernel_size // 2,
             dropout=getattr(args, 'dropout', DROPOUT)
         )
 
         # Low-rank projection of extracted features
-        self.feature_projection_low = nn.Linear(FEATURE_CHANNELS * self.window, self.bottleneck_dim)
+        self.feature_projection_low = nn.Linear(self.feature_channels * self.window, self.bottleneck_dim)
         self.feature_projection_high = nn.Linear(self.bottleneck_dim, self.hidden_dim)
         self.feature_norm = nn.LayerNorm(self.hidden_dim)
         self.feature_act = nn.ReLU()
@@ -383,7 +418,10 @@ class MSTAGAT_Net(nn.Module):
             self.hidden_dim, num_nodes=self.num_nodes,
             dropout=getattr(args, 'dropout', DROPOUT),
             attention_heads=getattr(args, 'attention_heads', ATTENTION_HEADS),
-            bottleneck_dim=self.bottleneck_dim
+            bottleneck_dim=self.bottleneck_dim,
+            use_adj_prior=self.use_adj_prior,
+            use_graph_bias=self.use_graph_bias,
+            adj_matrix=adj_matrix
         )
 
         # Temporal Component

@@ -19,20 +19,22 @@ from data import DataBasicLoader
 from ablation import MSAGATNet_Ablation
 from model import MSTAGAT_Net
 from utils import visualize_matrices, visualize_predictions, plot_loss_curves, save_metrics, peak_error
+from config import FIRST_SEED, TRAIN_CONFIG, DATASET_CONFIGS
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
 
 # Determine project root and output directories
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FIGURES_DIR = os.path.join(BASE_DIR, 'report', 'figures')
+FIGURES_BASE_DIR = os.path.join(BASE_DIR, 'report', 'figures')
 RESULTS_DIR = os.path.join(BASE_DIR, 'report', 'results')
-os.makedirs(FIGURES_DIR, exist_ok=True)
+os.makedirs(FIGURES_BASE_DIR, exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', type=str, default='region785')
-parser.add_argument('--sim_mat', type=str, default='region-adj')
+parser.add_argument('--sim_mat', type=str, default=None,
+                    help='Adjacency/similarity matrix name (without .txt). If omitted, uses dataset default from config.')
 parser.add_argument('--window', type=int, default=20)
 parser.add_argument('--horizon', type=int, default=5)
 parser.add_argument('--train', type=float, default=0.5)
@@ -57,17 +59,55 @@ parser.add_argument('--result', type=int, default=0)
 parser.add_argument('--record', type=str, default='')
 # New argument: starting date for forecast visualization (assume weekly frequency)
 parser.add_argument('--start_date', type=str, default='2020-01-01', help='Start date for forecast visualization')
+
+# Model architecture parameters
+parser.add_argument('--num_scales', type=int, default=4,
+                   help='Number of temporal scales for multi-scale processing (default: 4)')
+parser.add_argument('--kernel_size', type=int, default=3,
+                   help='Base kernel size for temporal convolutions (default: 3)')
+parser.add_argument('--feature_channels', type=int, default=16,
+                   help='Number of feature channels in hidden layers (default: 16)')
+parser.add_argument('--bottleneck_dim', type=int, default=8,
+                   help='Bottleneck dimension for low-rank attention (default: 8)')
+parser.add_argument('--attention_heads', type=int, default=4,
+                   help='Number of attention heads (default: 4)')
+parser.add_argument('--attention_regularization_weight', type=float, default=1e-5,
+                   help='Weight for attention regularization loss (default: 1e-5)')
+
+# Graph structure options
+parser.add_argument('--use_adj_prior', action='store_true', default=False,
+                   help='Use adjacency matrix as prior for attention (better for small graphs)')
+parser.add_argument('--use_graph_bias', action='store_true', default=True,
+                   help='Use learnable graph structure bias')
+parser.add_argument('--no_graph_bias', action='store_true', default=False,
+                   help='Disable learnable graph structure bias')
+
 # Add ablation parameter
 parser.add_argument('--ablation', type=str, default='none', 
                    choices=['none', 'no_agam', 'no_mtfm', 'no_pprm'],
                    help='Ablation study type: none, no_agam (LR‑AGAM: Low-rank Adaptive Graph Attention Module), no_mtfm (MTFM: Multi-scale Temporal Feature Module), no_pprm (PPRM: Progressive Multi-step Prediction Refinement Module)')
 args = parser.parse_args()
+
+# Fill dataset-specific defaults (only when user did not provide the flag)
+if args.sim_mat is None:
+    dataset_cfg = DATASET_CONFIGS.get(args.dataset, {})
+    args.sim_mat = dataset_cfg.get('sim_mat', 'region-adj')
+
+# Handle graph bias flag (--no_graph_bias overrides --use_graph_bias)
+if args.no_graph_bias:
+    args.use_graph_bias = False
+
 print('--------Parameters--------')
 print(args)
 print('--------------------------')
 
 if args.gpu is not None:
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
+    # If we restrict visibility to a single physical GPU via CUDA_VISIBLE_DEVICES,
+    # that GPU becomes visible as cuda:0 inside this process. In that case,
+    # calling torch.cuda.set_device(original_id) would raise "invalid device ordinal".
+    requested_gpu = int(args.gpu)
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(requested_gpu)
+    args.gpu = 0
 else:
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -80,12 +120,20 @@ torch.backends.cudnn.deterministic = True
 # Only enable CUDA if requested, a GPU id is provided, and CUDA is available
 args.cuda = args.cuda and (args.gpu is not None) and torch.cuda.is_available()
 if args.cuda:
+    visible_gpu_count = torch.cuda.device_count()
+    if visible_gpu_count < 1:
+        logger.warning('CUDA requested but no visible GPUs; falling back to CPU')
+        args.cuda = False
+    elif args.gpu >= visible_gpu_count:
+        logger.warning('Requested GPU id %s out of range (visible=%s); using cuda:0', args.gpu, visible_gpu_count)
+        args.gpu = 0
+if args.cuda:
     torch.cuda.set_device(args.gpu)
 logger.info('cuda %s', args.cuda)
 
 # Define model name and logging token for ablation
 model_name = 'MSTAGAT-Net'
-log_token = f"{model_name}.{args.dataset}.w-{args.window}.h-{args.horizon}.{args.ablation}"
+log_token = f"{model_name}.{args.dataset}.w-{args.window}.h-{args.horizon}.{args.ablation}.seed-{args.seed}"
 
 if args.mylog:
     tensorboard_log_dir = os.path.join('tensorboard', log_token)
@@ -267,23 +315,30 @@ for epoch in range(1, args.epochs + 1):
     if bad_counter == args.patience:
         break
 
-# Plot and save the enhanced loss curves
-loss_fig_path = os.path.join(FIGURES_DIR, f"loss_curve_{log_token}.png")
-plot_loss_curves(train_losses, val_losses, loss_fig_path, args)
-logger.info("Loss curve saved to %s", loss_fig_path)
-
-# Visualize matrices: Geolocation, Input Correlation, and Learned Attention
-matrices_fig_path = os.path.join(FIGURES_DIR, f"matrices_{log_token}.png")
-visualize_matrices(data_loader, model, matrices_fig_path, device)
-logger.info("Matrices comparison figure saved to %s", matrices_fig_path)
-
-# Visualize predictions
-
-# Evaluate on test set to get predictions for visualization
-_, _, _, _, _, _, _, _, _, _, _, _, _, y_true_test, y_pred_test = evaluate(data_loader, data_loader.test, tag='test')
-predictions_fig_path = os.path.join(FIGURES_DIR, f"predictions_{log_token}.png")
-visualize_predictions(y_true_test, y_pred_test, predictions_fig_path, logger=logger)
-logger.info("Predictions figure saved to %s", predictions_fig_path)
+# Only generate visualizations for the first seed to avoid too many files
+if args.seed == FIRST_SEED:
+    # Create dataset-specific figures directory
+    FIGURES_DIR = os.path.join(FIGURES_BASE_DIR, args.dataset)
+    os.makedirs(FIGURES_DIR, exist_ok=True)
+    
+    # Plot and save the enhanced loss curves
+    loss_fig_path = os.path.join(FIGURES_DIR, f"loss_curve_{log_token}.png")
+    plot_loss_curves(train_losses, val_losses, loss_fig_path, args)
+    logger.info("Loss curve saved to %s", loss_fig_path)
+    
+    # Visualize matrices: Geolocation, Input Correlation, and Learned Attention
+    matrices_fig_path = os.path.join(FIGURES_DIR, f"matrices_{log_token}.png")
+    visualize_matrices(data_loader, model, matrices_fig_path, device)
+    logger.info("Matrices comparison figure saved to %s", matrices_fig_path)
+    
+    # Visualize predictions
+    # Evaluate on test set to get predictions for visualization
+    _, _, _, _, _, _, _, _, _, _, _, _, _, y_true_test, y_pred_test = evaluate(data_loader, data_loader.test, tag='test')
+    predictions_fig_path = os.path.join(FIGURES_DIR, f"predictions_{log_token}.png")
+    visualize_predictions(y_true_test, y_pred_test, predictions_fig_path, logger=logger)
+    logger.info("Predictions figure saved to %s", predictions_fig_path)
+else:
+    logger.info("Skipping visualization generation (seed %d != first seed %d)", args.seed, FIRST_SEED)
 
 # Load the best model for final evaluation and print final metrics
 model.load_state_dict(torch.load(os.path.join(args.save_dir, f"{log_token}.pt"), map_location='cpu'))
