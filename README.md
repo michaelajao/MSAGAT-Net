@@ -37,10 +37,10 @@ MSAGAT-Net integrates four core components:
 - **Novel graph bias message passing**: Learnable spatial structure (U⊗V) integrated directly into forward computation
 - Multi-head attention with learnable L1 regularization for sparsity
 
-### 3. **Multi-Scale Temporal Feature Module (MTFM)**
-- Parallel dilated convolutions at 3 scales (dilation rates: 1, 2, 4)
+### 3. **Multi-Scale Spatial Feature Module (MSSFM)**
+- Parallel dilated convolutions at 4 scales (dilation rates: 1, 2, 4, 8)
 - Adaptive scale fusion with learnable weights
-- Captures short-term fluctuations and long-term trends simultaneously
+- Captures local and global spatial dependencies between nodes
 
 ### 4. **Progressive Prediction Refinement Module (PPRM)**
 - Stabilises multi-horizon forecasts by combining model predictions with trend extrapolation
@@ -98,23 +98,13 @@ pip install numpy pandas scipy scikit-learn matplotlib seaborn optuna tensorboar
 ### 1. Train Single Model
 
 ```bash
-python src/scripts/train.py \
+python -m src.scripts.experiments \
+  --single \
   --dataset japan \
-  --sim_mat japan-adj \
-  --window 20 \
   --horizon 5 \
-  --model msagat \
-  --hidden_dim 32 \
-  --attention_heads 4 \
-  --bottleneck_dim 8 \
-  --num_scales 3 \
-  --epochs 1500 \
-  --batch 32 \
-  --lr 1e-3 \
-  --patience 100 \
-  --cuda --gpu 0 \
-  --save_dir save_all \
-  --mylog
+  --seed 42 \
+  --ablation none \
+  --save_dir save_all
 ```
 
 **Key arguments:**
@@ -128,16 +118,16 @@ python src/scripts/train.py \
 
 ```bash
 # Full model
-python src/scripts/train.py --dataset japan --ablation none --horizon 3
+python -m src.scripts.experiments --single --dataset japan --ablation none --horizon 3 --seed 42
 
 # Without AGAM (spatial attention)
-python src/scripts/train.py --dataset japan --ablation no_agam --horizon 3
+python -m src.scripts.experiments --single --dataset japan --ablation no_agam --horizon 3 --seed 42
 
-# Without MTFM (multi-scale temporal)
-python src/scripts/train.py --dataset japan --ablation no_mtfm --horizon 3
+# Without MTFM (multi-scale spatial)
+python -m src.scripts.experiments --single --dataset japan --ablation no_mtfm --horizon 3 --seed 42
 
 # Without PPRM (progressive refinement)
-python src/scripts/train.py --dataset japan --ablation no_pprm --horizon 3
+python -m src.scripts.experiments --single --dataset japan --ablation no_pprm --horizon 3 --seed 42
 ```
 
 ### 3. Batch Experiments
@@ -145,18 +135,21 @@ python src/scripts/train.py --dataset japan --ablation no_pprm --horizon 3
 Run comprehensive experiments across all datasets, horizons, and ablations:
 
 ```bash
-python src/scripts/run_experiments.py
+python -m src.scripts.experiments
 ```
 
-This executes **~500 training runs** (7 datasets × multiple horizons × 4 ablations × 5 random seeds) and automatically skips completed experiments.
+This executes **~200 training runs** (7 datasets × multiple horizons × 4 ablations × seeds) and automatically saves results.
 
-**Filtering options:****
+**Filtering options:**
 ```bash
 # Run only specific datasets
-python src/scripts/run_experiments.py --datasets japan ltla_timeseries
+python -m src.scripts.experiments --datasets japan ltla_timeseries
 
-# Run only specific ablations
-python src/scripts/run_experiments.py --ablations none no_agam
+# Run only main experiments (no ablations)
+python -m src.scripts.experiments --experiment main
+
+# Run only ablation studies
+python -m src.scripts.experiments --experiment ablation
 ```
 
 ### 4. Generate Figures
@@ -164,9 +157,7 @@ python src/scripts/run_experiments.py --ablations none no_agam
 Create publication-ready visualizations:
 
 ```bash
-conda activate dl_env
-cd src/scripts
-python generate_figures.py
+python -m src.scripts.generate_figures
 ```
 
 Generates comprehensive analysis visualizations including performance comparisons, ablation studies, and component importance heatmaps.
@@ -186,18 +177,17 @@ MSAGAT-Net/
 │   ├── data.py                    # DataLoader, preprocessing, train/val/test splits
 │   ├── training.py                # Training loop, early stopping, checkpointing
 │   ├── utils.py                   # Metrics (RMSE, MAE, PCC, R²)
+│   ├── optimize.py                # Hyperparameter optimization with Optuna
 │   └── scripts/
-│       ├── train.py               # Single experiment training script
-│       ├── run_experiments.py     # Batch experiment runner
+│       ├── experiments.py         # Single & batch experiment runner
 │       ├── aggregate_results.py   # Consolidate results across runs
 │       └── generate_figures.py    # Publication figure generation
-├── save_all/                      # Trained model checkpoints (.pt files)
-├── report/
+├── run_all_experiments.ps1        # PowerShell script for all experiments
+├── save_all/                      # Trained model checkpoints (.pt files) [gitignored]
+├── report/                        # Results and figures [gitignored]
 │   ├── results/                   # Per-dataset aggregated results
-│   │   ├── japan/
-│   │   │   ├── all_results.csv           # All runs (seed-level)
-│   │   │   └── all_ablation_summary.csv  # Mean across seeds
-│   │   └── ...
+│   │   └── {dataset}/
+│   │       └── all_results.csv    # All runs with metrics
 │   └── figures/paper/             # Generated publication figures (.png)
 └── README.md                      # This file
 ```
@@ -213,7 +203,7 @@ MSAGAT-Net/
 | `hidden_dim` | 32 | Hidden feature dimension |
 | `attention_heads` | 4 | Number of attention heads |
 | `bottleneck_dim` | 8 | Low-rank projection bottleneck |
-| `num_scales` | 3 | Temporal scales (dilations: 1,2,4) |
+| `num_scales` | 4 | Spatial scales (dilations: 1,2,4,8) |
 | `kernel_size` | 3 | Convolution kernel size |
 | `feature_channels` | 16 | Feature extractor output channels |
 | `dropout` | 0.2 | Dropout probability |
