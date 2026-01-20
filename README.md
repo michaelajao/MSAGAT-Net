@@ -8,22 +8,6 @@ A computationally efficient spatiotemporal deep learning framework for epidemic 
 
 ---
 
-## 📖 Overview
-
-MSAGAT-Net addresses three fundamental challenges in spatiotemporal epidemic forecasting:
-1. **Computational scalability** - Quadratic O(N²) attention complexity limits real-world deployment
-2. **Multi-scale temporal dynamics** - Epidemics exhibit patterns from daily fluctuations to seasonal waves  
-3. **Multi-horizon forecast stability** - Error accumulation degrades long-range predictions
-
-**Key Innovation**: Reduces graph attention complexity from **O(N²) to O(N)** using linearised attention with low-rank projections, enabling real-time surveillance across thousands of regions.
-
-### Publication
-
-**MSAGAT-Net: Multi-Scale Temporal Adaptive Graph Attention for Efficient Spatiotemporal Epidemic Forecasting**  
-*Under Review, 2026*
-
----
-
 ## 🏗️ Architecture
 
 MSAGAT-Net integrates four core components:
