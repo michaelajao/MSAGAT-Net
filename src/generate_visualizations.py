@@ -186,7 +186,7 @@ def fig_ablation_study():
     """Create bar charts showing ablation study results."""
     setup_style()
     ablation_colors = {'none': '#0173B2', 'no_agam': '#DE8F05', 'no_mtfm': '#029E73', 'no_pprm': '#D55E00'}
-    ablation_labels = {'none': 'Full Model', 'no_agam': 'w/o AGAM', 'no_mtfm': 'w/o MTFM', 'no_pprm': 'w/o PPRM'}
+    ablation_labels = {'none': 'Full Model', 'no_agam': 'w/o AGAM', 'no_mtfm': 'w/o MSSFM', 'no_pprm': 'w/o PPRM'}
     
     for ds, horizons in DATASET_CONFIGS:
         for h in horizons:
@@ -319,7 +319,7 @@ def fig_component_impact():
             continue
         df = pd.DataFrame(data)
         fig, ax = plt.subplots(figsize=(8, 5))
-        comp_colors = {'AGAM': '#0173B2', 'MTFM': '#DE8F05', 'PPRM': '#029E73'}
+        comp_colors = {'AGAM': '#0173B2', 'MSSFM': '#DE8F05', 'PPRM': '#029E73'}
         x = np.arange(len(df['Horizon'].unique()))
         width = 0.25
         horizons_list = df['Horizon'].unique()

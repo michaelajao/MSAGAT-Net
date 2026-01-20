@@ -75,7 +75,25 @@ def get_metric(df: pd.DataFrame, key: str) -> float:
 
 
 def find_metrics_file(dataset: str, window: int, horizon: int, ablation: str, seed: int = None) -> Optional[str]:
-    """Find metrics file, optionally filtering by seed."""
+    """Find metrics file, optionally filtering by seed.
+    
+    Supports both old and new naming conventions:
+    - Old: report/results/final_metrics_MSTAGAT-Net.{dataset}.w-{window}.h-{horizon}.{ablation}.seed-{seed}.csv
+    - New: report/results/{dataset}/w-{window}.h-{horizon}.{ablation}.seed-{seed}.csv
+    """
+    # New pattern (organized by dataset folder)
+    dataset_dir = os.path.join(METRICS_DIR, dataset)
+    if seed is not None:
+        new_pattern = os.path.join(dataset_dir, f"w-{window}.h-{horizon}.{ablation}.seed-{seed}.csv")
+        if os.path.exists(new_pattern):
+            return new_pattern
+    else:
+        new_pattern = os.path.join(dataset_dir, f"w-{window}.h-{horizon}.{ablation}.*.csv")
+        matches = glob.glob(new_pattern)
+        if matches:
+            return matches[0]
+    
+    # Old pattern (fallback)
     if seed is not None:
         patterns = [
             f"final_metrics_*{dataset}*w-{window}*h-{horizon}*{ablation}*seed-{seed}.csv",
@@ -168,7 +186,7 @@ def generate_ablation_report(dataset: str, window: int, horizon: int) -> Optiona
     txt.append("-"*70)
     txt.append("  none     = Full model with all components")
     txt.append("  no_agam  = Without Adaptive Graph Attention Module (LR-AGAM)")
-    txt.append("  no_mtfm  = Without Multi-scale Temporal Fusion Module (MTFM)")
+    txt.append("  no_mtfm  = Without Multi-Scale Spatial Feature Module (MSSFM)")
     txt.append("  no_pprm  = Without Progressive Prediction Refinement Module (PPRM)")
     txt.append("")
     txt.append("METRICS EXPLANATION:")

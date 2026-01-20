@@ -28,11 +28,19 @@ def normalize(name: str) -> str:
     return name.strip().lower().replace('-', '').replace('_', '')
 
 
-def extract_metadata_from_filename(filename: str) -> Dict:
-    """Extract metadata from filename pattern."""
-    # Example: final_metrics_MSTAGAT-Net.japan.w-20.h-5.none.seed-42.csv
+def extract_metadata_from_filename(filename: str, dataset: str = None) -> Dict:
+    """Extract metadata from filename pattern.
+    
+    Supports both old and new naming formats:
+    - Old: final_metrics_MSTAGAT-Net.japan.w-20.h-5.none.seed-42.csv
+    - New: w-20.h-5.none.seed-42.csv (with dataset from folder)
+    """
     parts = filename.replace('.csv', '').split('.')
     metadata = {}
+    
+    # If dataset provided from folder structure, use it
+    if dataset:
+        metadata['dataset'] = dataset
     
     for part in parts:
         if part.startswith('w-'):
@@ -43,8 +51,8 @@ def extract_metadata_from_filename(filename: str) -> Dict:
             metadata['seed'] = int(part.split('-')[1])
         elif part in ABLATIONS:
             metadata['ablation'] = part
-        elif part in DATASET_LIST or any(ds in part for ds in DATASET_LIST):
-            # Extract dataset name
+        elif not dataset and (part in DATASET_LIST or any(ds in part for ds in DATASET_LIST)):
+            # Extract dataset name from filename if not provided
             for ds in DATASET_LIST:
                 if ds in part:
                     metadata['dataset'] = ds
@@ -57,17 +65,27 @@ def load_and_consolidate_results() -> pd.DataFrame:
     """Load all individual metrics CSV files and consolidate them."""
     all_records = []
     
-    # Find all final_metrics CSV files
-    pattern = os.path.join(METRICS_DIR, 'final_metrics_*.csv')
-    csv_files = glob.glob(pattern)
+    # Search in both old location (root) and new location (dataset subfolders)
+    csv_files = []
+    
+    # Old pattern: final_metrics_*.csv in root
+    old_pattern = os.path.join(METRICS_DIR, 'final_metrics_*.csv')
+    csv_files.extend([(f, None) for f in glob.glob(old_pattern)])
+    
+    # New pattern: *.csv in dataset subfolders
+    for dataset in DATASET_LIST:
+        dataset_dir = os.path.join(METRICS_DIR, dataset)
+        if os.path.isdir(dataset_dir):
+            new_pattern = os.path.join(dataset_dir, 'w-*.csv')
+            csv_files.extend([(f, dataset) for f in glob.glob(new_pattern)])
     
     print(f"Found {len(csv_files)} metrics files")
     
-    for csv_file in csv_files:
+    for csv_file, dataset_from_folder in csv_files:
         try:
             # Extract metadata from filename
             basename = os.path.basename(csv_file)
-            metadata = extract_metadata_from_filename(basename)
+            metadata = extract_metadata_from_filename(basename, dataset_from_folder)
             
             # Skip if metadata incomplete
             if not all(k in metadata for k in ['dataset', 'window', 'horizon', 'ablation']):
@@ -186,6 +204,30 @@ def compute_ablation_summaries(df_all: pd.DataFrame) -> pd.DataFrame:
     return df_summary
 
 
+def save_dataframe_as_txt(df: pd.DataFrame, txt_path: str, title: str = "Results"):
+    """Save a DataFrame as a human-readable TXT file."""
+    with open(txt_path, 'w') as f:
+        f.write("=" * 80 + "\n")
+        f.write(f"{title}\n")
+        f.write("=" * 80 + "\n\n")
+        
+        # Write summary statistics
+        f.write(f"Total records: {len(df)}\n")
+        if 'dataset' in df.columns:
+            f.write(f"Datasets: {', '.join(df['dataset'].unique())}\n")
+        if 'horizon' in df.columns:
+            f.write(f"Horizons: {', '.join(map(str, sorted(df['horizon'].unique())))}\n")
+        if 'ablation' in df.columns:
+            f.write(f"Ablations: {', '.join(df['ablation'].unique())}\n")
+        f.write("\n")
+        
+        # Write full table
+        f.write("-" * 80 + "\n")
+        f.write(df.to_string(index=False))
+        f.write("\n" + "-" * 80 + "\n")
+        f.write("\n" + "=" * 80 + "\n")
+
+
 def main():
     """Main consolidation function."""
     print("=" * 60)
@@ -202,19 +244,25 @@ def main():
     
     print(f"   Consolidated {len(df_all)} records")
     
-    # Save all results
-    all_results_path = os.path.join(METRICS_DIR, 'all_results.csv')
-    df_all.to_csv(all_results_path, index=False)
-    print(f"   Saved: {all_results_path}")
+    # Save all results as CSV and TXT
+    all_results_csv = os.path.join(METRICS_DIR, 'all_results.csv')
+    all_results_txt = os.path.join(METRICS_DIR, 'all_results.txt')
+    df_all.to_csv(all_results_csv, index=False)
+    save_dataframe_as_txt(df_all, all_results_txt, "MSTAGAT-Net All Results")
+    print(f"   Saved: {all_results_csv}")
+    print(f"   Saved: {all_results_txt}")
     
     # Compute ablation summaries
     print("\n2. Computing ablation summaries...")
     df_summary = compute_ablation_summaries(df_all)
     
     if len(df_summary) > 0:
-        summary_path = os.path.join(METRICS_DIR, 'all_ablation_summary.csv')
-        df_summary.to_csv(summary_path, index=False)
-        print(f"   Saved: {summary_path}")
+        summary_csv = os.path.join(METRICS_DIR, 'all_ablation_summary.csv')
+        summary_txt = os.path.join(METRICS_DIR, 'all_ablation_summary.txt')
+        df_summary.to_csv(summary_csv, index=False)
+        save_dataframe_as_txt(df_summary, summary_txt, "MSTAGAT-Net Ablation Summary")
+        print(f"   Saved: {summary_csv}")
+        print(f"   Saved: {summary_txt}")
         print(f"   Summary has {len(df_summary)} records")
     else:
         print("   No summary data to save")
@@ -231,14 +279,18 @@ def main():
         dataset_dir = os.path.join(METRICS_DIR, dataset)
         os.makedirs(dataset_dir, exist_ok=True)
         
-        # Save dataset-specific all_results
+        # Save dataset-specific all_results (CSV and TXT)
         dataset_results = df_all[df_all['dataset'] == dataset]
-        dataset_results_path = os.path.join(dataset_dir, 'all_results.csv')
-        dataset_results.to_csv(dataset_results_path, index=False)
+        dataset_results_csv = os.path.join(dataset_dir, 'all_results.csv')
+        dataset_results_txt = os.path.join(dataset_dir, 'all_results.txt')
+        dataset_results.to_csv(dataset_results_csv, index=False)
+        save_dataframe_as_txt(dataset_results, dataset_results_txt, f"MSTAGAT-Net Results - {dataset}")
         
-        # Save dataset-specific summary
-        dataset_summary_path = os.path.join(dataset_dir, 'all_ablation_summary.csv')
-        dataset_summary.to_csv(dataset_summary_path, index=False)
+        # Save dataset-specific summary (CSV and TXT)
+        dataset_summary_csv = os.path.join(dataset_dir, 'all_ablation_summary.csv')
+        dataset_summary_txt = os.path.join(dataset_dir, 'all_ablation_summary.txt')
+        dataset_summary.to_csv(dataset_summary_csv, index=False)
+        save_dataframe_as_txt(dataset_summary, dataset_summary_txt, f"MSTAGAT-Net Ablation Summary - {dataset}")
         
         print(f"   {dataset}: {len(dataset_results)} results, {len(dataset_summary)} summary records")
     

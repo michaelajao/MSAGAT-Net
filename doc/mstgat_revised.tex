@@ -44,7 +44,7 @@
 
 % ---------- ABSTRACT ----------
 \begin{abstract}
-Spatiotemporal forecasting presents significant challenges in machine learning research, requiring models that can simultaneously capture complex spatial relationships and temporal dynamics. This problem is particularly crucial in domains such as epidemiology, where disease spread exhibits intricate patterns across both geographical regions and time periods. We present MSTGAT-Net (Multi-Scale Temporal Graph Attention Network), a novel deep learning architecture that combines adaptive graph attention mechanisms with multi-scale temporal analysis to address these challenges. The model incorporates three key innovations: (1) an Efficient Adaptive Graph Attention Module that dynamically captures evolving spatial relationships between regions with low-rank approximations, (2) a Dilated Multi-Scale Temporal Module that processes patterns at different timescales through parallel dilated convolutions, and (3) a Progressive Prediction Module that mitigates error accumulation in long-horizon forecasts. Our comprehensive ablation studies demonstrate that each component significantly contributes to the overall forecasting performance. MSTGAT-Net offers robust performance across diverse forecasting horizons while maintaining computational efficiency, making it particularly valuable for epidemiological forecasting and healthcare resource planning applications.
+Spatiotemporal forecasting presents significant challenges in machine learning research, requiring models that can simultaneously capture complex spatial relationships and temporal dynamics. This problem is particularly crucial in domains such as epidemiology, where disease spread exhibits intricate patterns across both geographical regions and time periods. We present MSTGAT-Net (Multi-Scale Temporal Graph Attention Network), a novel deep learning architecture that combines adaptive graph attention mechanisms with autoregressive prediction. The model incorporates three key components: (1) a Temporal Feature Extraction Module (TFEM) that captures temporal patterns from input time series using efficient depthwise separable convolutions, (2) a Low-rank Adaptive Graph Attention Module (LR-AGAM) that dynamically captures evolving spatial relationships between regions using efficient low-rank approximations, and (3) a GRU-based Progressive Prediction Refinement Module (PPRM) that generates multi-step forecasts autoregressively while adaptively blending with recent observations to mitigate error accumulation. Our comprehensive ablation studies demonstrate that each component significantly contributes to the overall forecasting performance. MSTGAT-Net offers robust performance across diverse forecasting horizons while maintaining computational efficiency, making it particularly valuable for epidemiological forecasting and healthcare resource planning applications.
 \end{abstract}
 
 % ---------- INDEX TERMS ----------
@@ -57,14 +57,14 @@ Deep Learning, Graph Neural Networks, Multi-head Attention, Time Series Analysis
 
 \IEEEPARstart{S}{patiotemporal} forecasting presents one of the most significant challenges in machine learning research, requiring models that can simultaneously capture complex spatial relationships and temporal dynamics. This problem is particularly crucial in domains such as epidemiology, where disease spread exhibits intricate patterns across both geographical regions and time periods. Traditional approaches often treat spatial and temporal components separately, failing to model their interdependence and leading to suboptimal predictions. Furthermore, many existing methods rely on predefined graph structures that may not accurately reflect the true underlying relationships in the data.
 
-In this paper, we introduce the Multi-Scale Temporal Graph Attention Network (MSTGAT-Net), a novel deep learning architecture specifically designed to address these limitations. MSTGAT-Net integrates several innovative components: (1) efficient feature extraction using depthwise separable convolutions, (2) adaptive graph learning through a low-rank attention mechanism, (3) multi-scale temporal modeling via dilated convolutions, and (4) horizon prediction with an adaptive refinement mechanism.
+In this paper, we introduce the Multi-Scale Temporal Graph Attention Network (MSTGAT-Net), a novel deep learning architecture specifically designed to address these limitations. MSTGAT-Net integrates three innovative components: (1) temporal feature extraction using efficient depthwise separable convolutions along the time axis, (2) adaptive graph learning through a low-rank attention mechanism for spatial dependencies, and (3) GRU-based autoregressive horizon prediction with adaptive refinement.
 
 Our contributions can be summarized as follows:
 \begin{itemize}
-    \item We propose a comprehensive end-to-end architecture that jointly models spatial dependencies and temporal dynamics at multiple scales.
-    \item We introduce a low-rank graph attention mechanism that learns and adapts spatial relationships during training without relying on a predefined adjacency matrix.
-    \item We develop a multi-scale temporal module that efficiently captures patterns across different time horizons through dilated convolutions with adaptive fusion.
-    \item We design an adaptive refinement mechanism that combines model predictions with recent observations, improving forecasting accuracy particularly during regime changes.
+    \item We propose a streamlined end-to-end architecture that processes temporal patterns through convolutional feature extraction, models spatial dependencies through attention, and generates forecasts through autoregressive prediction.
+    \item We introduce a Temporal Feature Extraction Module (TFEM) using depthwise separable convolutions that efficiently encodes temporal dynamics from each node's historical observations.
+    \item We develop a Low-rank Adaptive Graph Attention Module (LR-AGAM) that learns spatial relationships during training without relying on a predefined adjacency matrix, using efficient low-rank approximations.
+    \item We design a GRU-based Progressive Prediction Refinement Module (PPRM) that generates multi-step forecasts autoregressively while adaptively blending with learned decay extrapolations, improving forecasting accuracy particularly during regime changes.
     \item We optimize computational efficiency through strategic use of low-rank approximations and separable convolutions, enabling application to large-scale spatiotemporal forecasting problems.
 \end{itemize}
 
@@ -84,7 +84,7 @@ Recent innovations have further refined spatiotemporal modeling capabilities. Mu
 
 Despite these advances, existing models often struggle with balancing model expressiveness and computational efficiency. Many state-of-the-art architectures employ complex recurrent structures or deep convolutional networks, making them challenging to deploy in resource-constrained environments. Furthermore, most models lack mechanisms to adaptively integrate information across different temporal scales and spatial structures, limiting their effectiveness for applications where patterns may emerge at multiple granularities simultaneously.
 
-Our proposed MSTGAT-Net addresses these limitations through a carefully designed architecture that combines adaptive graph attention with multi-scale temporal fusion and progressive prediction refinement. This integrated approach achieves state-of-the-art performance while maintaining computational efficiency.
+Our proposed MSTGAT-Net addresses these limitations through a carefully designed architecture that combines adaptive graph attention with multi-scale spatial feature fusion and progressive prediction refinement. This integrated approach achieves state-of-the-art performance while maintaining computational efficiency.
 
 % ---------- SECTION III: PROBLEM FORMULATION ----------
 \section{Problem Formulation}
@@ -131,69 +131,58 @@ MSTGAT-Net is designed as a modular, end-to-end deep learning architecture speci
 
 \begin{figure}[ht]
 \centering
-\begin{tikzpicture}[node distance=1.5cm and 3cm, >=Latex, 
+\begin{tikzpicture}[node distance=1.8cm and 3cm, >=Latex, 
     module/.style={rectangle, draw, thick, text centered, rounded corners, minimum height=1.2cm, text width=3cm, fill=blue!10},
     input/.style={rectangle, draw, thick, text centered, minimum height=0.8cm, text width=2.5cm},
     output/.style={rectangle, draw, thick, text centered, minimum height=0.8cm, text width=2.5cm},
     point/.style={coordinate}]
 
     \node (input) [input] {Input Data $\mathbf{X}$}; 
-    \node (feat_ext) [module, below=of input] {Feature Extraction Module};
-    \node (spatial) [module, below=of feat_ext] {Spatial Dependency Module};
-    \node (temporal) [module, below=of spatial] {Multi-Scale Temporal Module};
-    \node (predict) [module, below=of temporal] {Horizon Prediction Module};
+    \node (feat_ext) [module, below=of input] {TFEM\\(Temporal Features)};
+    \node (spatial) [module, below=of feat_ext] {LR-AGAM\\(Spatial Attention)};
+    \node (predict) [module, below=of spatial] {PPRM (GRU)\\(Autoregressive Pred.)};
     \node (output) [output, below=of predict] {Output $\hat{\mathbf{Y}}$};
     
     % Main flow
     \draw [->, thick] (input) -- (feat_ext);
     \draw [->, thick] (feat_ext) -- (spatial);
-    \draw [->, thick] (spatial) -- (temporal);
-    \draw [->, thick] (temporal) -- (predict);
+    \draw [->, thick] (spatial) -- (predict);
     \draw [->, thick] (predict) -- (output);
     
-    % Skip connections (dotted)
+    % Skip connection from TFEM to LR-AGAM
     \node (skip1_start) [point, right=1.2cm of feat_ext] {};
     \node (skip1_end) [point, right=1.2cm of spatial] {};
     \draw [->, dashed] (feat_ext.east) -| (skip1_end) |- (spatial.east) node[pos=0.25, right, font=\scriptsize] {Skip};
 
-    \node (skip2_start) [point, right=1.2cm of spatial] {};
-    \node (skip2_end) [point, right=1.2cm of temporal] {};
-    \draw [->, dashed] (spatial.east) -| (skip2_end) |- (temporal.east) node[pos=0.25, right, font=\scriptsize] {Skip};
-
-    \node (skip3_start) [point, left=1.2cm of temporal] {};
-    \node (skip3_end) [point, left=1.2cm of predict] {};
-    \draw [->, dashed] (temporal.west) -| (skip3_end) |- (predict.west) node[pos=-0.5, left, font=\scriptsize] {Skip};
-
-    % Input to Prediction Module (for refinement)
+    % Input to Prediction Module (for refinement with last observation)
     \node (input_refine) [point, left=2.5cm of predict] {};
     \draw [->, dashed] (input.west) -- ++(-3,0) |- (input_refine) -- (predict.west) node[pos=0.95, above=12pt, left, font=\scriptsize] {Last Obs};
 
 \end{tikzpicture}
-\caption{Overall architecture of the proposed MSTGAT-Net model. The framework consists of four key components: Feature Extraction Module, Spatial Dependency Module, Multi-Scale Temporal Module, and Horizon Prediction Module. Dashed lines indicate skip connections and the direct connection from input to the prediction module for refinement.}
+\caption{Overall architecture of the proposed MSTGAT-Net model. The framework consists of three key components: Temporal Feature Extraction Module (TFEM), Low-rank Adaptive Graph Attention Module (LR-AGAM), and GRU-based Progressive Prediction Refinement Module (PPRM). Dashed lines indicate skip connections and the direct connection from input to PPRM for adaptive refinement.}
 \label{fig:architecture}
 \end{figure}
 
-At its core, MSTGAT-Net processes the input tensor $\mathbf{X} \in \mathbb{R}^{B \times T \times N}$ (Batch Size $\times$ Time Steps $\times$ Nodes) through four primary, sequential modules, each designed to address a specific aspect of the spatiotemporal forecasting problem:
+At its core, MSTGAT-Net processes the input tensor $\mathbf{X} \in \mathbb{R}^{B \times T \times N}$ (Batch Size $\times$ Time Steps $\times$ Nodes) through three primary, sequential modules, each designed to address a specific aspect of the spatiotemporal forecasting problem:
 
 \begin{enumerate}
-    \item \textbf{Feature Extraction Module}: Transforms raw time series into latent representations using depthwise separable convolutions and low-rank projections.
-    \item \textbf{Spatial Dependency Module}: Captures relationships between different regions through a novel efficient adaptive graph attention mechanism with low-rank approximations.
-    \item \textbf{Multi-Scale Temporal Module}: Models temporal dynamics at different scales through dilated convolutions with adaptive scale fusion.
-    \item \textbf{Horizon Prediction Module}: Generates forecasts for future time steps using a progressive prediction approach with adaptive refinement based on recent observations.
+    \item \textbf{Temporal Feature Extraction Module (TFEM)}: Transforms raw time series into latent representations by applying depthwise separable convolutions \textit{along the temporal axis}, capturing local and global temporal patterns within each node's history.
+    \item \textbf{Low-rank Adaptive Graph Attention Module (LR-AGAM)}: Captures inter-node spatial relationships through a novel efficient adaptive graph attention mechanism with low-rank approximations, learning which regions influence each other.
+    \item \textbf{GRU-based Progressive Prediction Refinement Module (PPRM)}: Generates forecasts autoregressively using a GRU, with each prediction step conditioned on the previous, while adaptively blending with learned decay extrapolations from recent observations.
 \end{enumerate}
 
 The architecture incorporates several key design principles:
 \begin{itemize}
     \item \textbf{Parameter Efficiency}: Using low-rank decompositions and separable convolutions to reduce parameters and computational complexity.
     \item \textbf{Adaptive Learning}: Learning and adapting relationships during training rather than relying on fixed structures.
-    \item \textbf{Multi-Scale Processing}: Explicitly modeling patterns at different temporal scales.
+    \item \textbf{Autoregressive Prediction}: Using GRU to capture dependencies between prediction steps for improved multi-horizon forecasts.
     \item \textbf{Residual Learning}: Using skip connections to facilitate gradient flow and information propagation.
 \end{itemize}
 
-\subsection{Feature Extraction Module}
+\subsection{Temporal Feature Extraction Module (TFEM)}
 \label{sec:feature_extraction}
 
-The Feature Extraction Module forms the foundational first stage of MSTGAT-Net, responsible for transforming raw time series data into latent representations that capture meaningful temporal patterns. This module employs an efficient parameter-sharing strategy to process input sequences across all spatial nodes simultaneously while maintaining computational efficiency.
+The Temporal Feature Extraction Module forms the foundational first stage of MSTGAT-Net, responsible for transforming raw time series data into latent representations that capture meaningful temporal patterns. This module processes input sequences \textit{along the time dimension} using depthwise separable convolutions, extracting both short-term fluctuations and longer-term trends from each node's historical observations.
 
 \subsubsection{Input Preprocessing and Reshaping}
 
@@ -205,9 +194,9 @@ Given the input tensor $\mathbf{X} \in \mathbb{R}^{B \times T \times N}$ represe
 
 This transformation flattens the batch and spatial dimensions, treating each region's time series as an independent channel. The reshaping enables parallel processing of all spatial nodes while preserving the temporal structure essential for subsequent convolution operations.
 
-\subsubsection{Depthwise Separable Convolutions}
+\subsubsection{Depthwise Separable Temporal Convolutions}
 
-Traditional convolutional operations often require prohibitive computational resources when applied to large spatiotemporal data. To address this, we employ depthwise separable convolutions that decompose the standard convolution into two sequential, more efficient operations:
+Traditional convolutional operations often require prohibitive computational resources when applied to large spatiotemporal data. To address this, we employ depthwise separable convolutions applied \textit{along the time dimension} that decompose the standard convolution into two sequential, more efficient operations:
 
 \begin{enumerate}
     \item \textbf{Depthwise Convolution}: Applies a separate filter to each input channel, focusing on extracting temporal patterns independently for each spatial node:
@@ -274,16 +263,16 @@ This low-rank projection serves multiple critical purposes:
     \item \textbf{Computational Efficiency}: Significantly reduces the computational cost of subsequent operations, particularly the attention mechanism in the spatial module.
 \end{itemize}
 
-The output of this module, $\mathbf{H}_{reshaped}$, contains rich latent representations of the input time series that capture temporal patterns while being efficiently structured for subsequent processing by the Spatial Dependency Module.
+The output of this module, $\mathbf{H}_{reshaped}$, contains rich latent representations of the input time series that encode temporal dynamics while being efficiently structured for subsequent processing by LR-AGAM. Critically, the temporal information from the input window is now compressed into the feature dimension, enabling the subsequent modules to focus on spatial relationships.
 
-\subsection{Spatial Dependency Module}
+\subsection{Low-rank Adaptive Graph Attention Module (LR-AGAM)}
 \label{sec:spatial_dependency}
 
-The Spatial Dependency Module forms the core innovation of MSTGAT-Net, addressing a fundamental challenge in spatiotemporal forecasting: modeling dynamic spatial relationships without relying on predefined structures. Conventional graph neural networks typically operate on fixed adjacency matrices, limiting their ability to adapt to evolving spatial dependencies. Our module employs a novel adaptive graph attention mechanism that dynamically learns and updates spatial relationships during both training and inference.
+The Low-rank Adaptive Graph Attention Module (LR-AGAM) addresses the challenge of modeling dynamic spatial relationships without relying on predefined structures. After temporal features have been extracted by TFEM, LR-AGAM learns which spatial nodes (regions) influence each other by computing attention weights across the node dimension. Conventional graph neural networks typically operate on fixed adjacency matrices, limiting their ability to adapt to evolving spatial dependencies. Our module employs a novel adaptive graph attention mechanism that dynamically learns and updates spatial relationships during both training and inference.
 
 \subsubsection{Design Principles and Motivation}
 
-Several key principles inform the design of our Spatial Dependency Module:
+Several key principles inform the design of LR-AGAM:
 
 \begin{itemize}
     \item \textbf{Adaptivity}: Spatial relationships in epidemic spread are not static but evolve over time based on factors like mobility, policy interventions, and disease characteristics.
@@ -294,7 +283,7 @@ Several key principles inform the design of our Spatial Dependency Module:
 
 \subsubsection{Efficient Low-Rank Multi-Head Attention}
 
-Starting with node features $\mathbf{H}_{reshaped} \in \mathbb{R}^{B \times N \times D}$ from the Feature Extraction Module, we implement a memory-efficient attention mechanism using low-rank projections.
+Starting with node features $\mathbf{H}_{reshaped} \in \mathbb{R}^{B \times N \times D}$ from TFEM, we implement a memory-efficient attention mechanism using low-rank projections.
 
 \paragraph{Factorized Query-Key-Value Projection}
 Traditional attention mechanisms project input features into query, key, and value representations using large parameter matrices. We instead employ a two-stage low-rank projection:
@@ -388,7 +377,7 @@ where $\lambda_{att}$ is a hyperparameter controlling the strength of regulariza
 
 \subsubsection{Theoretical Advantages}
 
-The key theoretical advantages of our Spatial Dependency Module include:
+The key theoretical advantages of LR-AGAM include:
 
 \begin{itemize}
     \item \textbf{Dynamic Adaptivity}: Unlike fixed graph structures, our approach can model relationships that evolve over time or differ across regions.
@@ -397,37 +386,38 @@ The key theoretical advantages of our Spatial Dependency Module include:
     \item \textbf{Data Efficiency}: By incorporating inductive biases through the structural component and optional prior knowledge, the model can learn effectively even with limited training data.
 \end{itemize}
 
-The output of this module, $\mathbf{H}_{spatial}$, encodes rich representations that capture spatial dependencies between regions, serving as input to the subsequent Multi-Scale Temporal Module.
+The output of this module, $\mathbf{H}_{spatial}$, encodes rich representations that capture spatial dependencies between regions, serving as input to the subsequent Multi-Scale Spatial Feature Module.
 
-\subsection{Multi-Scale Temporal Module}
-\label{sec:multi_scale_temporal}
+\subsection{Multi-Scale Spatial Feature Module (MSSFM)}
+\label{sec:multi_scale_spatial}
 
-The Multi-Scale Temporal Module addresses a key challenge in epidemiological forecasting: capturing temporal patterns that occur at multiple time scales simultaneously. Disease spread exhibits complex dynamics spanning different temporal horizons—from rapid day-to-day fluctuations to weekly patterns and longer-term trends. Traditional approaches using fixed-receptive-field convolutions or recurrent architectures often struggle to efficiently model these multi-scale behaviors. Our module introduces a specialized architecture that explicitly processes temporal information at multiple scales and adaptively fuses the resulting representations.
+The Multi-Scale Spatial Feature Module (MSSFM) complements the pairwise attention mechanism of LR-AGAM by capturing multi-scale structural patterns across the spatial graph. While LR-AGAM computes direct node-to-node attention weights, MSSFM applies dilated 1D convolutions \textit{along the node dimension} to aggregate information from neighborhoods of varying sizes. This enables the model to capture both local cluster dynamics (nearby regions with similar patterns) and broader structural relationships (distant but functionally connected regions).
 
-\subsubsection{Dilated Multi-Scale Temporal Convolutions}
+\subsubsection{Dilated Multi-Scale Spatial Convolutions}
 
-After modeling spatial dependencies, we need to capture how these relationships evolve over time at different scales. We employ dilated convolutions, which expand the receptive field exponentially without increasing the parameter count or computational complexity linearly.
+After extracting pairwise dependencies with attention, we employ dilated convolutions \textit{across the node axis} to capture multi-scale spatial features. The dilation allows expansion of the receptive field exponentially without increasing parameter count or computational complexity linearly.
 
-Given the spatially-aware node representations $\mathbf{H}_{spatial} \in \mathbb{R}^{B \times N \times D}$ from the previous module, we first transpose the tensor to align the temporal operation dimension:
+Given the spatially-aware node representations $\mathbf{H}_{spatial} \in \mathbb{R}^{B \times N \times D}$ from LR-AGAM, we first transpose the tensor to align the convolution along the node dimension:
 
 \begin{equation}
 \mathbf{H}_{spatial}^T \in \mathbb{R}^{B \times D \times N}
 \end{equation}
 
-We then apply a series of parallel 1D convolutions with increasing dilation rates to capture patterns at different temporal scales:
+We then apply a series of parallel 1D convolutions with increasing dilation rates to capture patterns at different spatial scales (neighborhoods of different sizes):
 
 \begin{equation}
 \mathbf{Z}_s = \text{Conv1D}(\mathbf{H}_{spatial}^T, \text{kernel\_size}=K, \text{dilation}=2^{s-1})
 \end{equation}
 
-where $s \in \{1,2,...,S\}$ indexes the scale, and the dilation rate increases exponentially with $s$ (typically, $S=3$ in our implementation). For example:
+where $s \in \{1,2,...,S\}$ indexes the scale, and the dilation rate increases exponentially with $s$ (typically, $S=4$ in our implementation). For example:
 \begin{itemize}
-    \item Scale 1: Dilation = 1, capturing immediate local patterns (receptive field of $K$).
-    \item Scale 2: Dilation = 2, capturing medium-range patterns (receptive field of $2K-1$).
-    \item Scale 3: Dilation = 4, capturing longer-range patterns (receptive field of $4K-3$).
+    \item Scale 1: Dilation = 1, capturing immediate local spatial patterns (receptive field of $K$).
+    \item Scale 2: Dilation = 2, capturing medium-range spatial patterns (receptive field of $2K-1$).
+    \item Scale 3: Dilation = 4, capturing longer-range spatial patterns (receptive field of $4K-3$).
+    \item Scale 4: Dilation = 8, capturing broad spatial patterns (receptive field of $8K-7$).
 \end{itemize}
 
-This design allows the model to efficiently cover a large temporal receptive field with few parameters. For instance, with $K=3$ and $S=3$, we achieve a receptive field of 9 time steps using only 9 parameters (3 per scale), compared to 9 parameters required by a standard convolution with kernel size 9.
+This design allows the model to efficiently cover a large spatial receptive field with few parameters. For instance, with $K=3$ and $S=3$, we achieve a receptive field of 9 nodes using only 9 parameters (3 per scale), compared to 9 parameters required by a standard convolution with kernel size 9.
 
 Each convolution output undergoes batch normalization for training stability, ReLU activation for non-linearity, and dropout for regularization:
 
@@ -437,7 +427,7 @@ Each convolution output undergoes batch normalization for training stability, Re
 
 \subsubsection{Adaptive Scale Fusion}
 
-Different regions and time periods may exhibit varying temporal characteristics—urban areas might show rapid fluctuations requiring fine-grained analysis, while rural areas might display smoother trends better captured by larger scales. Rather than treating all scales equally, we implement an adaptive fusion mechanism that learns to weigh the importance of different temporal scales:
+Different regions may exhibit varying spatial characteristics—dense urban clusters might require fine-grained analysis, while sparse rural patterns might be better captured by larger spatial scales. Rather than treating all scales equally, we implement an adaptive fusion mechanism that learns to weigh the importance of different spatial scales:
 
 \begin{equation}
 \mathbf{w} \in \mathbb{R}^S \quad \text{(learnable parameter)}
@@ -486,7 +476,7 @@ The layer normalization stabilizes training and ensures consistent feature scale
 
 \subsubsection{Theoretical Foundation and Benefits}
 
-The Multi-Scale Temporal Module draws inspiration from wavelet analysis and multi-resolution processing in signal processing theory. Key benefits include:
+The Multi-Scale Spatial Feature Module draws inspiration from wavelet analysis and multi-resolution processing in signal processing theory. Key benefits include:
 
 \begin{itemize}
     \item \textbf{Hierarchical Pattern Recognition}: Different dilation rates capture patterns at multiple time scales, from fine-grained fluctuations to coarse trends.
@@ -500,12 +490,12 @@ The Multi-Scale Temporal Module draws inspiration from wavelet analysis and mult
     \item \textbf{Feature Hierarchy}: The multi-scale processing creates a rich hierarchy of temporal features at different granularities, enhancing the model's representation power.
 \end{itemize}
 
-The output of this module, $\mathbf{H}_{temporal}$, contains representations that encode both spatial dependencies and multi-scale temporal dynamics, serving as input to the Horizon Prediction Module for generating final forecasts.
+The output of this module, $\mathbf{H}_{mssfm}$, contains representations that encode both spatial dependencies and multi-scale feature information, serving as input to PPRM for generating final forecasts.
 
-\subsection{Horizon Prediction Module}
+\subsection{Progressive Prediction Refinement Module (PPRM)}
 \label{sec:horizon_prediction}
 
-The Horizon Prediction Module addresses one of the most challenging aspects of epidemic forecasting: generating accurate predictions over multiple future time steps without error accumulation or instability. Traditional approaches to multi-step forecasting often suffer from compounding errors, where small inaccuracies in early predictions amplify as they propagate through subsequent time steps. Our module introduces a progressive prediction mechanism with adaptive refinement to mitigate these challenges.
+The Progressive Prediction Refinement Module (PPRM) addresses one of the most challenging aspects of epidemic forecasting: generating accurate predictions over multiple future time steps without error accumulation or instability. Traditional approaches to multi-step forecasting often suffer from compounding errors, where small inaccuracies in early predictions amplify as they propagate through subsequent time steps. Our module introduces a progressive prediction mechanism with adaptive refinement to mitigate these challenges.
 
 \subsubsection{The Error Accumulation Problem}
 
@@ -515,7 +505,7 @@ In multi-step time series forecasting, two main approaches exist:
     \item \textbf{Direct multi-step forecasting}: Generates all future steps simultaneously, maintaining independence but potentially sacrificing temporal coherence.
 \end{itemize}
 
-Our Horizon Prediction Module takes a hybrid approach, combining the strengths of both methods through a progressive prediction strategy with an adaptive blending mechanism.
+PPRM takes a hybrid approach, combining the strengths of both methods through a progressive prediction strategy with an adaptive blending mechanism.
 
 \subsubsection{Initial Prediction Generation}
 
@@ -591,7 +581,7 @@ The resulting tensor represents the predicted values for all regions across the 
 
 \subsubsection{Theoretical Advantages}
 
-The Horizon Prediction Module offers several theoretical advantages over standard approaches:
+PPRM offers several theoretical advantages over standard approaches:
 
 \begin{itemize}
     \item \textbf{Error Mitigation}: By adaptively combining model predictions with a simpler baseline, the module mitigates error accumulation, particularly during regime changes or volatile periods.
@@ -603,7 +593,7 @@ The Horizon Prediction Module offers several theoretical advantages over standar
     \item \textbf{No-Change Fallback}: In situations where the model has low confidence or historical patterns become unreliable, the module can fall back to a simpler trend extrapolation, providing a form of safety net.
 \end{itemize}
 
-These characteristics make the Horizon Prediction Module particularly well-suited for epidemiological forecasting, where sudden changes in disease dynamics, intervention measures, or reporting practices can cause abrupt shifts in time series behavior.
+These characteristics make PPRM particularly well-suited for epidemiological forecasting, where sudden changes in disease dynamics, intervention measures, or reporting practices can cause abrupt shifts in time series behavior.
 
 \subsection{Model Training Algorithm}
 \label{sec:training_algorithm}
@@ -699,10 +689,10 @@ When properly trained according to this algorithm, MSTGAT-Net learns to effectiv
 
 To systematically evaluate the contribution of each key component within the MSTGAT-Net architecture, we conduct a series of ablation studies. These studies involve creating model variants where specific modules are replaced with simpler alternatives. This process allows us to isolate and quantify the impact of each sophisticated component on the overall model performance. The `MSAGATNet_Ablation` class in our implementation facilitates these experiments by allowing component substitution via configuration arguments.
 
-\subsection{MSTGAT-Net without Adaptive Graph Attention (MSTGAT-no-AGAM)}
+\subsection{MSTGAT-Net without LR-AGAM (MSTGAT-no-AGAM)}
 \label{sec:ablation_no_agam}
 
-This variant investigates the importance of the adaptive graph learning mechanism. We replace the `SpatialAttentionModule`, which implements the Adaptive Graph Attention Module (AGAM), with a `SimpleGraphConvolutionalLayer`. The objective is to assess the performance gain achieved by dynamically learning spatial dependencies compared to using a standard Graph Convolutional Network (GCN) layer, which typically operates on a fixed or predefined graph structure.
+This variant investigates the importance of the adaptive graph learning mechanism. We replace the `SpatialAttentionModule`, which implements the Low-rank Adaptive Graph Attention Module (LR-AGAM), with a `SimpleGraphConvolutionalLayer`. The objective is to assess the performance gain achieved by dynamically learning spatial dependencies compared to using a standard Graph Convolutional Network (GCN) layer, which typically operates on a fixed or predefined graph structure.
 
 The `SimpleGraphConvolutionalLayer` implements a standard GCN operation involving linear transformations, a non-linear activation (ReLU), and aggregation based on an adjacency matrix $\mathbf{A}$:
 \begin{equation}
@@ -710,10 +700,10 @@ The `SimpleGraphConvolutionalLayer` implements a standard GCN operation involvin
 \end{equation}
 where $\mathbf{H}$ is the input node representation, $\mathbf{W}_1$ and $\mathbf{W}_2$ are learnable weight matrices, and $\sigma$ is the ReLU activation function. The adjacency matrix $\mathbf{A}$ is treated as fixed during inference (it defaults to the identity matrix if no prior graph structure is provided). Consequently, this variant loses the ability to adapt the spatial relationships based on the input features and context, relying solely on the static connections defined by $\mathbf{A}$. Furthermore, the attention regularization loss $L_{att}$, designed to encourage sparsity or specific structures in the learned attention, becomes irrelevant and is set to zero in this configuration.
 
-\subsection{MSTGAT-Net without Multi-Scale Temporal Modeling (MSTGAT-no-DMTM)}
-\label{sec:ablation_no_dmtm}
+\subsection{MSTGAT-Net without MSSFM (MSTGAT-no-MSSFM)}
+\label{sec:ablation_no_mtfm}
 
-This ablation study focuses on the contribution of the multi-scale temporal processing capability. The `MultiScaleTemporalModule`, which utilizes dilated convolutions to capture patterns across different temporal ranges (Dilated Multi-Scale Temporal Module - DMTM), is replaced by a `SingleScaleTemporalModule`. The aim is to evaluate how crucial capturing temporal patterns at multiple scales simultaneously is for forecasting accuracy compared to using a more conventional single-scale temporal convolution.
+This ablation study focuses on the contribution of the multi-scale spatial processing capability. The Multi-Scale Spatial Feature Module (MSSFM), which uses dilated convolutions to capture spatial patterns across different receptive fields with adaptive fusion, is replaced by a single-scale convolution module. The aim is to evaluate how crucial capturing feature interactions at multiple spatial scales simultaneously is for forecasting accuracy compared to using a single-scale approach.
 
 The `SingleScaleTemporalModule` employs a standard 1D convolution followed by normalization, activation, and dropout, but crucially, it operates only at a single temporal scale with a fixed kernel size $K$ and *without* employing dilation:
 \begin{equation}
@@ -722,20 +712,20 @@ The `SingleScaleTemporalModule` employs a standard 1D convolution followed by no
 \begin{equation}
 \mathbf{H}_t = \sigma(\text{LN}(\text{Fusion}(\mathbf{Z}^T)))
 \end{equation}
-where $\mathbf{H}_s$ is the output from the spatial module, Conv1D performs the single-scale convolution, BN is Batch Normalization, $\sigma$ is ReLU, LN is Layer Normalization, and Fusion represents subsequent linear projection layers. By removing the dilated convolutions and the adaptive fusion across scales, this variant lacks the capacity to efficiently capture long-range temporal dependencies and adaptively weigh the importance of different temporal patterns, which is a key feature of the original DMTM.
+where $\mathbf{H}_s$ is the output from the spatial module, Conv1D performs the single-scale convolution, BN is Batch Normalization, $\sigma$ is ReLU, LN is Layer Normalization, and Fusion represents subsequent linear projection layers. By removing the dilated convolutions and the adaptive fusion across scales, this variant lacks the capacity to efficiently capture multi-scale feature dependencies and adaptively weigh the importance of different spatial receptive fields, which is a key feature of the original MSSFM.
 
-\subsection{MSTGAT-Net without Progressive Prediction (MSTGAT-no-PPM)}
-\label{sec:ablation_no_ppm}
+\subsection{MSTGAT-Net without PPRM (MSTGAT-no-PPRM)}
+\label{sec:ablation_no_pprm}
 
-This variant assesses the effectiveness of the adaptive refinement mechanism in the final prediction stage. We replace the `HorizonPredictor`, which implements the Progressive Prediction Module (PPM), with a simpler `DirectPredictionModule`. The goal is to compare the performance of the progressive approach, which combines model predictions with recent observations via a learned gate, against a straightforward direct multi-step prediction.
+This variant assesses the effectiveness of the adaptive refinement mechanism in the final prediction stage. We replace the `HorizonPredictor`, which implements the Progressive Prediction Refinement Module (PPRM), with a simpler `DirectPredictionModule`. The goal is to compare the performance of the progressive approach, which combines model predictions with recent observations via a learned gate, against a straightforward direct multi-step prediction.
 
-The `DirectPredictionModule` utilizes a feed-forward network (typically composed of linear layers, normalization, activations, and dropout) to directly map the final hidden representation $\mathbf{H}_t$ from the temporal module to the entire prediction horizon $h$ in a single step:
+The `DirectPredictionModule` utilizes a feed-forward network (typically composed of linear layers, normalization, activations, and dropout) to directly map the final hidden representation $\mathbf{H}_s$ from the spatial feature module to the entire prediction horizon $h$ in a single step:
 \begin{equation}
 \hat{\mathbf{Y}} = \text{Predictor}(\mathbf{H}_t) \in \text{mathbb{R}}^{B \times N \times h}
 \end{equation}
-This direct approach contrasts with the PPM, which generates an initial prediction $\mathbf{P}_{initial}$ and then adaptively combines it with a time-decayed extrapolation $\mathbf{E}$ of the last observation using a learned gate $\mathbf{G}$ ($\hat{\mathbf{Y}} = \mathbf{G} \odot \mathbf{P}_{initial} + (1 - \mathbf{G}) \odot \mathbf{E}$). By omitting this gating mechanism and the explicit incorporation of the most recent observation for refinement, the `DirectPredictionModule` variant may be less adaptive to sudden changes or shifts in the time series dynamics compared to the progressive approach employed in the full MSTGAT-Net model.
+This direct approach contrasts with PPRM, which generates an initial prediction $\mathbf{P}_{initial}$ and then adaptively combines it with a time-decayed extrapolation $\mathbf{E}$ of the last observation using a learned gate $\mathbf{G}$ ($\hat{\mathbf{Y}} = \mathbf{G} \odot \mathbf{P}_{initial} + (1 - \mathbf{G}) \odot \mathbf{E}$). By omitting this gating mechanism and the explicit incorporation of the most recent observation for refinement, the `DirectPredictionModule` variant may be less adaptive to sudden changes or shifts in the time series dynamics compared to the progressive approach employed in the full MSTGAT-Net model.
 
-By comparing the performance metrics (e.g., MAE, RMSE, MAPE) of the full MSTGAT-Net model against these three ablated variants (MSTGAT-no-AGAM, MSTGAT-no-DMTM, MSTGAT-no-PPM) on benchmark datasets, we can quantitatively determine the specific contributions of the adaptive graph attention, multi-scale temporal modeling, and progressive prediction components to the overall forecasting accuracy and robustness of the proposed architecture.
+By comparing the performance metrics (e.g., MAE, RMSE, MAPE) of the full MSTGAT-Net model against these three ablated variants (MSTGAT-no-AGAM, MSTGAT-no-MSSFM, MSTGAT-no-PPRM) on benchmark datasets, we can quantitatively determine the specific contributions of LR-AGAM (adaptive graph attention), MSSFM (multi-scale spatial feature fusion), and PPRM (progressive prediction refinement) to the overall forecasting accuracy and robustness of the proposed architecture.
 
 % ---------- SECTION VI: EXPERIMENTS ----------
 \section{Experiments}
@@ -848,7 +838,7 @@ Table \ref{table:ablation_results} presents the results of our ablation studies 
 
 \begin{table}[ht]
 \centering
-\caption{Ablation study results for 5-day forecasting. MSTGAT-no-AGAM removes the adaptive graph attention, MSTGAT-no-DMTM removes multi-scale temporal modeling, and MSTGAT-no-PPM removes progressive prediction. Best results are in \textbf{bold}.}
+\caption{Ablation study results for 5-day forecasting. MSTGAT-no-AGAM removes LR-AGAM (Low-rank Adaptive Graph Attention Module), MSTGAT-no-MSSFM removes MSSFM (Multi-Scale Spatial Feature Module), and MSTGAT-no-PPRM removes PPRM (Progressive Prediction Refinement Module). Best results are in \textbf{bold}.}
 \label{table:ablation_results}
 \begin{tabular}{l|ccc|ccc}
 \toprule
@@ -857,8 +847,8 @@ Table \ref{table:ablation_results} presents the results of our ablation studies 
  & MAE & RMSE & MAPE & MAE & RMSE & MAPE \\
 \midrule
 MSTGAT-no-AGAM & 7.48 & 12.36 & 26.3\% & 9.17 & 14.85 & 32.7\% \\
-MSTGAT-no-DMTM & 7.25 & 12.04 & 25.8\% & 8.93 & 14.52 & 31.5\% \\
-MSTGAT-no-PPM & 7.02 & 11.59 & 24.9\% & 8.76 & 14.23 & 30.9\% \\
+MSTGAT-no-MSSFM & 7.25 & 12.04 & 25.8\% & 8.93 & 14.52 & 31.5\% \\
+MSTGAT-no-PPRM & 7.02 & 11.59 & 24.9\% & 8.76 & 14.23 & 30.9\% \\
 \midrule
 MSTGAT-Net (Full) & \textbf{6.81} & \textbf{11.27} & \textbf{24.2\%} & \textbf{8.42} & \textbf{13.74} & \textbf{29.8\%} \\
 \bottomrule
@@ -868,7 +858,7 @@ MSTGAT-Net (Full) & \textbf{6.81} & \textbf{11.27} & \textbf{24.2\%} & \textbf{8
 \begin{figure}[!t]
 \centering
 \includegraphics[width=0.95\columnwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/paper_figures/component_importance_comparison.png}
-\caption{Component importance comparison across different forecast horizons. The bars represent the percentage increase in RMSE when each component is removed, indicating their relative contribution to model performance. Note how the Adaptive Graph Attention Module (AGAM) becomes increasingly important for longer forecast horizons.}
+\caption{Component importance comparison across different forecast horizons. The bars represent the percentage increase in RMSE when each component is removed, indicating their relative contribution to model performance. Note how LR-AGAM (Low-rank Adaptive Graph Attention Module) becomes increasingly important for longer forecast horizons.}
 \label{fig:component_importance}
 \end{figure}
 
@@ -882,22 +872,22 @@ MSTGAT-Net (Full) & \textbf{6.81} & \textbf{11.27} & \textbf{24.2\%} & \textbf{8
 These ablation studies reveal several important insights:
 
 \begin{itemize}
-    \item The Adaptive Graph Attention Module (AGAM) contributes most significantly to model performance, with its removal leading to a 9.8\% increase in MAE on the Japan dataset and an 8.9\% increase on the Regional dataset.
-    \item The Dilated Multi-Scale Temporal Module (DMTM) provides the second-largest contribution, demonstrating the importance of capturing temporal patterns at different scales.
-    \item The Progressive Prediction Module (PPM) offers a smaller but still noticeable improvement, particularly for the 5-day horizon shown here. Further analysis showed that the PPM's contribution becomes more significant for longer horizons (10-day, 15-day), highlighting its role in mitigating error accumulation.
+    \item LR-AGAM (Low-rank Adaptive Graph Attention Module) contributes most significantly to model performance, with its removal leading to a 9.8\% increase in MAE on the Japan dataset and an 8.9\% increase on the Regional dataset.
+    \item MSSFM (Multi-Scale Spatial Feature Module) provides the second-largest contribution, demonstrating the importance of capturing spatial feature interactions at different scales with adaptive fusion.
+    \item PPRM (Progressive Prediction Refinement Module) offers a smaller but still noticeable improvement, particularly for the 5-day horizon shown here. Further analysis showed that PPRM's contribution becomes more significant for longer horizons (10-day, 15-day), highlighting its role in mitigating error accumulation through adaptive blending.
     \item The performance degradation is more pronounced on the Regional dataset than on the Japan dataset when removing components, suggesting that our architectural innovations are particularly valuable for larger, more complex spatial networks.
 \end{itemize}
 
 \subsubsection{Visualization of Learned Attention Patterns}
 
-Fig. \ref{fig:attention_patterns} illustrates the learned attention patterns from the Spatial Dependency Module on the Japan COVID-19 dataset. The heatmap reveals several interesting spatiotemporal patterns:
+Fig. \ref{fig:attention_patterns} illustrates the learned attention patterns from LR-AGAM on the Japan COVID-19 dataset. The heatmap reveals several interesting spatiotemporal patterns:
 
 \begin{figure*}[!t]
 \centering
 \subfloat[Full model]{\includegraphics[width=0.33\textwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/figures/matrices_MSTAGAT-Net.japan.w-20.h-3.none.png}}
-\subfloat[Without AGAM module]{\includegraphics[width=0.33\textwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/figures/matrices_MSTAGAT-Net.japan.w-20.h-3.no_agam.png}}
-\subfloat[Without DMTM module]{\includegraphics[width=0.33\textwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/figures/matrices_MSTAGAT-Net.japan.w-20.h-3.no_mtfm.png}}
-\caption{Learned attention patterns (adjacency matrices) for Japan COVID-19 dataset. (a) Full MSTGAT-Net model shows clear, structured patterns that align with geographical adjacency and population connectivity. (b) Removing the Adaptive Graph Attention Module results in less defined spatial relationships. (c) Removing the Multi-Scale Temporal Module affects how the model captures temporal dependencies, which also impacts the spatial attention patterns.}
+\subfloat[Without LR-AGAM]{\includegraphics[width=0.33\textwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/figures/matrices_MSTAGAT-Net.japan.w-20.h-3.no_agam.png}}
+\subfloat[Without MSSFM]{\includegraphics[width=0.33\textwidth]{/home/olarinoyem/Project/MSAGAT-Net/report/figures/matrices_MSTAGAT-Net.japan.w-20.h-3.no_mtfm.png}}
+\caption{Learned attention patterns (adjacency matrices) for Japan COVID-19 dataset. (a) Full MSTGAT-Net model shows clear, structured patterns that align with geographical adjacency and population connectivity. (b) Removing LR-AGAM results in less defined spatial relationships. (c) Removing MSSFM affects how the model captures multi-scale spatial patterns, which impacts the learned attention distribution.}
 \label{fig:attention_patterns}
 \end{figure*}
 
@@ -910,9 +900,9 @@ Fig. \ref{fig:attention_patterns} illustrates the learned attention patterns fro
 
 This visualization demonstrates the model's ability to capture meaningful and interpretable spatial relationships that evolve based on the input data, a key advantage over methods that rely on fixed graph structures.
 
-\subsubsection{Analysis of Multi-Scale Temporal Features}
+\subsubsection{Analysis of Multi-Scale Spatial Features}
 
-Fig. \ref{fig:scale_weights} shows the learned scale weights from the adaptive fusion mechanism in the Multi-Scale Temporal Module. The analysis reveals that:
+Fig. \ref{fig:scale_weights} shows the learned scale weights from the adaptive fusion mechanism in the Multi-Scale Spatial Feature Module. The analysis reveals that:
 
 \begin{figure}[!t]
 \centering
@@ -945,9 +935,9 @@ We examined model performance during significant regime changes, such as the ons
 \end{figure}
 
 \begin{itemize}
-    \item The Progressive Prediction Module's adaptive blending of model predictions with recent observations.
-    \item The Multi-Scale Temporal Module's ability to capture patterns at different time horizons simultaneously.
-    \item The dynamic nature of the Spatial Dependency Module, which can rapidly adjust to changes in inter-regional transmission patterns.
+    \item PPRM's (Progressive Prediction Refinement Module) adaptive blending of model predictions with recent observations.
+    \item MSSFM's (Multi-Scale Spatial Feature Module) ability to capture patterns at different spatial scales simultaneously through adaptive fusion.
+    \item The dynamic nature of LR-AGAM (Low-rank Adaptive Graph Attention Module), which can rapidly adjust to changes in inter-regional transmission patterns.
 \end{itemize}
 
 \subsubsection{Performance Across Different Region Types}
@@ -961,7 +951,7 @@ We categorized regions in the Japan dataset into high, medium, and low populatio
 \label{fig:performance_heatmaps}
 \end{figure}
 
-The performance advantage of MSTGAT-Net is especially evident in regions with complex epidemic dynamics, such as major metropolitan areas with high connectivity to other regions. Fig. \ref{fig:performance_heatmaps} illustrates this pattern through performance heatmaps across different region types and forecast horizons. Areas with higher population mobility and more complex interaction patterns benefit most from the model's adaptive graph learning and multi-scale temporal modeling capabilities.
+The performance advantage of MSTGAT-Net is especially evident in regions with complex epidemic dynamics, such as major metropolitan areas with high connectivity to other regions. Fig. \ref{fig:performance_heatmaps} illustrates this pattern through performance heatmaps across different region types and forecast horizons. Areas with higher population mobility and more complex interaction patterns benefit most from the model's adaptive graph learning and multi-scale spatial feature modeling capabilities.
 
 % ---------- SECTION VII: LIMITATIONS AND FUTURE DIRECTIONS ----------
 \section{Limitations and Future Directions}
@@ -1005,7 +995,7 @@ Based on these limitations and our findings, we identify several promising futur
 \section{Conclusion}
 \label{sec:conclusion}
 
-This paper introduced MSTGAT-Net, a novel deep learning architecture for spatiotemporal forecasting that combines adaptive graph attention, multi-scale temporal modeling, and progressive prediction. Through comprehensive evaluations on multiple real-world epidemic datasets, we demonstrated that MSTGAT-Net consistently outperforms state-of-the-art baselines across various forecast horizons, with particularly strong performance for medium and long-term predictions.
+This paper introduced MSTGAT-Net, a novel deep learning architecture for spatiotemporal forecasting that combines adaptive graph attention, multi-scale spatial feature modeling, and progressive prediction. Through comprehensive evaluations on multiple real-world epidemic datasets, we demonstrated that MSTGAT-Net consistently outperforms state-of-the-art baselines across various forecast horizons, with particularly strong performance for medium and long-term predictions.
 
 Our extensive performance analysis revealed several key findings:
 
@@ -1019,7 +1009,7 @@ Our extensive performance analysis revealed several key findings:
     \item MSTGAT-Net adapts quickly to regime changes and sudden shifts in epidemic patterns, maintaining forecast accuracy during critical transition periods (Fig. \ref{fig:regime_change}).
 \end{itemize}
 
-Our ablation studies (Fig. \ref{fig:component_importance} and Fig. \ref{fig:component_importance_heatmap}) quantified the contributions of each key architectural innovation, revealing that the Adaptive Graph Attention Module provides the largest performance improvement (9.8\% increase in MAE when removed), followed by the Dilated Multi-Scale Temporal Module (6.5\%) and the Progressive Prediction Module (3.1\%). The visualization of learned attention patterns (Fig. \ref{fig:attention_patterns}) showed that the model captures meaningful spatial relationships that align with geographical proximity and population connectivity, despite not being explicitly provided with this information.
+Our ablation studies (Fig. \ref{fig:component_importance} and Fig. \ref{fig:component_importance_heatmap}) quantified the contributions of each key architectural innovation, revealing that the Adaptive Graph Attention Module provides the largest performance improvement (9.8\% increase in MAE when removed), followed by the Multi-Scale Spatial Feature Module (6.5\%) and the Progressive Prediction Module (3.1\%). The visualization of learned attention patterns (Fig. \ref{fig:attention_patterns}) showed that the model captures meaningful spatial relationships that align with geographical proximity and population connectivity, despite not being explicitly provided with this information.
 
 MSTGAT-Net's ability to adapt to changing dynamics and effectively model complex spatial dependencies makes it particularly valuable for epidemic forecasting and other applications involving interconnected spatial units with evolving relationships. By addressing several limitations of existing approaches, our work contributes to more accurate and reliable spatiotemporal forecasting, which is crucial for informed decision-making in public health and resource allocation.
 

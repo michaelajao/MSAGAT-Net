@@ -319,9 +319,22 @@ def save_metrics(
     horizon: int = None,
     logger=None,
     model_name: str = None,
+    seed: int = None,
+    ablation: str = None,
 ):
     """
-    Append or create CSV file for recorded metrics.
+    Save metrics to both CSV and TXT files.
+    
+    Args:
+        metrics: Dictionary of metric names and values
+        save_path: Base path for saving (will create both .csv and .txt)
+        dataset: Dataset name
+        window: Window size
+        horizon: Prediction horizon
+        logger: Logger instance
+        model_name: Model name
+        seed: Random seed used
+        ablation: Ablation type
     """
     info = {
         "model": model_name or "MSTAGAT",
@@ -333,14 +346,54 @@ def save_metrics(
         info["window"] = window
     if horizon:
         info["horizon"] = horizon
+    if seed is not None:
+        info["seed"] = seed
+    if ablation:
+        info["ablation"] = ablation
+        
     data = {
         **info,
         **{k: v for k, v in metrics.items() if not isinstance(v, np.ndarray)},
     }
+    
+    # Save as CSV
     df = pd.DataFrame([data])
-    if os.path.exists(save_path):
-        df_old = pd.read_csv(save_path)
+    csv_path = save_path if save_path.endswith('.csv') else save_path.replace('.txt', '.csv')
+    if os.path.exists(csv_path):
+        df_old = pd.read_csv(csv_path)
         df = pd.concat([df_old, df], ignore_index=True)
-    df.to_csv(save_path, index=False)
+    df.to_csv(csv_path, index=False)
+    
+    # Save as TXT (human-readable format)
+    txt_path = csv_path.replace('.csv', '.txt')
+    with open(txt_path, 'w') as f:
+        f.write("=" * 60 + "\n")
+        f.write(f"MSTAGAT-Net Results\n")
+        f.write("=" * 60 + "\n\n")
+        
+        f.write("Configuration:\n")
+        f.write("-" * 40 + "\n")
+        if dataset:
+            f.write(f"  Dataset: {dataset}\n")
+        if window:
+            f.write(f"  Window: {window}\n")
+        if horizon:
+            f.write(f"  Horizon: {horizon}\n")
+        if seed is not None:
+            f.write(f"  Seed: {seed}\n")
+        if ablation:
+            f.write(f"  Ablation: {ablation}\n")
+        f.write(f"  Timestamp: {info['timestamp']}\n\n")
+        
+        f.write("Metrics:\n")
+        f.write("-" * 40 + "\n")
+        for k, v in metrics.items():
+            if not isinstance(v, np.ndarray):
+                if isinstance(v, float):
+                    f.write(f"  {k}: {v:.6f}\n")
+                else:
+                    f.write(f"  {k}: {v}\n")
+        f.write("\n" + "=" * 60 + "\n")
+    
     if logger:
-        logger.info(f"Metrics saved to {save_path}")
+        logger.info(f"Metrics saved to {csv_path} and {txt_path}")

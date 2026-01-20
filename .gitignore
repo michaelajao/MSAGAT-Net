@@ -1,1 +1,93 @@
-tensorboard/*/*
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+msagat/
+pytorch/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# PyCharm
+.idea/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Model checkpoints and saved models
+save/
+save_all/
+*.pt
+*.pth
+*.pkl
+*.pickle
+
+# Logs and TensorBoard
+logs/
+tensorboard/
+
+# Results and outputs
+report/figures/
+report/results/
+report/paper_figures/
+outputs/
+
+# Old/backup directories
+old/
+report_old/
+*_old/
+*.bak
+
+# Data (if large - uncomment if needed)
+# data/
+
+# LaTeX
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.bbl
+*.blg
+
+# Temporary files
+*.tmp
+*.temp
+*~
