@@ -84,8 +84,8 @@ parser.add_argument('--no_graph_bias', action='store_true', default=False,
 
 # Add ablation parameter
 parser.add_argument('--ablation', type=str, default='none', 
-                   choices=['none', 'no_agam', 'no_mtfm', 'no_pprm'],
-                   help='Ablation study type: none, no_agam (LR‑AGAM: Low-rank Adaptive Graph Attention Module), no_mtfm (MTFM: Multi-scale Temporal Feature Module), no_pprm (PPRM: Progressive Multi-step Prediction Refinement Module)')
+                   choices=['none', 'no_agam', 'no_pprm'],
+                   help='Ablation study type: none, no_agam (LR‑AGAM: Low-rank Adaptive Graph Attention Module), no_pprm (PPRM: GRU-based Progressive Prediction Refinement Module)')
 args = parser.parse_args()
 
 # Fill dataset-specific defaults (only when user did not provide the flag)
@@ -202,7 +202,8 @@ def evaluate(data_loader, data, tag='val', show=0):
         pcc_tmp = []
         for k in range(data_loader.m):
             pcc_tmp.append(pearsonr(y_true_states[:, k], y_pred_states[:, k])[0])
-        pcc_states = np.mean(np.array(pcc_tmp))
+        # Use nanmean to ignore constant nodes (nan values)
+        pcc_states = np.nanmean(np.array(pcc_tmp))
     else:
         pcc_states = 1
     r2_states = np.mean(r2_score(y_true_states, y_pred_states, multioutput='raw_values'))
@@ -349,7 +350,13 @@ print('Final TEST MAE {:5.4f} std {:5.4f} RMSE {:5.4f} RMSEs {:5.4f} PCC {:5.4f}
     mae, std_mae, rmse, rmse_states, pcc, pcc_states, mape, r2, r2_states, var, var_states, peak_mae))
 
 # Save final metrics using utils.save_metrics
-results_csv = os.path.join(RESULTS_DIR, f"final_metrics_{log_token}.csv")
+# Organize by dataset folder with simplified filename
+DATASET_RESULTS_DIR = os.path.join(RESULTS_DIR, args.dataset)
+os.makedirs(DATASET_RESULTS_DIR, exist_ok=True)
+
+# Simplified filename: w-{window}.h-{horizon}.{ablation}.seed-{seed}.csv
+simple_filename = f"w-{args.window}.h-{args.horizon}.{args.ablation}.seed-{args.seed}.csv"
+results_csv = os.path.join(DATASET_RESULTS_DIR, simple_filename)
 save_metrics({
     'mae': mae,
     'std_MAE': std_mae,
@@ -363,8 +370,8 @@ save_metrics({
     'Var': var,
     'Vars': var_states,
     'Peak': peak_mae
-}, results_csv, args.dataset, args.window, args.horizon, logger, model_name)
-print(f"Saved final metrics to {results_csv}")
+}, results_csv, args.dataset, args.window, args.horizon, logger, model_name, args.seed, args.ablation)
+print(f"Saved final metrics to {results_csv} and {results_csv.replace('.csv', '.txt')}")
 
 if args.record != '':
     with open("result/result.txt", "a", encoding="utf-8") as f:

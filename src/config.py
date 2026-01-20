@@ -106,8 +106,8 @@ SEEDS = [5, 30, 45, 123, 1000]
 # First seed used for visualization (to avoid too many figures)
 FIRST_SEED = SEEDS[0]  # 5
 
-# Ablation configurations
-ABLATIONS = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
+# Ablation configurations (no_mtfm kept for backward compatibility but MSSFM removed from main model)
+ABLATIONS = ['none', 'no_agam', 'no_pprm']
 
 # Default window size
 DEFAULT_WINDOW = TRAIN_CONFIG['window']
@@ -119,8 +119,14 @@ DEFAULT_WINDOW = TRAIN_CONFIG['window']
 ABLATION_DESCRIPTIONS = {
     'none': 'Full model with all components',
     'no_agam': 'Without Low-rank Adaptive Graph Attention Module (LR-AGAM)',
-    'no_mtfm': 'Without Multi-scale Temporal Fusion Module (MTFM)',
-    'no_pprm': 'Without Progressive Prediction Refinement Module (PPRM)',
+    'no_pprm': 'Without GRU-based Progressive Prediction Refinement Module (PPRM)',
+}
+
+# Module full names for documentation
+MODULE_FULL_NAMES = {
+    'tfem': 'Temporal Feature Extraction Module (TFEM)',
+    'agam': 'Low-rank Adaptive Graph Attention Module (LR-AGAM)', 
+    'pprm': 'GRU-based Progressive Prediction Refinement Module (PPRM)',
 }
 
 # =============================================================================
@@ -139,7 +145,7 @@ DATASET_DISPLAY_NAMES = {
 
 COMPONENT_DISPLAY_NAMES = {
     'agam': 'LR-AGAM',
-    'mtfm': 'MTFM',
+    'mtfm': 'MSSFM',
     'pprm': 'PPRM',
 }
 

@@ -104,13 +104,13 @@ class SimpleGraphConvolutionalLayer(nn.Module):
         return x, 0.0
 
 # =============================================================================
-# 2. Single-scale Temporal Module (for DMTFM ablation)
+# 2. Single-scale Spatial Module (for MSSFM ablation)
 # =============================================================================
 class SingleScaleTemporalModule(nn.Module):
-    """Single-scale temporal convolution for ablation study.
+    """Single-scale spatial convolution for ablation study.
     
-    Used as an ablation replacement for the DilatedMultiScaleTemporalModule.
-    This module processes temporal features at a single scale with a fixed kernel size.
+    Used as an ablation replacement for the MultiScaleTemporalModule (MSSFM).
+    This module processes features at a single spatial scale with a fixed kernel size.
     
     Args:
         hidden_dim (int): Dimension of hidden representations
@@ -273,16 +273,11 @@ class MSAGATNet_Ablation(nn.Module):
                 bottleneck_dim=self.low_rank_dim
             )
         
-        # Temporal component: choose multi-scale or single-scale
-        if self.ablation == 'no_mtfm':
-            # Replace Dilated Multi-Scale Temporal with single-scale
-            self.temporal_module = SingleScaleTemporalModule(
-                self.hidden_dim,
-                kernel_size=self.kernel_size,
-                dropout=getattr(args, 'dropout', DROPOUT)
-            )
-        else:
-            # Original: Dilated Multi-Scale Temporal Module
+        # Note: MSSFM has been removed from main model, but we keep this for backward compatibility
+        # When 'no_mtfm' is set, we use identity (no additional spatial processing)
+        self.use_temporal_module = (self.ablation != 'no_mtfm')
+        if self.use_temporal_module:
+            # Multi-scale spatial feature module (kept for ablation comparison)
             self.temporal_module = MultiScaleTemporalModule(
                 hidden_dim=self.hidden_dim,
                 num_scales=getattr(args, 'num_scales', NUM_TEMPORAL_SCALES),
@@ -300,7 +295,7 @@ class MSAGATNet_Ablation(nn.Module):
                 dropout=getattr(args, 'dropout', DROPOUT)
             )
         else:
-            # Original: Progressive Prediction Module
+            # Original: GRU-based Progressive Prediction Module
             self.prediction_module = HorizonPredictor(
                 hidden_dim=self.hidden_dim,
                 horizon=self.horizon,
@@ -337,8 +332,11 @@ class MSAGATNet_Ablation(nn.Module):
         # Apply graph attention for spatial dependencies
         graph_features, attn_reg_loss = self.graph_attention(features)
         
-        # Process temporal patterns
-        fusion_features = self.temporal_module(graph_features)
+        # Apply multi-scale spatial processing only if enabled (for ablation)
+        if self.use_temporal_module:
+            fusion_features = self.temporal_module(graph_features)
+        else:
+            fusion_features = graph_features
         
         # Generate predictions
         predictions = self.prediction_module(fusion_features, x_last)

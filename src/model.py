@@ -17,11 +17,11 @@ BOTTLENECK_DIM = 8
 
 class SpatialAttentionModule(nn.Module):
     """
-    Spatial Attention Module that captures node relationships in a graph structure.
+    Low-rank Adaptive Graph Attention Module (LR-AGAM).
     
-    This module implements a graph attention mechanism with low-rank decomposition
-    for computational efficiency. It computes attention scores between nodes and
-    updates node representations accordingly.
+    Captures node relationships in a graph structure using an efficient
+    attention mechanism with low-rank decomposition. Computes attention 
+    scores between nodes and updates node representations accordingly.
     
     Args:
         hidden_dim (int): Dimensionality of node features
@@ -159,15 +159,15 @@ class SpatialAttentionModule(nn.Module):
 
 class MultiScaleTemporalModule(nn.Module):
     """
-    Multi-Scale Temporal Module that captures temporal patterns at different scales.
+    Multi-Scale Spatial Feature Module that captures spatial patterns at different scales.
     
-    This module uses dilated convolutions at different dilation rates to capture
-    short and long-term temporal dependencies. The outputs from different scales
-    are adaptively fused.
+    Despite the class name, this module operates on the NODE (spatial) dimension, not time.
+    It uses dilated convolutions at different dilation rates to capture local and global
+    spatial dependencies between nodes. The outputs from different scales are adaptively fused.
     
     Args:
         hidden_dim (int): Dimensionality of node features
-        num_scales (int): Number of temporal scales (different dilation rates)
+        num_scales (int): Number of spatial scales (different dilation rates)
         kernel_size (int): Size of the convolutional kernel
         dropout (float): Dropout probability for regularization
     """
@@ -198,18 +198,18 @@ class MultiScaleTemporalModule(nn.Module):
 
     def forward(self, x):
         """
-        Forward pass of the multi-scale temporal module.
+        Forward pass of the multi-scale spatial feature module.
         
         Args:
             x (tensor): Input features [batch, nodes, hidden_dim]
             
         Returns:
-            tensor: Temporally processed features
+            tensor: Spatially processed features with multi-scale information
         """
-        # Reshape for 1D convolution [batch*nodes, hidden_dim, time]
+        # Reshape for 1D convolution [batch, hidden_dim, nodes]
         x = x.transpose(1, 2)  # [batch, hidden_dim, nodes]
         
-        # Apply different temporal scales
+        # Apply different spatial scales (dilated convolutions along node dimension)
         features = [scale(x) for scale in self.scales]
         
         # Compute adaptive weights for scale fusion
@@ -232,11 +232,12 @@ class MultiScaleTemporalModule(nn.Module):
 
 class HorizonPredictor(nn.Module):
     """
-    Horizon Predictor module for forecasting future values.
+    Progressive Prediction Refinement Module (PPRM) with GRU.
     
-    This module takes node features and generates predictions for multiple
-    future time steps. It includes an optional refinement mechanism based on
-    the last observed value.
+    Uses a GRU to autoregressively generate predictions for multiple future time steps.
+    The GRU learns temporal dynamics for the prediction horizon, with each step
+    conditioned on the previous prediction. Includes adaptive refinement that
+    blends GRU outputs with learned decay from the last observation.
     
     Args:
         hidden_dim (int): Dimensionality of node features
@@ -250,16 +251,25 @@ class HorizonPredictor(nn.Module):
         self.horizon = horizon
         self.bottleneck_dim = bottleneck_dim
         
-        # Low-rank prediction projection
-        self.predictor_low = nn.Linear(hidden_dim, bottleneck_dim)
-        self.predictor_mid = nn.Sequential(
-            nn.LayerNorm(bottleneck_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout)
+        # GRU for autoregressive prediction
+        self.gru = nn.GRU(
+            input_size=1,  # Previous prediction value
+            hidden_size=bottleneck_dim,
+            num_layers=1,
+            batch_first=True,
+            dropout=0.0  # Single layer, no dropout needed
         )
-        self.predictor_high = nn.Linear(bottleneck_dim, horizon)
         
-        # Adaptive refinement gate based on last observation
+        # Project node features to GRU hidden state
+        self.hidden_proj = nn.Linear(hidden_dim, bottleneck_dim)
+        
+        # Output projection from GRU hidden to prediction
+        self.output_proj = nn.Linear(bottleneck_dim, 1)
+        
+        # Learnable decay rate (replaces fixed 0.1)
+        self.log_decay = nn.Parameter(torch.tensor(-2.3))  # ~0.1 initial
+        
+        # Adaptive refinement gate
         self.refine_gate = nn.Sequential(
             nn.Linear(hidden_dim, bottleneck_dim),
             nn.ReLU(),
@@ -269,7 +279,7 @@ class HorizonPredictor(nn.Module):
 
     def forward(self, x, last_step=None):
         """
-        Forward pass of the horizon predictor.
+        Forward pass of the GRU-based horizon predictor.
         
         Args:
             x (tensor): Node features [batch, nodes, hidden_dim]
@@ -278,36 +288,58 @@ class HorizonPredictor(nn.Module):
         Returns:
             tensor: Predictions for future time steps [batch, nodes, horizon]
         """
-        # Generate initial predictions
-        x_low = self.predictor_low(x)
-        x_mid = self.predictor_mid(x_low)
-        initial_pred = self.predictor_high(x_mid)
+        B, N, D = x.shape
         
-        # Apply refinement if last observed value is provided
+        # Initialize GRU hidden state from node features
+        # [batch, nodes, hidden_dim] -> [batch*nodes, bottleneck_dim]
+        h0 = self.hidden_proj(x.view(B * N, D))
+        h0 = h0.unsqueeze(0)  # [1, batch*nodes, bottleneck_dim]
+        
+        # Start with last observation as first input
         if last_step is not None:
-            # Compute adaptive gate
-            gate = self.refine_gate(x)
-            
-            # Prepare last step and exponential decay
-            last_step = last_step.unsqueeze(-1)
-            time_decay = torch.arange(1, self.horizon + 1, device=x.device).float().view(1, 1, self.horizon)
-            progressive_part = last_step * torch.exp(-0.1 * time_decay)
-            
-            # Adaptive fusion of model prediction and exponential decay
-            final_pred = gate * initial_pred + (1 - gate) * progressive_part
+            current_input = last_step.reshape(B * N, 1, 1)  # [batch*nodes, 1, 1]
         else:
-            final_pred = initial_pred
+            current_input = torch.zeros(B * N, 1, 1, device=x.device)
+        
+        # Autoregressive prediction
+        predictions = []
+        hidden = h0
+        for t in range(self.horizon):
+            gru_out, hidden = self.gru(current_input, hidden)
+            pred_t = self.output_proj(gru_out.squeeze(1))  # [batch*nodes, 1]
+            predictions.append(pred_t)
+            current_input = pred_t.unsqueeze(1)  # [batch*nodes, 1, 1]
+        
+        # Stack predictions: [batch*nodes, horizon]
+        gru_pred = torch.cat(predictions, dim=-1)
+        gru_pred = gru_pred.view(B, N, self.horizon)
+        
+        # Apply adaptive refinement if last observation provided
+        if last_step is not None:
+            gate = self.refine_gate(x)  # [batch, nodes, horizon]
+            
+            # Learned decay extrapolation
+            decay_rate = torch.exp(self.log_decay)
+            time_steps = torch.arange(1, self.horizon + 1, device=x.device).float()
+            decay_curve = torch.exp(-decay_rate * time_steps).view(1, 1, self.horizon)
+            decay_pred = last_step.unsqueeze(-1) * decay_curve
+            
+            # Blend GRU prediction with decay extrapolation
+            final_pred = gate * gru_pred + (1 - gate) * decay_pred
+        else:
+            final_pred = gru_pred
             
         return final_pred
 
 
 class DepthwiseSeparableConv1D(nn.Module):
     """
-    Depthwise Separable 1D Convolution for efficient feature extraction.
+    Depthwise Separable 1D Convolution for Temporal Feature Extraction Module (TFEM).
     
     This module splits a standard convolution into a depthwise convolution
     (applied to each channel separately) followed by a pointwise convolution
-    (1x1 convolution across channels). This reduces parameters and computation.
+    (1x1 convolution across channels). Used to process the input time window
+    and extract temporal features efficiently.
     
     Args:
         in_channels (int): Number of input channels
@@ -361,15 +393,20 @@ class MSTAGAT_Net(nn.Module):
     """
     Multi-Scale Temporal-Adaptive Graph Attention Network (MSTAGAT-Net)
     
-    This model combines graph attention mechanisms for spatial dependencies and
-    multi-scale temporal convolutions for temporal patterns to forecast time series data
-    in a network structure.
+    A spatiotemporal forecasting model with three key components:
+    - TFEM: Temporal Feature Extraction Module (depthwise separable convolutions along time)
+    - LR-AGAM: Low-rank Adaptive Graph Attention Module (spatial attention across nodes)
+    - PPRM: Progressive Prediction Refinement Module (GRU-based autoregressive prediction)
+    
+    Data flow:
+    1. Input [B, T, N] → TFEM extracts temporal features → [B, N, D]
+    2. LR-AGAM computes attention across nodes → [B, N, D]
+    3. PPRM generates predictions autoregressively → [B, H, N]
     
     Key components:
-    - Feature extraction using depthwise separable convolutions
-    - Spatial modeling with graph attention
-    - Temporal modeling with multi-scale dilated convolutions
-    - Horizon prediction with adaptive refinement
+    - Temporal feature extraction using depthwise separable convolutions along TIME
+    - Spatial modeling with graph attention across NODES
+    - Autoregressive prediction with GRU and adaptive refinement
     
     Args:
         args: Model configuration arguments
@@ -411,8 +448,8 @@ class MSTAGAT_Net(nn.Module):
         self.feature_norm = nn.LayerNorm(self.hidden_dim)
         self.feature_act = nn.ReLU()
 
-        # Spatial Component
-        # ----------------
+        # Spatial Component (LR-AGAM)
+        # -----------------------------
         # Graph attention mechanism to capture spatial dependencies between nodes
         self.spatial_module = SpatialAttentionModule(
             self.hidden_dim, num_nodes=self.num_nodes,
@@ -424,19 +461,9 @@ class MSTAGAT_Net(nn.Module):
             adj_matrix=adj_matrix
         )
 
-        # Temporal Component
-        # -----------------
-        # Multi-scale temporal module to capture patterns at different time scales
-        self.temporal_module = MultiScaleTemporalModule(
-            self.hidden_dim,
-            num_scales=getattr(args, 'num_scales', NUM_TEMPORAL_SCALES),
-            kernel_size=self.kernel_size,
-            dropout=getattr(args, 'dropout', DROPOUT)
-        )
-
-        # Prediction Component
-        # -------------------
-        # Horizon predictor to forecast future values
+        # Prediction Component (PPRM)
+        # ---------------------------
+        # GRU-based horizon predictor with adaptive refinement
         self.prediction_module = HorizonPredictor(
             self.hidden_dim, self.horizon,
             bottleneck_dim=self.bottleneck_dim,
@@ -457,8 +484,8 @@ class MSTAGAT_Net(nn.Module):
         B, T, N = x.shape
         x_last = x[:, -1, :]  # Last observed values
         
-        # Feature Extraction
-        # -----------------
+        # Feature Extraction (TFEM)
+        # -------------------------
         # Reshape for 1D convolution [batch*nodes, 1, time_window]
         x_temp = x.permute(0, 2, 1).contiguous().view(B * N, 1, T)
         temporal_features = self.feature_extractor(x_temp)
@@ -470,20 +497,15 @@ class MSTAGAT_Net(nn.Module):
         features = self.feature_norm(features)
         features = self.feature_act(features)
         
-        # Spatial Processing
-        # -----------------
+        # Spatial Processing (LR-AGAM)
+        # ----------------------------
         # Apply graph attention to capture spatial dependencies
         graph_features, attn_reg_loss = self.spatial_module(features)
         
-        # Temporal Processing
-        # ------------------
-        # Apply multi-scale temporal module to capture temporal patterns
-        fusion_features = self.temporal_module(graph_features)
-        
-        # Prediction
-        # ----------
-        # Generate predictions for future time steps
-        predictions = self.prediction_module(fusion_features, x_last)
+        # Prediction (PPRM)
+        # -----------------
+        # Generate predictions using GRU-based autoregressive predictor
+        predictions = self.prediction_module(graph_features, x_last)
         predictions = predictions.transpose(1, 2)  # [batch, horizon, nodes]
         
         return predictions, attn_reg_loss
