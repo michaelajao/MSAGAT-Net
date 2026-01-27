@@ -292,7 +292,7 @@ def run_single_experiment(
 # BATCH EXPERIMENT RUNNERS
 # =============================================================================
 
-def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = False):
+def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = False, force_cpu: bool = False, save_dir: str = 'save_all'):
     """Run main comparison experiments (Tables 1 & 2)."""
     
     print("\n" + "="*80)
@@ -322,6 +322,8 @@ def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = 
                         horizon=horizon,
                         seed=seed,
                         ablation='none',
+                        save_dir=save_dir,
+                        force_cpu=force_cpu,
                         verbose=True
                     )
                     print("  [OK] Completed")
@@ -334,7 +336,7 @@ def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = 
     print(f"{'='*80}")
 
 
-def run_ablation_experiments(datasets: List[str], seeds: List[int], dry_run: bool = False):
+def run_ablation_experiments(datasets: List[str], seeds: List[int], dry_run: bool = False, force_cpu: bool = False, save_dir: str = 'save_all'):
     """Run ablation study experiments (Tables 3 & 4)."""
     
     print("\n" + "="*80)
@@ -366,6 +368,8 @@ def run_ablation_experiments(datasets: List[str], seeds: List[int], dry_run: boo
                             horizon=horizon,
                             seed=seed,
                             ablation=ablation,
+                            save_dir=save_dir,
+                            force_cpu=force_cpu,
                             verbose=True
                         )
                         print("  [OK] Completed")
@@ -478,10 +482,10 @@ def main():
         print("="*80)
         
         if args.experiment in ['main', 'all']:
-            run_main_experiments(datasets, args.seeds, args.dry_run)
+            run_main_experiments(datasets, args.seeds, args.dry_run, args.cpu, args.save_dir)
         
         if args.experiment in ['ablation', 'all']:
-            run_ablation_experiments(datasets, args.seeds, args.dry_run)
+            run_ablation_experiments(datasets, args.seeds, args.dry_run, args.cpu, args.save_dir)
         
         print("\n" + "="*80)
         print("EXPERIMENTS COMPLETE")

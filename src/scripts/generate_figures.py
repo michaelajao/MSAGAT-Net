@@ -95,7 +95,7 @@ METRIC_NAMES = {
     'rmse': 'RMSE',
     'mae': 'MAE',
     'pcc': 'PCC',
-    'r2': 'R┬▓'
+    'r2': r'R$^2$'
 }
 
 # Component names
@@ -726,22 +726,24 @@ def fig_diagnostic_predictions():
         
         # Generate predictions
         try:
-            # Get test data
-            X_test, y_test, idx_test = loader.test
-            X_test = torch.tensor(X_test, dtype=torch.float32).to(device)
-            idx_test = torch.tensor(idx_test, dtype=torch.long).to(device) if idx_test is not None else None
+            # Get test data - loader.test returns [X, Y] list
+            X_test, y_test = loader.test[0], loader.test[1]
+            X_test = X_test.clone().detach().to(device) if isinstance(X_test, torch.Tensor) else torch.tensor(X_test, dtype=torch.float32).to(device)
+            
+            # Create dummy index for model forward pass
+            idx_test = torch.arange(len(X_test)).to(device)
             
             with torch.no_grad():
                 y_pred, _ = model(X_test, idx_test)
             
             y_pred = y_pred.cpu().numpy()
-            y_test_np = y_test
+            y_test_np = y_test.numpy() if isinstance(y_test, torch.Tensor) else y_test
             
-            # Take first prediction step
+            # Take last prediction step (model outputs multi-horizon predictions)
             if y_pred.ndim == 3:
-                y_pred = y_pred[:, 0, :]  # [batch, nodes]
+                y_pred = y_pred[:, -1, :]  # [batch, nodes] - use last horizon step
             if y_test_np.ndim == 3:
-                y_test_np = y_test_np[:, 0, :]  # [batch, nodes]
+                y_test_np = y_test_np[:, -1, :]  # [batch, nodes]
             
             # Visualize
             output_dir = os.path.join(BASE_DIR, 'report', 'figures', dataset)
