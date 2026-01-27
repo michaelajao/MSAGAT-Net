@@ -8,7 +8,7 @@ A computationally efficient spatiotemporal deep learning framework for epidemic 
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 MSAGAT-Net integrates four core components:
 
@@ -32,7 +32,7 @@ MSAGAT-Net integrates four core components:
 
 ---
 
-## 📊 Datasets
+## Datasets
 
 The repository includes **7 epidemic forecasting benchmarks** (2 novel):
 
@@ -43,14 +43,14 @@ The repository includes **7 epidemic forecasting benchmarks** (2 novel):
 | **State360** | US state-level | 50 | `state360.txt` | `state-adj-49.txt` |
 | **Australia COVID** | State-level COVID-19 | 8 | `australia-covid.txt` | `australia-adj.txt` |
 | **Spain COVID** | Regional COVID-19 | 17 | `spain-covid.txt` | `spain-adj.txt` |
-| **LTLA-COVID** 🆕 | UK local authority COVID-19 | 317 | `ltla_timeseries.txt` | `ltla-adj.txt` |
-| **NHS-ICUBeds** 🆕 | England ICU bed occupancy | 142 | `nhs_timeseries.txt` | `nhs-adj.txt` |
+| **LTLA-COVID** | UK local authority COVID-19 | 317 | `ltla_timeseries.txt` | `ltla-adj.txt` |
+| **NHS-ICUBeds** | England ICU bed occupancy | 142 | `nhs_timeseries.txt` | `nhs-adj.txt` |
 
 All datasets located in [`data/`](data/)
 
 ---
 
-## 🚀 Installation
+## Installation
 
 ### Prerequisites
 - Python 3.11+
@@ -77,7 +77,7 @@ pip install numpy pandas scipy scikit-learn matplotlib seaborn optuna tensorboar
 
 ---
 
-## 🎯 Usage
+## Usage
 
 ### 1. Train Single Model
 
@@ -148,7 +148,7 @@ Generates comprehensive analysis visualizations including performance comparison
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 MSAGAT-Net/
@@ -178,7 +178,7 @@ MSAGAT-Net/
 
 ---
 
-## 🔬 Model Hyperparameters
+## Model Hyperparameters
 
 **Default Configuration** (empirically optimized):
 
@@ -199,7 +199,7 @@ MSAGAT-Net/
 
 ---
 
-## 📊 Evaluation Metrics
+## Evaluation Metrics
 
 All experiments track:
 - **RMSE**: Root Mean Squared Error
@@ -209,7 +209,7 @@ All experiments track:
 
 ---
 
-## 📝 Citation
+## Citation
 
 If you use MSAGAT-Net in your research, please cite:
 
@@ -224,7 +224,7 @@ If you use MSAGAT-Net in your research, please cite:
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
 
