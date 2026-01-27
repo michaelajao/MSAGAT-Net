@@ -30,6 +30,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(os.path.dirname(SCRIPT_DIR))
 METRICS_DIR = os.path.join(BASE_DIR, 'report', 'results')
 OUT_DIR = os.path.join(BASE_DIR, 'report', 'figures', 'paper')
+MODEL_DIR = os.path.join(BASE_DIR, 'save_final')  # Where trained models are saved
 DEFAULT_WINDOW = 20
 
 # Consolidated file names
@@ -560,7 +561,7 @@ def get_model_path(dataset: str, horizon: int, ablation: str, seed: int) -> str:
         base_name += ".with_adj"
     base_name += ".pt"
     
-    return os.path.join(BASE_DIR, 'save_all', base_name)
+    return os.path.join(MODEL_DIR, base_name)
 
 
 def create_data_args(dataset: str, horizon: int, window: int = 20):
@@ -575,7 +576,7 @@ def create_data_args(dataset: str, horizon: int, window: int = 20):
         val=0.2,
         test=0.3,
         cuda=False,
-        save_dir='save_all',
+        save_dir=MODEL_DIR,
         extra='',
         label='',
         pcc='',
