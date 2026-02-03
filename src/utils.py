@@ -214,40 +214,258 @@ def _extract_attention(model, num_nodes: int, device: torch.device,
 # PREDICTION VISUALIZATION
 # =============================================================================
 
+def _compute_region_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+    """Compute metrics for a single region."""
+    from scipy.stats import pearsonr
+    
+    rmse = np.sqrt(np.mean((y_true - y_pred) ** 2))
+    mae = np.mean(np.abs(y_true - y_pred))
+    
+    # Handle constant arrays for PCC
+    if np.std(y_true) < 1e-8 or np.std(y_pred) < 1e-8:
+        pcc = 0.0
+    else:
+        pcc, _ = pearsonr(y_true, y_pred)
+    
+    return {'rmse': rmse, 'mae': mae, 'pcc': pcc}
+
+
 def visualize_predictions(y_true: np.ndarray, y_pred: np.ndarray, save_path: str,
-                          regions: int = 5, logger=None):
+                          regions: int = 6, logger=None, dataset_name: str = None,
+                          region_names: List[str] = None):
     """
-    Plot ground truth vs. predictions for selected regions.
+    Create publication-quality prediction plots with time series comparison.
     
     Args:
         y_true: Ground truth [timesteps, nodes]
         y_pred: Predictions [timesteps, nodes]
         save_path: Path to save figure
-        regions: Number of regions to plot
+        regions: Number of regions to plot (default 6 for 2x3 grid)
         logger: Optional logger
+        dataset_name: Optional dataset name for title
+        region_names: Optional list of region names
     """
-    n_regions = min(regions, y_true.shape[1])
+    # Setup publication style
+    plt.rcdefaults()
+    plt.rcParams.update({
+        'figure.dpi': 300,
+        'savefig.dpi': 300,
+        'font.family': 'serif',
+        'font.serif': ['Times New Roman', 'DejaVu Serif'],
+        'font.size': 10,
+        'axes.titlesize': 11,
+        'axes.labelsize': 10,
+        'xtick.labelsize': 9,
+        'ytick.labelsize': 9,
+        'legend.fontsize': 9,
+        'axes.spines.top': False,
+        'axes.spines.right': False,
+        'axes.facecolor': 'white',
+        'figure.facecolor': 'white',
+    })
+    
+    n_nodes = y_true.shape[1]
+    n_regions = min(regions, n_nodes)
     timesteps = np.arange(y_true.shape[0])
     
-    fig, axes = plt.subplots(n_regions, 1, figsize=(12, 3 * n_regions), sharex=True)
-    if n_regions == 1:
-        axes = [axes]
+    # Select regions with highest variance (most interesting to visualize)
+    variances = np.var(y_true, axis=0)
+    selected_indices = np.argsort(variances)[-n_regions:][::-1]
+    
+    # Determine grid layout
+    if n_regions <= 3:
+        nrows, ncols = 1, n_regions
+        figsize = (4.5 * n_regions, 3.5)
+    elif n_regions <= 6:
+        nrows, ncols = 2, 3
+        figsize = (14, 7)
+    else:
+        nrows, ncols = 3, 3
+        figsize = (14, 10)
+    
+    fig, axes = plt.subplots(nrows, ncols, figsize=figsize)
+    axes = np.atleast_2d(axes).flatten()
+    
+    # Colors for publication
+    color_true = '#1f77b4'  # Blue
+    color_pred = '#d62728'  # Red
+    
+    for plot_idx, region_idx in enumerate(selected_indices):
+        if plot_idx >= len(axes):
+            break
+            
+        ax = axes[plot_idx]
         
-    for i in range(n_regions):
-        axes[i].plot(timesteps, y_true[:, i], label="Ground Truth", alpha=0.7)
-        axes[i].plot(timesteps, y_pred[:, i], label="Prediction", alpha=0.7)
-        axes[i].set_title(f"Region {i}")
-        axes[i].set_ylabel("Value")
-        axes[i].grid(True, linestyle='--', alpha=0.5)
-        axes[i].legend()
+        true_vals = y_true[:, region_idx]
+        pred_vals = y_pred[:, region_idx]
         
-    axes[-1].set_xlabel("Time Step")
+        # Compute metrics for this region
+        metrics = _compute_region_metrics(true_vals, pred_vals)
+        
+        # Plot ground truth
+        ax.plot(timesteps, true_vals, 
+                color=color_true, 
+                linewidth=1.5, 
+                label='Ground Truth',
+                zorder=2)
+        
+        # Plot prediction
+        ax.plot(timesteps, pred_vals, 
+                color=color_pred, 
+                linewidth=1.5, 
+                linestyle='--',
+                label='Prediction',
+                alpha=0.9,
+                zorder=3)
+        
+        # Fill between to show error
+        ax.fill_between(timesteps, true_vals, pred_vals,
+                        color='gray', alpha=0.15, zorder=1)
+        
+        # Region name
+        if region_names and region_idx < len(region_names):
+            region_label = region_names[region_idx]
+        else:
+            region_label = f'Region {region_idx + 1}'
+        
+        # Title with metrics
+        ax.set_title(f'{region_label}\nRMSE={metrics["rmse"]:.3f}, PCC={metrics["pcc"]:.3f}',
+                     fontsize=10, fontweight='normal')
+        
+        # Axis labels
+        ax.set_xlabel('Time Step')
+        ax.set_ylabel('Value')
+        
+        # Light grid
+        ax.grid(True, linestyle=':', alpha=0.4, zorder=0)
+        
+        # Legend only on first subplot
+        if plot_idx == 0:
+            ax.legend(loc='upper right', frameon=True, framealpha=0.9,
+                      edgecolor='gray', fancybox=False)
+    
+    # Hide unused subplots
+    for idx in range(len(selected_indices), len(axes)):
+        axes[idx].set_visible(False)
+    
+    # Overall title
+    if dataset_name:
+        fig.suptitle(f'{dataset_name} - Prediction Results', fontsize=12, fontweight='bold', y=1.02)
+    
     plt.tight_layout()
-    plt.savefig(save_path, bbox_inches="tight")
+    plt.savefig(save_path, bbox_inches='tight', dpi=300, facecolor='white')
     plt.close(fig)
     
     if logger:
         logger.info(f"Predictions saved to {save_path}")
+
+
+def visualize_predictions_summary(y_true: np.ndarray, y_pred: np.ndarray, save_path: str,
+                                   logger=None, dataset_name: str = None):
+    """
+    Create a single summary plot showing aggregated predictions across all regions.
+    Useful for showing overall model performance.
+    
+    Args:
+        y_true: Ground truth [timesteps, nodes]
+        y_pred: Predictions [timesteps, nodes]
+        save_path: Path to save figure
+        logger: Optional logger
+        dataset_name: Optional dataset name for title
+    """
+    # Setup publication style
+    plt.rcdefaults()
+    plt.rcParams.update({
+        'figure.dpi': 300,
+        'savefig.dpi': 300,
+        'font.family': 'serif',
+        'font.serif': ['Times New Roman', 'DejaVu Serif'],
+        'font.size': 10,
+        'axes.titlesize': 11,
+        'axes.labelsize': 10,
+        'xtick.labelsize': 9,
+        'ytick.labelsize': 9,
+        'legend.fontsize': 9,
+        'axes.spines.top': False,
+        'axes.spines.right': False,
+    })
+    
+    timesteps = np.arange(y_true.shape[0])
+    
+    # Compute aggregated values (mean across regions)
+    true_mean = np.mean(y_true, axis=1)
+    pred_mean = np.mean(y_pred, axis=1)
+    true_std = np.std(y_true, axis=1)
+    pred_std = np.std(y_pred, axis=1)
+    
+    # Compute overall metrics
+    overall_rmse = np.sqrt(np.mean((y_true - y_pred) ** 2))
+    overall_mae = np.mean(np.abs(y_true - y_pred))
+    
+    # Per-timestep RMSE across regions
+    from scipy.stats import pearsonr
+    flat_true = y_true.flatten()
+    flat_pred = y_pred.flatten()
+    if np.std(flat_true) > 1e-8 and np.std(flat_pred) > 1e-8:
+        overall_pcc, _ = pearsonr(flat_true, flat_pred)
+    else:
+        overall_pcc = 0.0
+    
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    
+    # Colors
+    color_true = '#1f77b4'
+    color_pred = '#d62728'
+    
+    # Left plot: Mean prediction with confidence bands
+    ax1 = axes[0]
+    ax1.plot(timesteps, true_mean, color=color_true, linewidth=2, label='Ground Truth (mean)')
+    ax1.fill_between(timesteps, true_mean - true_std, true_mean + true_std,
+                     color=color_true, alpha=0.2, label='±1 std')
+    ax1.plot(timesteps, pred_mean, color=color_pred, linewidth=2, linestyle='--', 
+             label='Prediction (mean)')
+    ax1.fill_between(timesteps, pred_mean - pred_std, pred_mean + pred_std,
+                     color=color_pred, alpha=0.15)
+    
+    ax1.set_xlabel('Time Step')
+    ax1.set_ylabel('Value (averaged across regions)')
+    ax1.set_title('Aggregated Predictions')
+    ax1.legend(loc='upper right', frameon=True, framealpha=0.9)
+    ax1.grid(True, linestyle=':', alpha=0.4)
+    
+    # Right plot: Error distribution over time
+    ax2 = axes[1]
+    errors = np.abs(y_true - y_pred)
+    error_mean = np.mean(errors, axis=1)
+    error_std = np.std(errors, axis=1)
+    
+    ax2.plot(timesteps, error_mean, color='#2ca02c', linewidth=2, label='Mean Abs. Error')
+    ax2.fill_between(timesteps, 
+                     np.maximum(0, error_mean - error_std), 
+                     error_mean + error_std,
+                     color='#2ca02c', alpha=0.2, label='±1 std')
+    
+    ax2.set_xlabel('Time Step')
+    ax2.set_ylabel('Absolute Error')
+    ax2.set_title('Prediction Error Over Time')
+    ax2.legend(loc='upper right', frameon=True, framealpha=0.9)
+    ax2.grid(True, linestyle=':', alpha=0.4)
+    
+    # Add metrics text box
+    metrics_text = f'Overall Metrics:\nRMSE = {overall_rmse:.4f}\nMAE = {overall_mae:.4f}\nPCC = {overall_pcc:.4f}'
+    ax2.text(0.02, 0.98, metrics_text, transform=ax2.transAxes, fontsize=9,
+             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+    
+    # Overall title
+    if dataset_name:
+        fig.suptitle(f'{dataset_name} - Summary', fontsize=12, fontweight='bold', y=1.02)
+    
+    plt.tight_layout()
+    plt.savefig(save_path, bbox_inches='tight', dpi=300, facecolor='white')
+    plt.close(fig)
+    
+    if logger:
+        logger.info(f"Summary predictions saved to {save_path}")
 
 
 # =============================================================================

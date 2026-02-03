@@ -31,6 +31,7 @@ NUM_TEMPORAL_SCALES = 4
 KERNEL_SIZE = 3
 FEATURE_CHANNELS = 16
 BOTTLENECK_DIM = 8
+HIGHWAY_WINDOW = 4  # For autoregressive component (critical for stable forecasting!)
 
 # Graph size thresholds for adaptive configuration
 SMALL_GRAPH_THRESHOLD = 20   # <= 20 nodes: use adj prior + graph bias
@@ -534,6 +535,33 @@ class MSTAGAT_Net(nn.Module):
             bottleneck_dim=self.bottleneck_dim,
             dropout=getattr(args, 'dropout', DROPOUT)
         )
+        
+        # =====================================================================
+        # Highway/Autoregressive Connection (like Cola-GNN/EpiGNN)
+        # Critical for stable forecasting across all datasets!
+        # =====================================================================
+        self.highway_window = min(getattr(args, 'highway_window', HIGHWAY_WINDOW), self.window)
+        if self.highway_window > 0:
+            self.highway = nn.Linear(self.highway_window, self.horizon)
+        else:
+            self.highway = None
+        self.highway_ratio = nn.Parameter(torch.tensor(0.5))
+        
+        # Initialize weights properly (Xavier - used by all successful models)
+        self._init_weights()
+        
+    def _init_weights(self):
+        """Initialize weights using Xavier uniform (like Cola-GNN/EpiGNN)."""
+        for name, p in self.named_parameters():
+            if p.dim() >= 2:
+                nn.init.xavier_uniform_(p)
+            elif p.dim() == 1 and p.size(0) > 0:
+                if 'bias' in name:
+                    nn.init.zeros_(p)
+                else:
+                    stdv = 1. / math.sqrt(p.size(0))
+                    p.data.uniform_(-stdv, stdv)
+            # Skip 0-dimensional tensors (scalars like highway_ratio)
 
     def forward(self, x, idx=None):
         """
@@ -566,8 +594,25 @@ class MSTAGAT_Net(nn.Module):
         fusion_features = self.temporal_module(graph_features)
         
         # Prediction (PPRM)
-        predictions = self.prediction_module(fusion_features, x_last)
-        predictions = predictions.transpose(1, 2)  # [batch, horizon, nodes]
+        model_pred = self.prediction_module(fusion_features, x_last)
+        model_pred = model_pred.transpose(1, 2)  # [batch, horizon, nodes]
+        
+        # Highway/Autoregressive connection (like Cola-GNN/EpiGNN)
+        # This is CRITICAL for stable forecasting!
+        if self.highway is not None and self.highway_window > 0:
+            # Get recent observations
+            z = x[:, -self.highway_window:, :]  # [B, hw, N]
+            z = z.permute(0, 2, 1).contiguous()  # [B, N, hw]
+            z = z.view(B * N, self.highway_window)  # [B*N, hw]
+            z = self.highway(z)  # [B*N, H]
+            z = z.view(B, N, self.horizon)  # [B, N, H]
+            z = z.transpose(1, 2)  # [B, H, N]
+            
+            # Blend with sigmoid-gated ratio
+            ratio = torch.sigmoid(self.highway_ratio)
+            predictions = ratio * model_pred + (1 - ratio) * z
+        else:
+            predictions = model_pred
         
         return predictions, attn_reg_loss
 
@@ -831,6 +876,30 @@ class MSAGATNet_Ablation(nn.Module):
                 bottleneck_dim=self.low_rank_dim,
                 dropout=dropout
             )
+        
+        # Highway/Autoregressive Connection (same as main model for fair comparison)
+        self.highway_window = min(getattr(args, 'highway_window', HIGHWAY_WINDOW), self.window)
+        if self.highway_window > 0:
+            self.highway = nn.Linear(self.highway_window, self.horizon)
+        else:
+            self.highway = None
+        self.highway_ratio = nn.Parameter(torch.tensor(0.5))
+        
+        # Initialize weights
+        self._init_weights()
+        
+    def _init_weights(self):
+        """Initialize weights using Xavier uniform."""
+        for name, p in self.named_parameters():
+            if p.dim() >= 2:
+                nn.init.xavier_uniform_(p)
+            elif p.dim() == 1 and p.size(0) > 0:
+                if 'bias' in name:
+                    nn.init.zeros_(p)
+                else:
+                    stdv = 1. / math.sqrt(p.size(0))
+                    p.data.uniform_(-stdv, stdv)
+            # Skip 0-dimensional tensors (scalars)
 
     def forward(self, x, idx=None):
         """
@@ -862,8 +931,22 @@ class MSAGATNet_Ablation(nn.Module):
         # Apply multi-scale spatial refinement
         fusion_features = self.spatial_refinement_module(graph_features)
         
-        # Generate predictions
-        predictions = self.prediction_module(fusion_features, x_last)
-        predictions = predictions.transpose(1, 2)
+        # Generate model predictions
+        model_pred = self.prediction_module(fusion_features, x_last)
+        model_pred = model_pred.transpose(1, 2)
+        
+        # Highway/Autoregressive connection
+        if self.highway is not None and self.highway_window > 0:
+            z = x[:, -self.highway_window:, :]
+            z = z.permute(0, 2, 1).contiguous()
+            z = z.view(B * N, self.highway_window)
+            z = self.highway(z)
+            z = z.view(B, N, self.horizon)
+            z = z.transpose(1, 2)
+            
+            ratio = torch.sigmoid(self.highway_ratio)
+            predictions = ratio * model_pred + (1 - ratio) * z
+        else:
+            predictions = model_pred
         
         return predictions, attn_reg_loss

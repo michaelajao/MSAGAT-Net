@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Generate publication-ready figures for MSAGAT-Net research paper.
 Outputs PNG files formatted for academic publication.
@@ -21,7 +21,7 @@ if SRC_DIR not in sys.path:
 
 from data import DataBasicLoader
 from models import MSAGATNet_Ablation  # Use ablation model for loading checkpoints
-from utils import visualize_matrices, visualize_predictions
+from utils import visualize_matrices, visualize_predictions, visualize_predictions_summary
 
 # =============================================================================
 # CONFIGURATION
@@ -110,8 +110,11 @@ COMP_NAMES = {
 DATASET_NAMES = {
     'japan': 'Japan',
     'region785': 'US Region',
-    'nhs_timeseries': 'NHS',
-    'ltla_timeseries': 'LTLA'
+    'state360': 'US States',
+    'nhs_timeseries': 'NHS (UK)',
+    'ltla_timeseries': 'LTLA (UK)',
+    'australia-covid': 'Australia',
+    'spain-covid': 'Spain'
 }
 
 # =============================================================================
@@ -628,14 +631,7 @@ def fig_diagnostic_matrices():
         # Use first horizon for visualization
         horizon = horizons[0]
         
-        # Get correct model path based on dataset config
-        model_path = get_model_path(dataset, horizon, 'none', seed)
-        
-        if not os.path.exists(model_path):
-            print(f"  Warning: Model not found: {model_path}")
-            continue
-        
-        # Load dataset
+        # Load dataset once per dataset (shared across ablations)
         try:
             args = create_data_args(dataset, horizon, DEFAULT_WINDOW)
             loader = DataBasicLoader(args)
@@ -643,43 +639,59 @@ def fig_diagnostic_matrices():
             print(f"  Error loading dataset {dataset}: {e}")
             continue
         
-        # Load model
-        try:
-            checkpoint = torch.load(model_path, map_location=device)
+        # Generate matrices for full model and all ablation variants
+        for ablation in ABLATIONS:
+            # Get correct model path based on dataset config
+            model_path = get_model_path(dataset, horizon, ablation, seed)
             
-            # Handle both state_dict formats (nested and direct)
-            if 'model_state_dict' in checkpoint:
-                state_dict = checkpoint['model_state_dict']
+            if not os.path.exists(model_path):
+                print(f"  Warning: Model not found: {model_path}")
+                continue
+            
+            # Load model
+            try:
+                checkpoint = torch.load(model_path, map_location=device)
+                
+                # Handle both state_dict formats (nested and direct)
+                if 'model_state_dict' in checkpoint:
+                    state_dict = checkpoint['model_state_dict']
+                else:
+                    state_dict = checkpoint
+                
+                # Create model with correct parameters for this ablation
+                model = create_model_for_loading(dataset, loader, device, ablation)
+                model.load_state_dict(state_dict)
+                model.eval()
+                
+            except Exception as e:
+                print(f"  Error loading model {model_path}: {e}")
+                continue
+            
+            # Generate visualization
+            output_dir = os.path.join(BASE_DIR, 'report', 'figures', dataset)
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Include ablation in filename
+            if ablation == 'none':
+                save_path = os.path.join(
+                    output_dir,
+                    f'matrices_{dataset}_h{horizon}_seed{seed}.png'
+                )
             else:
-                state_dict = checkpoint
+                save_path = os.path.join(
+                    output_dir,
+                    f'matrices_{dataset}_h{horizon}_{ablation}_seed{seed}.png'
+                )
             
-            # Create model with correct parameters
-            model = create_model_for_loading(dataset, loader, device)
-            model.load_state_dict(state_dict)
-            model.eval()
-            
-        except Exception as e:
-            print(f"  Error loading model {model_path}: {e}")
-            continue
-        
-        # Generate visualization
-        output_dir = os.path.join(BASE_DIR, 'report', 'figures', dataset)
-        os.makedirs(output_dir, exist_ok=True)
-        
-        save_path = os.path.join(
-            output_dir,
-            f'matrices_{dataset}_h{horizon}_seed{seed}.png'
-        )
-        
-        try:
-            visualize_matrices(loader, model, save_path, device)
-            print(f"  Saved: {save_path}")
-        except Exception as e:
-            print(f"  Error visualizing matrices for {dataset}: {e}")
+            try:
+                visualize_matrices(loader, model, save_path, device)
+                print(f"  Saved: {save_path}")
+            except Exception as e:
+                print(f"  Error visualizing matrices for {dataset} ({ablation}): {e}")
 
 
 def fig_diagnostic_predictions():
-    """Generate prediction visualizations for first seed."""
+    """Generate publication-quality prediction visualizations for first seed."""
     print("\n7. Generating diagnostic prediction plots (first seed only)...")
     
     # Use first seed (5)
@@ -690,6 +702,9 @@ def fig_diagnostic_predictions():
     for dataset, horizons in DATASET_CONFIGS:
         # Use first horizon for visualization
         horizon = horizons[0]
+        
+        # Get display name for dataset
+        display_name = DATASET_NAMES.get(dataset, dataset.replace('_', ' ').replace('-', ' ').title())
         
         # Get correct model path based on dataset config
         model_path = get_model_path(dataset, horizon, 'none', seed)
@@ -746,17 +761,37 @@ def fig_diagnostic_predictions():
             if y_test_np.ndim == 3:
                 y_test_np = y_test_np[:, -1, :]  # [batch, nodes]
             
-            # Visualize
+            # Output directory
             output_dir = os.path.join(BASE_DIR, 'report', 'figures', dataset)
             os.makedirs(output_dir, exist_ok=True)
             
+            # 1. Generate main predictions plot (time series for selected regions)
             save_path = os.path.join(
                 output_dir,
                 f'predictions_{dataset}_h{horizon}_seed{seed}.png'
             )
             
-            visualize_predictions(y_test_np, y_pred, save_path, regions=5)
+            # Determine number of regions based on dataset size
+            n_regions = min(6, loader.m)  # Max 6 for clean 2x3 grid
+            
+            visualize_predictions(
+                y_test_np, y_pred, save_path, 
+                regions=n_regions,
+                dataset_name=f'{display_name} (H={horizon})'
+            )
             print(f"  Saved: {save_path}")
+            
+            # 2. Generate summary plot (aggregated view)
+            summary_path = os.path.join(
+                output_dir,
+                f'predictions_summary_{dataset}_h{horizon}_seed{seed}.png'
+            )
+            
+            visualize_predictions_summary(
+                y_test_np, y_pred, summary_path,
+                dataset_name=f'{display_name} (H={horizon})'
+            )
+            print(f"  Saved: {summary_path}")
             
         except Exception as e:
             print(f"  Error generating predictions for {dataset}: {e}")

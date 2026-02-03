@@ -43,6 +43,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 from src.data import DataBasicLoader
 from src.models import MSAGATNet_Ablation
+from src.models_novel import EpiDelayNet, EpiDelayNet_Ablation
+from src.models_novel_full import EpiDelayNetFull
+from src.models_sig import EpiSIGNet, EpiSIGNet_NoSIG
+from src.models_sig_v2 import EpiSIGNetV2, EpiSIGNetV2_NoSIG
 from src.training import Trainer
 from src.utils import plot_loss_curves, save_metrics
 
@@ -66,59 +70,47 @@ DATASET_CONFIGS = {
         'sim_mat': 'japan-adj',
         'num_nodes': 47,
         'horizons': [3, 5, 10, 15],
-        'use_adj_prior': False,
-        'use_graph_bias': False,
-        'notes': 'Large graph - pure learned attention (best performance)'
+        # NOTE: Baselines use same settings for all datasets - adjacency always used if provided
     },
     'australia-covid': {
         'sim_mat': 'australia-adj',
         'num_nodes': 8,
         'horizons': [3, 7, 14],
-        'use_adj_prior': True,
-        'use_graph_bias': True,
-        'notes': 'Small graph - adjacency prior helps'
     },
     'nhs_timeseries': {
         'sim_mat': 'nhs-adj',
         'num_nodes': 7,
         'horizons': [3, 7, 14],
-        'use_adj_prior': True,
-        'use_graph_bias': True,
-        'notes': 'Small graph - adjacency prior helps'
     },
     'spain-covid': {
         'sim_mat': 'spain-adj',
         'num_nodes': 17,
         'horizons': [3, 7, 14],
-        'use_adj_prior': True,
-        'use_graph_bias': True,
-        'notes': 'Medium graph - adj helps for longer horizons'
     },
     'ltla_timeseries': {
         'sim_mat': 'ltla-adj',
         'num_nodes': 307,
         'horizons': [3, 7, 14],
-        'use_adj_prior': False,
-        'use_graph_bias': False,
-        'notes': 'Very large graph - learned attention only'
     },
     'region785': {
         'sim_mat': 'region-adj',
         'num_nodes': 10,
         'horizons': [3, 5, 10, 15],
-        'use_adj_prior': True,
-        'use_graph_bias': True,
-        'notes': 'Small graph - use adjacency prior'
     },
     'state360': {
         'sim_mat': 'state-adj-49',
         'num_nodes': 49,
         'horizons': [3, 5, 10, 15],
-        'use_adj_prior': False,
-        'use_graph_bias': False,
-        'notes': 'Large graph - learned attention only'
     },
 }
+
+# =============================================================================
+# GLOBAL MODEL SETTINGS (same for all datasets, like baselines)
+# =============================================================================
+# Baselines (Cola-GNN, STGCN, etc.) always use adjacency if provided
+# They don't have per-dataset settings for this
+USE_ADJ_PRIOR = True   # Use adjacency matrix as prior (like baselines)
+USE_GRAPH_BIAS = True  # Use learnable graph structure bias
 
 # Training hyperparameters
 TRAIN_CONFIG = {
@@ -141,6 +133,18 @@ SEEDS = [5, 30, 45, 123, 1000]
 # Ablation configurations
 ABLATIONS = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
 
+# EpiDelay-Net ablations
+EPIDELAY_ABLATIONS = ['none', 'no_delay', 'no_leadlag', 'no_rt', 'no_phase']
+
+# Available models
+MODELS = ['msagat', 'epidelay', 'epidelay_full', 'episig', 'episig_v2']
+
+# EpiSIG-Net ablations (just one: remove SIG)
+EPISIG_ABLATIONS = ['none', 'no_sig']
+
+# EpiSIG-Net v2 ablations
+EPISIG_V2_ABLATIONS = ['none', 'no_sig']
+
 
 # =============================================================================
 # SINGLE EXPERIMENT RUNNER
@@ -152,10 +156,9 @@ def run_single_experiment(
     seed: int,
     ablation: str = 'none',
     save_dir: str = 'save_all',
-    use_adj_prior: Optional[bool] = None,
-    use_graph_bias: Optional[bool] = None,
     verbose: bool = True,
-    force_cpu: bool = False
+    force_cpu: bool = False,
+    model_type: str = 'msagat'
 ) -> Dict[str, float]:
     """
     Run a single training experiment.
@@ -164,23 +167,25 @@ def run_single_experiment(
         dataset: Dataset name
         horizon: Prediction horizon
         seed: Random seed
-        ablation: Ablation variant ('none', 'no_agam', 'no_mtfm', 'no_pprm')
+        ablation: Ablation variant 
+            - For MSAGAT: 'none', 'no_agam', 'no_mtfm', 'no_pprm'
+            - For EpiDelay: 'none', 'no_delay', 'no_leadlag', 'no_rt', 'no_phase'
         save_dir: Directory to save model checkpoints
-        use_adj_prior: Override dataset config for adjacency prior
-        use_graph_bias: Override dataset config for graph bias
         verbose: Print progress
         force_cpu: Force CPU training even if GPU available
+        model_type: Model to use ('msagat' or 'epidelay')
         
     Returns:
         Dictionary of final metrics
     """
     config = DATASET_CONFIGS[dataset]
     
-    # Use overrides or dataset defaults
-    adj_prior = use_adj_prior if use_adj_prior is not None else config['use_adj_prior']
-    graph_bias = use_graph_bias if use_graph_bias is not None else config['use_graph_bias']
+    # Use SAME settings for all datasets (like baselines - Cola-GNN, STGCN, etc.)
+    adj_prior = USE_ADJ_PRIOR
+    graph_bias = USE_GRAPH_BIAS
     
     # Build args namespace
+    # Use SAME hyperparameters across all datasets for fair comparison (like baselines)
     args = Namespace(
         dataset=dataset,
         sim_mat=config['sim_mat'],
@@ -212,6 +217,7 @@ def run_single_experiment(
         cuda=torch.cuda.is_available() and not force_cpu,
         save_dir=save_dir,
         mylog=True,
+        highway_window=4,  # Same for all datasets
         extra='',
         label='',
         pcc='',
@@ -230,9 +236,31 @@ def run_single_experiment(
     # Load data
     data_loader = DataBasicLoader(args)
     
-    # Create model (final runner uses MSTAGAT-Net only)
-    model = MSAGATNet_Ablation(args, data_loader)
-    model_name = 'MSTAGAT-Net'
+    # Create model based on model_type
+    if model_type == 'episig_v2':
+        if ablation == 'no_sig':
+            model = EpiSIGNetV2_NoSIG(args, data_loader)
+        else:
+            model = EpiSIGNetV2(args, data_loader)
+        model_name = 'EpiSIG-Net-V2'
+    elif model_type == 'episig':
+        if ablation == 'no_sig':
+            model = EpiSIGNet_NoSIG(args, data_loader)
+        else:
+            model = EpiSIGNet(args, data_loader)
+        model_name = 'EpiSIG-Net'
+    elif model_type == 'epidelay':
+        if ablation == 'none':
+            model = EpiDelayNet(args, data_loader)
+        else:
+            model = EpiDelayNet_Ablation(args, data_loader)
+        model_name = 'EpiDelay-Net'
+    elif model_type == 'epidelay_full':
+        model = EpiDelayNetFull(args, data_loader)
+        model_name = 'EpiDelay-Net-Full'
+    else:
+        model = MSAGATNet_Ablation(args, data_loader)
+        model_name = 'MSTAGAT-Net'
     
     if args.cuda:
         model.cuda()
@@ -292,11 +320,12 @@ def run_single_experiment(
 # BATCH EXPERIMENT RUNNERS
 # =============================================================================
 
-def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = False, force_cpu: bool = False, save_dir: str = 'save_all'):
+def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = False, force_cpu: bool = False, save_dir: str = 'save_all', model_type: str = 'msagat'):
     """Run main comparison experiments (Tables 1 & 2)."""
     
+    model_display = {'episig': 'EpiSIG-Net', 'epidelay': 'EpiDelay-Net', 'epidelay_full': 'EpiDelay-Net-Full'}.get(model_type, 'MSAGAT-Net')
     print("\n" + "="*80)
-    print("MAIN EXPERIMENTS: MSAGAT-Net with Optimal Settings")
+    print(f"MAIN EXPERIMENTS: {model_display} with Optimal Settings")
     print("="*80)
     
     total = sum(len(DATASET_CONFIGS[d]['horizons']) for d in datasets) * len(seeds)
@@ -324,7 +353,8 @@ def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = 
                         ablation='none',
                         save_dir=save_dir,
                         force_cpu=force_cpu,
-                        verbose=True
+                        verbose=True,
+                        model_type=model_type
                     )
                     print("  [OK] Completed")
                 except Exception as e:
@@ -332,19 +362,29 @@ def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = 
                     print(f"  [FAIL] {e}")
     
     print(f"\n{'='*80}")
-    print(f"MAIN EXPERIMENTS: {completed-failed}/{total} completed, {failed} failed")
+    print(f"MAIN EXPERIMENTS ({model_display}): {completed-failed}/{total} completed, {failed} failed")
     print(f"{'='*80}")
 
 
-def run_ablation_experiments(datasets: List[str], seeds: List[int], dry_run: bool = False, force_cpu: bool = False, save_dir: str = 'save_all'):
+def run_ablation_experiments(datasets: List[str], seeds: List[int], dry_run: bool = False, force_cpu: bool = False, save_dir: str = 'save_all', model_type: str = 'msagat'):
     """Run ablation study experiments (Tables 3 & 4)."""
     
+    if model_type == 'episig':
+        model_display = 'EpiSIG-Net'
+        ablations = EPISIG_ABLATIONS
+    elif model_type == 'epidelay':
+        model_display = 'EpiDelay-Net'
+        ablations = EPIDELAY_ABLATIONS
+    else:
+        model_display = 'MSAGAT-Net'
+        ablations = ABLATIONS
+    
     print("\n" + "="*80)
-    print("ABLATION EXPERIMENTS: Component Contributions")
+    print(f"ABLATION EXPERIMENTS ({model_display}): Component Contributions")
     print("="*80)
     
     ablation_horizons = [3, 7, 14]
-    total = len(datasets) * len(ABLATIONS) * len(ablation_horizons) * len(seeds[:1])
+    total = len(datasets) * len(ablations) * len(ablation_horizons) * len(seeds[:1])
     completed = 0
     failed = 0
     
@@ -352,7 +392,7 @@ def run_ablation_experiments(datasets: List[str], seeds: List[int], dry_run: boo
         config = DATASET_CONFIGS[dataset]
         print(f"\n{dataset} ({config['num_nodes']} nodes)")
         
-        for ablation in ABLATIONS:
+        for ablation in ablations:
             for horizon in ablation_horizons:
                 for seed in seeds[:1]:  # Single seed for ablation
                     completed += 1
@@ -370,7 +410,8 @@ def run_ablation_experiments(datasets: List[str], seeds: List[int], dry_run: boo
                             ablation=ablation,
                             save_dir=save_dir,
                             force_cpu=force_cpu,
-                            verbose=True
+                            verbose=True,
+                            model_type=model_type
                         )
                         print("  [OK] Completed")
                     except Exception as e:
@@ -378,7 +419,7 @@ def run_ablation_experiments(datasets: List[str], seeds: List[int], dry_run: boo
                         print(f"  [FAIL] {e}")
     
     print(f"\n{'='*80}")
-    print(f"ABLATION EXPERIMENTS: {completed-failed}/{total} completed, {failed} failed")
+    print(f"ABLATION EXPERIMENTS ({model_display}): {completed-failed}/{total} completed, {failed} failed")
     print(f"{'='*80}")
 
 
@@ -421,8 +462,10 @@ Examples:
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed')
     parser.add_argument('--ablation', type=str, default='none',
-                        choices=['none', 'no_agam', 'no_mtfm', 'no_pprm'],
-                        help='Ablation variant')
+                        help='Ablation variant (msagat: none/no_agam/no_mtfm/no_pprm, epidelay: none/no_delay/no_leadlag/no_rt/no_phase)')
+    parser.add_argument('--model', type=str, default='msagat',
+                        choices=['msagat', 'epidelay', 'epidelay_full', 'episig', 'episig_v2'],
+                        help='Model type (msagat, epidelay, epidelay_full, episig, or episig_v2)')
     parser.add_argument('--cpu', action='store_true',
                         help='Force CPU training (disable CUDA)')
     
@@ -462,7 +505,8 @@ def main():
             ablation=args.ablation,
             save_dir=args.save_dir,
             force_cpu=args.cpu,
-            verbose=True
+            verbose=True,
+            model_type=args.model
         )
         
         print("\nFinal Metrics:")
@@ -482,10 +526,10 @@ def main():
         print("="*80)
         
         if args.experiment in ['main', 'all']:
-            run_main_experiments(datasets, args.seeds, args.dry_run, args.cpu, args.save_dir)
+            run_main_experiments(datasets, args.seeds, args.dry_run, args.cpu, args.save_dir, args.model)
         
         if args.experiment in ['ablation', 'all']:
-            run_ablation_experiments(datasets, args.seeds, args.dry_run, args.cpu, args.save_dir)
+            run_ablation_experiments(datasets, args.seeds, args.dry_run, args.cpu, args.save_dir, args.model)
         
         print("\n" + "="*80)
         print("EXPERIMENTS COMPLETE")
