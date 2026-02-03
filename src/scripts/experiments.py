@@ -47,6 +47,7 @@ from src.models_novel import EpiDelayNet, EpiDelayNet_Ablation
 from src.models_novel_full import EpiDelayNetFull
 from src.models_sig import EpiSIGNet, EpiSIGNet_NoSIG
 from src.models_sig_v2 import EpiSIGNetV2, EpiSIGNetV2_NoSIG
+from src.models_sig_v3 import EpiSIGNetV3, EpiSIGNetV3_NoSIG
 from src.training import Trainer
 from src.utils import plot_loss_curves, save_metrics
 
@@ -137,13 +138,16 @@ ABLATIONS = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
 EPIDELAY_ABLATIONS = ['none', 'no_delay', 'no_leadlag', 'no_rt', 'no_phase']
 
 # Available models
-MODELS = ['msagat', 'epidelay', 'epidelay_full', 'episig', 'episig_v2']
+MODELS = ['msagat', 'epidelay', 'epidelay_full', 'episig', 'episig_v2', 'episig_v3']
 
 # EpiSIG-Net ablations (just one: remove SIG)
 EPISIG_ABLATIONS = ['none', 'no_sig']
 
 # EpiSIG-Net v2 ablations
 EPISIG_V2_ABLATIONS = ['none', 'no_sig']
+
+# EpiSIG-Net v3 ablations
+EPISIG_V3_ABLATIONS = ['none', 'no_sig']
 
 
 # =============================================================================
@@ -237,7 +241,13 @@ def run_single_experiment(
     data_loader = DataBasicLoader(args)
     
     # Create model based on model_type
-    if model_type == 'episig_v2':
+    if model_type == 'episig_v3':
+        if ablation == 'no_sig':
+            model = EpiSIGNetV3_NoSIG(args, data_loader)
+        else:
+            model = EpiSIGNetV3(args, data_loader)
+        model_name = 'EpiSIG-Net-V3'
+    elif model_type == 'episig_v2':
         if ablation == 'no_sig':
             model = EpiSIGNetV2_NoSIG(args, data_loader)
         else:
@@ -464,8 +474,8 @@ Examples:
     parser.add_argument('--ablation', type=str, default='none',
                         help='Ablation variant (msagat: none/no_agam/no_mtfm/no_pprm, epidelay: none/no_delay/no_leadlag/no_rt/no_phase)')
     parser.add_argument('--model', type=str, default='msagat',
-                        choices=['msagat', 'epidelay', 'epidelay_full', 'episig', 'episig_v2'],
-                        help='Model type (msagat, epidelay, epidelay_full, episig, or episig_v2)')
+                        choices=['msagat', 'epidelay', 'epidelay_full', 'episig', 'episig_v2', 'episig_v3'],
+                        help='Model type (msagat, epidelay, epidelay_full, episig, episig_v2, or episig_v3)')
     parser.add_argument('--cpu', action='store_true',
                         help='Force CPU training (disable CUDA)')
     
