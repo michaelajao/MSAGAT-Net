@@ -39,10 +39,6 @@ COMPARISON_CONFIG = {
         'horizons': [2, 5, 10, 15],
         'sim_mat': 'state-adj-49',
     },
-    'ltla_timeseries': {
-        'horizons': [3, 7, 14],
-        'sim_mat': 'ltla-adj',
-    },
     'australia-covid': {
         'horizons': [3, 7, 14],
         'sim_mat': 'australia-adj',
@@ -57,7 +53,7 @@ COMPARISON_CONFIG = {
 COMPARISON_SEEDS = [5, 10, 20, 30, 42, 45, 100, 123, 500, 1000]
 
 # Models to compare
-MODELS = ['msagat', 'episig']
+MODELS = ['msagat', 'episig', 'episig_v3']
 
 
 def run_comparison_batch(
