@@ -48,6 +48,9 @@ from src.models_novel_full import EpiDelayNetFull
 from src.models_sig import EpiSIGNet, EpiSIGNet_NoSIG
 from src.models_sig_v2 import EpiSIGNetV2, EpiSIGNetV2_NoSIG
 from src.models_sig_v3 import EpiSIGNetV3, EpiSIGNetV3_NoSIG
+from src.models_sig_v4 import EpiSIGNetV4, EpiSIGNetV4_NoSIG
+from src.models_sig_v5 import EpiSIGNetV5, EpiSIGNetV5_NoSIG
+from src.models_episila import EpiSILANet, EpiSILANet_NoSI
 from src.training import Trainer
 from src.utils import plot_loss_curves, save_metrics
 
@@ -138,7 +141,7 @@ ABLATIONS = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
 EPIDELAY_ABLATIONS = ['none', 'no_delay', 'no_leadlag', 'no_rt', 'no_phase']
 
 # Available models
-MODELS = ['msagat', 'epidelay', 'epidelay_full', 'episig', 'episig_v2', 'episig_v3']
+MODELS = ['msagat', 'epidelay', 'epidelay_full', 'episig', 'episig_v2', 'episig_v3', 'episig_v4', 'episig_v5', 'episila']
 
 # EpiSIG-Net ablations (just one: remove SIG)
 EPISIG_ABLATIONS = ['none', 'no_sig']
@@ -241,7 +244,41 @@ def run_single_experiment(
     data_loader = DataBasicLoader(args)
     
     # Create model based on model_type
-    if model_type == 'episig_v3':
+    if model_type == 'episila':
+        if ablation == 'no_sig':
+            model = EpiSILANet_NoSI(
+                window=args.window,
+                horizon=args.horizon,
+                num_nodes=data_loader.m,  # data_loader.m is num_nodes
+                hidden_dim=64,
+                num_heads=4,
+                rank=16,
+                max_delay=14
+            )
+        else:
+            model = EpiSILANet(
+                window=args.window,
+                horizon=args.horizon,
+                num_nodes=data_loader.m,  # data_loader.m is num_nodes
+                hidden_dim=64,
+                num_heads=4,
+                rank=16,
+                max_delay=14
+            )
+        model_name = 'EpiSILA-Net'
+    elif model_type == 'episig_v5':
+        if ablation == 'no_sig':
+            model = EpiSIGNetV5_NoSIG(args, data_loader)
+        else:
+            model = EpiSIGNetV5(args, data_loader)
+        model_name = 'EpiSIG-Net-V5'
+    elif model_type == 'episig_v4':
+        if ablation == 'no_sig':
+            model = EpiSIGNetV4_NoSIG(args, data_loader)
+        else:
+            model = EpiSIGNetV4(args, data_loader)
+        model_name = 'EpiSIG-Net-V4'
+    elif model_type == 'episig_v3':
         if ablation == 'no_sig':
             model = EpiSIGNetV3_NoSIG(args, data_loader)
         else:
@@ -333,7 +370,7 @@ def run_single_experiment(
 def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = False, force_cpu: bool = False, save_dir: str = 'save_all', model_type: str = 'msagat'):
     """Run main comparison experiments (Tables 1 & 2)."""
     
-    model_display = {'episig': 'EpiSIG-Net', 'epidelay': 'EpiDelay-Net', 'epidelay_full': 'EpiDelay-Net-Full'}.get(model_type, 'MSAGAT-Net')
+    model_display = {'episig': 'EpiSIG-Net', 'episig_v2': 'EpiSIG-Net-V2', 'episig_v3': 'EpiSIG-Net-V3', 'episig_v4': 'EpiSIG-Net-V4', 'episig_v5': 'EpiSIG-Net-V5', 'episila': 'EpiSILA-Net', 'epidelay': 'EpiDelay-Net', 'epidelay_full': 'EpiDelay-Net-Full'}.get(model_type, 'MSAGAT-Net')
     print("\n" + "="*80)
     print(f"MAIN EXPERIMENTS: {model_display} with Optimal Settings")
     print("="*80)
@@ -344,7 +381,8 @@ def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = 
     
     for dataset in datasets:
         config = DATASET_CONFIGS[dataset]
-        print(f"\n{dataset} ({config['num_nodes']} nodes): {config['notes']}")
+        notes = config.get('notes', '')
+        print(f"\n{dataset} ({config['num_nodes']} nodes){': ' + notes if notes else ''}")
         
         for horizon in config['horizons']:
             for seed in seeds:
@@ -474,8 +512,8 @@ Examples:
     parser.add_argument('--ablation', type=str, default='none',
                         help='Ablation variant (msagat: none/no_agam/no_mtfm/no_pprm, epidelay: none/no_delay/no_leadlag/no_rt/no_phase)')
     parser.add_argument('--model', type=str, default='msagat',
-                        choices=['msagat', 'epidelay', 'epidelay_full', 'episig', 'episig_v2', 'episig_v3'],
-                        help='Model type (msagat, epidelay, epidelay_full, episig, episig_v2, or episig_v3)')
+                        choices=['msagat', 'epidelay', 'epidelay_full', 'episig', 'episig_v2', 'episig_v3', 'episig_v4', 'episig_v5', 'episila'],
+                        help='Model type (msagat, epidelay, epidelay_full, episig, episig_v2, episig_v3, episig_v4, episig_v5, or episila)')
     parser.add_argument('--cpu', action='store_true',
                         help='Force CPU training (disable CUDA)')
     
