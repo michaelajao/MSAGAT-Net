@@ -76,6 +76,16 @@ DATASET_CONFIGS = {
         'horizons': [3, 5, 10, 15],
         # NOTE: Baselines use same settings for all datasets - adjacency always used if provided
     },
+    'region785': {
+        'sim_mat': 'region-adj',
+        'num_nodes': 10,
+        'horizons': [3, 5, 10, 15],
+    },
+    'state360': {
+        'sim_mat': 'state-adj-49',
+        'num_nodes': 49,
+        'horizons': [3, 5, 10, 15],
+    },
     'australia-covid': {
         'sim_mat': 'australia-adj',
         'num_nodes': 8,
@@ -86,25 +96,10 @@ DATASET_CONFIGS = {
         'num_nodes': 7,
         'horizons': [3, 7, 14],
     },
-    'spain-covid': {
-        'sim_mat': 'spain-adj',
-        'num_nodes': 17,
-        'horizons': [3, 7, 14],
-    },
     'ltla_timeseries': {
         'sim_mat': 'ltla-adj',
-        'num_nodes': 307,
+        'num_nodes': 372,
         'horizons': [3, 7, 14],
-    },
-    'region785': {
-        'sim_mat': 'region-adj',
-        'num_nodes': 10,
-        'horizons': [3, 5, 10, 15],
-    },
-    'state360': {
-        'sim_mat': 'state-adj-49',
-        'num_nodes': 49,
-        'horizons': [3, 5, 10, 15],
     },
 }
 
@@ -198,9 +193,9 @@ def run_single_experiment(
         sim_mat=config['sim_mat'],
         window=TRAIN_CONFIG['window'],
         horizon=horizon,
-        train=0.5,
+        train=0.6,
         val=0.2,
-        test=0.3,
+        test=0.2,
         epochs=TRAIN_CONFIG['epochs'],
         batch=TRAIN_CONFIG['batch'],
         lr=TRAIN_CONFIG['lr'],

@@ -78,3 +78,8 @@ doc/
 # Experiment runner scripts
 run_all_experiments.ps1
 logs/
+.cursor/plans/fix_graph_structure_usage_37f4a771.plan.md
+.cursor/plans/fix_graph_structure_usage_43762a66.plan.md
+.cursor/plans/paper_experiments_and_updates_a8899f3f.plan.md
+.cursor/plans/rename_and_implement_csb_1e77a69c.plan.md
+.cursor/plans/fix_structural_bias_formula_cff90fba.plan.md

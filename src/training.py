@@ -41,6 +41,7 @@ class TrainingConfig:
     lr: float = 1e-3
     weight_decay: float = 5e-4
     patience: int = 100
+    max_grad_norm: float = 1.0
     save_dir: str = 'save'
     device: str = 'cpu'
     use_tensorboard: bool = True
@@ -85,7 +86,8 @@ class MetricsResult:
 
 
 def train_epoch(model, data_loader, optimizer, batch_size: int, 
-                horizon: int, device: torch.device) -> float:
+                horizon: int, device: torch.device,
+                max_grad_norm: float = 1.0) -> float:
     """
     Train model for one epoch.
     
@@ -96,6 +98,7 @@ def train_epoch(model, data_loader, optimizer, batch_size: int,
         batch_size: Batch size
         horizon: Prediction horizon
         device: Torch device
+        max_grad_norm: Maximum gradient norm for clipping (stabilizes training)
         
     Returns:
         Average loss for the epoch
@@ -116,6 +119,7 @@ def train_epoch(model, data_loader, optimizer, batch_size: int,
         
         total_loss += loss.item()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm)
         optimizer.step()
         
         n_samples += output.size(0) * data_loader.m
@@ -276,6 +280,7 @@ class Trainer:
                 lr=getattr(config, 'lr', 1e-3),
                 weight_decay=getattr(config, 'weight_decay', 5e-4),
                 patience=getattr(config, 'patience', 100),
+                max_grad_norm=getattr(config, 'max_grad_norm', 1.0),
                 save_dir=getattr(config, 'save_dir', 'save'),
                 use_tensorboard=getattr(config, 'mylog', True),
             )
@@ -333,7 +338,8 @@ class Trainer:
             # Train
             train_loss = train_epoch(
                 self.model, self.data_loader, self.optimizer,
-                self.config.batch_size, self.horizon, self.device
+                self.config.batch_size, self.horizon, self.device,
+                max_grad_norm=self.config.max_grad_norm
             )
             
             # Validate
