@@ -169,7 +169,7 @@ def _extract_attention(model, num_nodes: int, device: torch.device,
     """Extract attention weights from various model architectures."""
     attn = None
 
-    # MSTAGAT_Net with learned low-rank graph bias
+    # MSAGAT_Net with learned low-rank graph bias
     if hasattr(model, "spatial_module"):
         sm = model.spatial_module
         if hasattr(sm, "u") and hasattr(sm, "v"):
@@ -451,14 +451,9 @@ def visualize_predictions_summary(y_true: np.ndarray, y_pred: np.ndarray, save_p
     ax2.legend(loc='upper right', frameon=True, framealpha=0.9)
     ax2.grid(True, linestyle=':', alpha=0.4)
     
-    # Add metrics text box
-    metrics_text = f'Overall Metrics:\nRMSE = {overall_rmse:.4f}\nMAE = {overall_mae:.4f}\nPCC = {overall_pcc:.4f}'
-    ax2.text(0.02, 0.98, metrics_text, transform=ax2.transAxes, fontsize=9,
-             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-    
     # Overall title
     if dataset_name:
-        fig.suptitle(f'{dataset_name} - Summary', fontsize=12, fontweight='bold', y=1.02)
+        fig.suptitle(f'{dataset_name}', fontsize=12, fontweight='bold', y=1.02)
     
     plt.tight_layout()
     plt.savefig(save_path, bbox_inches='tight', dpi=300, facecolor='white')
@@ -553,7 +548,7 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
     
     # Build record
     info = {
-        "model": model_name or "MSTAGAT",
+        "model": model_name or "MSAGAT-Net",
         "dataset": dataset or "",
         "window": window or 0,
         "horizon": horizon or 0,
@@ -604,7 +599,7 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
     # Add header if file doesn't exist or is empty
     if not os.path.exists(txt_path) or os.path.getsize(txt_path) == 0:
         header = (
-            "# MSTAGAT-Net Experiment Results\n"
+            "# MSAGAT-Net Experiment Results\n"
             "# Format: [Timestamp] Model | Dataset, Window, Horizon, Ablation, Seed | Metrics\n"
             "# " + "="*80 + "\n"
         )

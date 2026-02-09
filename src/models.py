@@ -3,14 +3,14 @@ MSAGAT-Net Model Architectures
 
 This module contains all neural network architectures for the MSAGAT-Net framework:
 - Core building blocks (attention, spatial modules, convolutions)
-- Main MSTAGAT_Net model
+- Main MSAGAT_Net model
 - Ablation study variants (MSAGATNet_Ablation)
 
 Architecture Components:
-    1. SpatialAttentionModule: Graph attention with O(N) linear complexity
-    2. MultiScaleSpatialModule: Dilated convolutions at multiple scales
-    3. HorizonPredictor: Progressive multi-step prediction with refinement
-    4. DepthwiseSeparableConv1D: Efficient feature extraction
+    1. SpatialAttentionModule: Scaled dot-product attention with additive structural bias
+    2. MultiScaleSpatialModule: Multi-hop graph convolutions with adaptive fusion
+    3. HorizonPredictor: Progressive multi-step prediction with learnable decay
+    4. DepthwiseSeparableConv1D: Efficient temporal feature extraction
 """
 
 import math
@@ -85,7 +85,7 @@ class DepthwiseSeparableConv1D(nn.Module):
 
 class SpatialAttentionModule(nn.Module):
     """
-    Low-rank Adaptive Graph Attention Module (LR-AGAM).
+    Efficient Adaptive Graph Attention Module (EAGAM).
     
     Graph-structure-aware multi-head attention with low-rank decomposition.
     Unlike standard content-only attention, this module integrates graph
@@ -430,13 +430,13 @@ class HorizonPredictor(nn.Module):
 # MAIN MODEL
 # =============================================================================
 
-class MSTAGAT_Net(nn.Module):
+class MSAGAT_Net(nn.Module):
     """
-    Multi-Scale Temporal-Adaptive Graph Attention Network (MSTAGAT-Net)
+    MSAGAT-Net (Multi-Scale Adaptive Graph Attention Network)
     
     A spatiotemporal forecasting model with four key components:
     - TFEM: Temporal Feature Extraction Module (depthwise separable convolutions along time)
-    - LR-AGAM: Low-rank Adaptive Graph Attention Module (graph-structure-aware attention)
+    - EAGAM: Efficient Adaptive Graph Attention Module (graph-structure-aware attention)
     - MSSFM: Multi-Scale Spatial Feature Module (multi-hop graph convolutions)
     - PPRM: Progressive Prediction Refinement Module (horizon prediction with learnable decay)
     
@@ -492,7 +492,7 @@ class MSTAGAT_Net(nn.Module):
         self.feature_norm = nn.LayerNorm(self.hidden_dim)
         self.feature_act = nn.ReLU()
 
-        # Spatial Component (LR-AGAM) - graph structure always used
+        # Spatial Component (EAGAM) - graph structure always used
         self.spatial_module = SpatialAttentionModule(
             self.hidden_dim, 
             num_nodes=self.num_nodes,
@@ -503,7 +503,7 @@ class MSTAGAT_Net(nn.Module):
         )
 
         # Multi-Scale Spatial Feature Component (MSSFM) - multi-hop graph convolutions
-        self.temporal_module = MultiScaleSpatialModule(
+        self.spatial_refinement_module = MultiScaleSpatialModule(
             self.hidden_dim,
             num_nodes=self.num_nodes,
             num_scales=getattr(args, 'num_scales', NUM_TEMPORAL_SCALES),
@@ -519,10 +519,7 @@ class MSTAGAT_Net(nn.Module):
             dropout=getattr(args, 'dropout', DROPOUT)
         )
         
-        # =====================================================================
-        # Highway/Autoregressive Connection (like Cola-GNN/EpiGNN)
-        # Critical for stable forecasting across all datasets!
-        # =====================================================================
+        # Highway/Autoregressive Connection
         self.highway_window = min(getattr(args, 'highway_window', HIGHWAY_WINDOW), self.window)
         if self.highway_window > 0:
             self.highway = nn.Linear(self.highway_window, self.horizon)
@@ -533,9 +530,21 @@ class MSTAGAT_Net(nn.Module):
         # Initialize weights properly (Xavier - used by all successful models)
         self._init_weights()
         
+    # Parameters with special initialization that must NOT be overwritten
+    _PRESERVE_PARAMS = {
+        'fusion_weight',      # MSSFM locality-biased init: exp(-0.5 * k)
+        'log_decay',          # PPRM learnable decay: -2.3 -> ~0.1
+        'adj_scale',          # EAGAM adjacency scale: 1.0
+        'highway_ratio',      # Highway blend: 0.5
+        'log_attention_reg_weight',  # Attention reg: log(1e-5)
+    }
+
     def _init_weights(self):
-        """Initialize weights using Xavier uniform (like Cola-GNN/EpiGNN)."""
+        """Initialize weights using Xavier uniform, preserving special inits."""
         for name, p in self.named_parameters():
+            # Skip parameters with carefully designed initializations
+            if any(pname in name for pname in self._PRESERVE_PARAMS):
+                continue
             if p.dim() >= 2:
                 nn.init.xavier_uniform_(p)
             elif p.dim() == 1 and p.size(0) > 0:
@@ -544,11 +553,11 @@ class MSTAGAT_Net(nn.Module):
                 else:
                     stdv = 1. / math.sqrt(p.size(0))
                     p.data.uniform_(-stdv, stdv)
-            # Skip 0-dimensional tensors (scalars like highway_ratio)
+            # Skip 0-dimensional tensors (scalars)
 
     def forward(self, x, idx=None):
         """
-        Forward pass of the MSTAGAT-Net model.
+        Forward pass of the MSAGAT-Net model.
         
         Args:
             x: Input time series [batch, time_window, nodes]
@@ -570,18 +579,17 @@ class MSTAGAT_Net(nn.Module):
         features = self.feature_norm(features)
         features = self.feature_act(features)
         
-        # Spatial Processing (LR-AGAM)
+        # Spatial Processing (EAGAM)
         graph_features, attn_reg_loss = self.spatial_module(features)
         
         # Multi-Scale Spatial Feature Processing (MSSFM)
-        fusion_features = self.temporal_module(graph_features)
+        fusion_features = self.spatial_refinement_module(graph_features)
         
         # Prediction (PPRM)
         model_pred = self.prediction_module(fusion_features, x_last)
         model_pred = model_pred.transpose(1, 2)  # [batch, horizon, nodes]
         
-        # Highway/Autoregressive connection (like Cola-GNN/EpiGNN)
-        # This is CRITICAL for stable forecasting!
+        # Highway/Autoregressive connection
         if self.highway is not None and self.highway_window > 0:
             # Get recent observations
             z = x[:, -self.highway_window:, :]  # [B, hw, N]
@@ -604,147 +612,98 @@ class MSTAGAT_Net(nn.Module):
 # ABLATION STUDY COMPONENTS
 # =============================================================================
 
-class SimpleGraphConvolutionalLayer(nn.Module):
+class IdentitySpatialModule(nn.Module):
     """
-    Standard GCN layer with fixed adjacency matrix.
+    Identity pass-through for ablation of SpatialAttentionModule (no_agam).
     
-    Used as ablation replacement for SpatialAttentionModule (no_agam).
-    Performs standard graph convolution without adaptive attention.
+    Simply passes features through with a LayerNorm for training stability.
+    No graph convolution, no attention -- tests the marginal contribution of
+    the EAGAM component by removing ALL spatial attention.
     
     Args:
         hidden_dim: Dimension of hidden representations
-        num_nodes: Number of nodes in the graph
-        dropout: Dropout rate
+        num_nodes: Number of nodes (unused, kept for interface compatibility)
+        dropout: Dropout rate (unused)
     """
     
     def __init__(self, hidden_dim, num_nodes, dropout=DROPOUT, **kwargs):
         super().__init__()
-        
-        self.hidden_dim = hidden_dim
-        self.num_nodes = num_nodes
-        self.dropout = nn.Dropout(dropout)
-        self.linear1 = nn.Linear(hidden_dim, hidden_dim)
-        self.linear2 = nn.Linear(hidden_dim, hidden_dim)
         self.norm = nn.LayerNorm(hidden_dim)
-        
-        # Fixed adjacency matrix (identity by default)
-        self.register_buffer('adj_matrix', torch.eye(num_nodes))
+        self.num_nodes = num_nodes
         
     def forward(self, x, mask=None):
         """
+        Identity pass-through with normalization.
+        
         Args:
             x: Input [batch, nodes, hidden_dim]
             mask: Unused
         Returns:
-            tuple: (output [batch, nodes, hidden_dim], 0.0)
+            tuple: (normalized input [batch, nodes, hidden_dim], 0.0)
         """
-        batch_size = x.size(0)
-        num_nodes = x.size(1)
-        
-        x = self.linear1(x)
-        
-        # Handle size mismatch
-        if self.adj_matrix.size(0) != num_nodes:
-            adj_matrix = torch.eye(num_nodes, device=x.device).unsqueeze(0).expand(batch_size, -1, -1)
-        else:
-            adj_matrix = self.adj_matrix.unsqueeze(0).expand(batch_size, -1, -1)
-            
-        # GCN operation: X' = AXW
-        x = torch.bmm(adj_matrix, x)
-        x = F.relu(x)
-        x = self.dropout(x)
-        x = self.linear2(x)
-        x = self.norm(x)
-        
-        # Store for visualization
-        self.attn = [torch.eye(num_nodes, device=x.device).unsqueeze(0).repeat(batch_size, 1, 1)]
-        
-        return x, 0.0
+        # Store identity attention for visualization compatibility
+        B, N, _ = x.shape
+        self.attn = [torch.eye(N, device=x.device).unsqueeze(0).repeat(B, 1, 1)]
+        return self.norm(x), 0.0
 
 
-class SingleScaleSpatialModule(nn.Module):
+class IdentityMultiScaleModule(nn.Module):
     """
-    Single-scale spatial convolution for ablation study.
+    Identity pass-through for ablation of MultiScaleSpatialModule (no_mtfm).
     
-    Used as ablation replacement for MultiScaleSpatialModule (no_mtfm).
-    Operates on node dimension with a single dilation rate.
+    Simply passes features through with a LayerNorm for training stability.
+    No multi-hop graph convolution, no multi-scale fusion -- tests the marginal
+    contribution of the MSSFM component.
     
     Args:
         hidden_dim: Dimension of hidden representations
-        kernel_size: Convolution kernel size
-        dropout: Dropout rate
+        kernel_size: Unused (kept for interface compatibility)
+        dropout: Unused
     """
     
     def __init__(self, hidden_dim, num_scales=NUM_TEMPORAL_SCALES, 
                  kernel_size=KERNEL_SIZE, dropout=DROPOUT):
         super().__init__()
-        
-        self.hidden_dim = hidden_dim
-        
-        # Single-scale convolution without dilation
-        self.conv = nn.Sequential(
-            nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, 
-                      padding=kernel_size // 2),
-            nn.BatchNorm1d(hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout)
-        )
-        
-        self.fusion = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.ReLU()
-        )
+        self.norm = nn.LayerNorm(hidden_dim)
 
     def forward(self, x):
         """
-        Apply single-scale spatial convolution over node dimension.
+        Identity pass-through with normalization.
         
         Args:
             x: Input [batch, nodes, hidden_dim]
         Returns:
             Output [batch, nodes, hidden_dim]
         """
-        # Reshape for 1D convolution over nodes: [B, N, H] -> [B, H, N]
-        x = x.transpose(1, 2)
-        feat = self.conv(x)
-        # Reshape back: [B, H, N] -> [B, N, H]
-        feat = feat.transpose(1, 2)
-        return self.fusion(feat)
+        return self.norm(x)
 
 
 class DirectPredictionModule(nn.Module):
     """
-    Direct multi-step prediction for ablation study.
+    Minimal direct prediction for ablation of HorizonPredictor (no_pprm).
     
-    Used as ablation replacement for HorizonPredictor (no_pprm).
-    Directly predicts all future time steps without refinement.
+    Single linear projection from hidden_dim to horizon, with no progressive 
+    refinement, no learnable decay, no gating. Tests the marginal contribution
+    of the PPRM component by using the simplest possible predictor.
     
     Args:
         hidden_dim: Dimension of hidden representations
         horizon: Prediction horizon
-        dropout: Dropout rate
+        dropout: Unused (kept for interface compatibility)
     """
     
     def __init__(self, hidden_dim, horizon, low_rank_dim=BOTTLENECK_DIM, 
                  dropout=DROPOUT):
         super().__init__()
-        
         self.horizon = horizon
-        
-        self.predictor = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.LayerNorm(hidden_dim // 2),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim // 2, horizon)
-        )
+        # Single linear projection -- the minimal possible predictor
+        self.predictor = nn.Linear(hidden_dim, horizon)
 
     def forward(self, x, last_step=None):
         """
         Args:
             x: Input [batch, nodes, hidden_dim]
-            last_step: Unused
+            last_step: Unused (no refinement with last observed value)
         Returns:
             Predictions [batch, nodes, horizon]
         """
@@ -768,9 +727,9 @@ class MSAGATNet_Ablation(nn.Module):
     
     Ablation variants:
         - none: Full model (graph-structure-aware attention + multi-hop graph conv)
-        - no_agam: Replace SpatialAttentionModule with SimpleGraphConvolutionalLayer
-        - no_mtfm: Replace MultiScaleSpatialModule with SingleScaleSpatialModule
-        - no_pprm: Replace HorizonPredictor with DirectPredictionModule
+        - no_agam: Replace SpatialAttentionModule with identity pass-through
+        - no_mtfm: Replace MultiScaleSpatialModule with identity pass-through
+        - no_pprm: Replace HorizonPredictor with single linear projection
     """
     
     def __init__(self, args, data):
@@ -808,13 +767,11 @@ class MSAGATNet_Ablation(nn.Module):
         self.feature_norm = nn.LayerNorm(self.hidden_dim)
         self.feature_act = nn.ReLU()
         
-        # Spatial component: choose full attention or GCN
+        # Spatial component: choose full attention or identity pass-through
         if self.ablation == 'no_agam':
-            self.graph_attention = SimpleGraphConvolutionalLayer(
+            self.graph_attention = IdentitySpatialModule(
                 self.hidden_dim, num_nodes=self.m, dropout=dropout
             )
-            if adj_matrix is not None:
-                self.graph_attention.adj_matrix = adj_matrix
         else:
             self.graph_attention = SpatialAttentionModule(
                 hidden_dim=self.hidden_dim,
@@ -825,9 +782,9 @@ class MSAGATNet_Ablation(nn.Module):
                 adj_matrix=adj_matrix
             )
         
-        # Spatial refinement: choose multi-hop graph conv or single-scale
+        # Spatial refinement: choose multi-hop graph conv or identity pass-through
         if self.ablation == 'no_mtfm':
-            self.spatial_refinement_module = SingleScaleSpatialModule(
+            self.spatial_refinement_module = IdentityMultiScaleModule(
                 self.hidden_dim, kernel_size=self.kernel_size, dropout=dropout
             )
         else:
@@ -866,9 +823,21 @@ class MSAGATNet_Ablation(nn.Module):
         # Initialize weights
         self._init_weights()
         
+    # Parameters with special initialization that must NOT be overwritten
+    _PRESERVE_PARAMS = {
+        'fusion_weight',      # MSSFM locality-biased init: exp(-0.5 * k)
+        'log_decay',          # PPRM learnable decay: -2.3 -> ~0.1
+        'adj_scale',          # EAGAM adjacency scale: 1.0
+        'highway_ratio',      # Highway blend: 0.5
+        'log_attention_reg_weight',  # Attention reg: log(1e-5)
+    }
+
     def _init_weights(self):
-        """Initialize weights using Xavier uniform."""
+        """Initialize weights using Xavier uniform, preserving special inits."""
         for name, p in self.named_parameters():
+            # Skip parameters with carefully designed initializations
+            if any(pname in name for pname in self._PRESERVE_PARAMS):
+                continue
             if p.dim() >= 2:
                 nn.init.xavier_uniform_(p)
             elif p.dim() == 1 and p.size(0) > 0:

@@ -16,8 +16,7 @@ ENV/
 .venv
 
 # Jupyter Notebook
-.ipynb_checkpoints
-*.ipynb_checkpoints/
+.ipynb_checkpoints/
 
 # IDEs
 .vscode/
@@ -25,9 +24,13 @@ ENV/
 *.swp
 *.swo
 *~
-.DS_Store
 
-# Model Checkpoints & Weights
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Model Checkpoints
 save/
 save_all/
 *.pth
@@ -37,49 +40,31 @@ save_all/
 *.pkl
 *.pickle
 
-# Training Logs & TensorBoard
+# Training Logs
 logs/
 tensorboard/
 *.log
 events.out.tfevents.*
 
-# Experiment Results & Figures
-report/results/
-report/figures/
-
-# Hyperparameter Optimization
-src/optimize.py
-optim_results/
-
-# Old/backup results
+# Report outputs (generated, not source)
+report/
 reportOLD/
+
+# Paper and documentation (separate from source code)
+doc/
+
+# Experimental models (not part of MSAGAT-Net paper)
+experimental/
+
+# Hyperparameter optimisation
+optim_results/
+optimize.py
 
 # Temporary files
 *.tmp
 *.bak
-*.swp
 .cache/
 tmp/
 
-# OS-specific
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Data (optional - uncomment if data is large)
-# data/*.txt
-# data/*.csv
-
-# Folders to exclude from publishing
-save_all/
-report/
-doc/
-
-# Experiment runner scripts
-run_all_experiments.ps1
-logs/
-.cursor/plans/fix_graph_structure_usage_37f4a771.plan.md
-.cursor/plans/fix_graph_structure_usage_43762a66.plan.md
-.cursor/plans/paper_experiments_and_updates_a8899f3f.plan.md
-.cursor/plans/rename_and_implement_csb_1e77a69c.plan.md
-.cursor/plans/fix_structural_bias_formula_cff90fba.plan.md
+# Cursor plans
+.cursor/plans/
