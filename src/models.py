@@ -27,7 +27,7 @@ HIDDEN_DIM = 32
 ATTENTION_HEADS = 4
 ATTENTION_REG_WEIGHT_INIT = 1e-5
 DROPOUT = 0.2
-NUM_TEMPORAL_SCALES = 4
+NUM_SPATIAL_SCALES = 4
 KERNEL_SIZE = 3
 FEATURE_CHANNELS = 16
 BOTTLENECK_DIM = 8
@@ -253,7 +253,7 @@ class MultiScaleSpatialModule(nn.Module):
         adj_matrix: Adjacency matrix [num_nodes, num_nodes] (optional)
     """
     
-    def __init__(self, hidden_dim, num_nodes, num_scales=NUM_TEMPORAL_SCALES, 
+    def __init__(self, hidden_dim, num_nodes, num_scales=NUM_SPATIAL_SCALES, 
                  dropout=DROPOUT, adj_matrix=None):
         super().__init__()
         
@@ -506,7 +506,7 @@ class MSAGAT_Net(nn.Module):
         self.spatial_refinement_module = MultiScaleSpatialModule(
             self.hidden_dim,
             num_nodes=self.num_nodes,
-            num_scales=getattr(args, 'num_scales', NUM_TEMPORAL_SCALES),
+            num_scales=getattr(args, 'num_scales', NUM_SPATIAL_SCALES),
             dropout=getattr(args, 'dropout', DROPOUT),
             adj_matrix=adj_matrix
         )
@@ -661,7 +661,7 @@ class IdentityMultiScaleModule(nn.Module):
         dropout: Unused
     """
     
-    def __init__(self, hidden_dim, num_scales=NUM_TEMPORAL_SCALES, 
+    def __init__(self, hidden_dim, num_scales=NUM_SPATIAL_SCALES, 
                  kernel_size=KERNEL_SIZE, dropout=DROPOUT):
         super().__init__()
         self.norm = nn.LayerNorm(hidden_dim)
@@ -791,7 +791,7 @@ class MSAGATNet_Ablation(nn.Module):
             self.spatial_refinement_module = MultiScaleSpatialModule(
                 hidden_dim=self.hidden_dim,
                 num_nodes=self.m,
-                num_scales=getattr(args, 'num_scales', NUM_TEMPORAL_SCALES),
+                num_scales=getattr(args, 'num_scales', NUM_SPATIAL_SCALES),
                 dropout=dropout,
                 adj_matrix=adj_matrix
             )
@@ -897,3 +897,15 @@ class MSAGATNet_Ablation(nn.Module):
             predictions = model_pred
         
         return predictions, attn_reg_loss
+
+
+# =============================================================================
+# PAPER-CONSISTENT MODULE ALIASES
+# =============================================================================
+# These aliases map paper acronyms to their implementation classes,
+# making the code easier to follow alongside the manuscript.
+
+TFEM = DepthwiseSeparableConv1D    # Temporal Feature Extraction Module
+EAGAM = SpatialAttentionModule     # Efficient Adaptive Graph Attention Module
+MSSFM = MultiScaleSpatialModule    # Multi-Scale Spatial Feature Module
+PPRM = HorizonPredictor            # Progressive Prediction Refinement Module

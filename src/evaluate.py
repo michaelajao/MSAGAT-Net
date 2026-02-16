@@ -81,7 +81,7 @@ def load_metrics(dataset, horizon, ablation):
             df = pd.read_csv(csv)
             mask = ((df['dataset'] == dataset) & (df['window'] == DEFAULT_WINDOW) &
                     (df['horizon'] == horizon) & (df['ablation'] == ablation) &
-                    (df['seed'] == DEFAULT_SEED) & (df['model'] == 'MSTAGAT-Net'))
+                    (df['seed'] == DEFAULT_SEED) & (df['model'] == 'MSAGAT-Net'))
             if mask.any():
                 return df[mask].iloc[[0]]
     return None
@@ -245,7 +245,7 @@ def _create_model(dataset, loader, device, ablation='none'):
 
 def _model_path(dataset, horizon, ablation, seed):
     cfg = DATASET_CONFIGS_FULL[dataset]
-    name = f"MSTAGAT-Net.{dataset}.w-{DEFAULT_WINDOW}.h-{horizon}.{ablation}.seed-{seed}"
+    name = f"MSAGAT-Net.{dataset}.w-{DEFAULT_WINDOW}.h-{horizon}.{ablation}.seed-{seed}"
     if cfg['use_adj_prior']:
         name += ".with_adj"
     return os.path.join(MODEL_DIR, name + ".pt")

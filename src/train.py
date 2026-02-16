@@ -364,7 +364,7 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
 
     data_loader = DataBasicLoader(args)
     model = MSAGATNet_Ablation(args, data_loader)
-    model_name = 'MSTAGAT-Net'
+    model_name = 'MSAGAT-Net'
 
     if args.cuda:
         model.cuda()
