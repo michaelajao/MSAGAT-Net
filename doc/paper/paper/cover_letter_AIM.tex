@@ -1,0 +1,53 @@
+\documentclass[12pt]{letter}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{hyperref}
+\usepackage{parskip}
+
+\begin{document}
+
+\begin{letter}{%
+The Editor-in-Chief\\
+Artificial Intelligence in Medicine\\
+Elsevier
+}
+
+\opening{Dear Editor,}
+
+We are pleased to submit our research article titled ``MSAGAT-Net: Multi-Scale Adaptive Graph Attention Network for Efficient Spatiotemporal Epidemic Forecasting'' for consideration as a Research Article in \emph{Artificial Intelligence in Medicine}.
+
+This work addresses a fundamental challenge in graph-based AI for biomedical applications: existing graph attention mechanisms are over-parameterised, mandate predefined adjacency matrices constructed from external data sources, and provide no adaptive control over how structural priors influence learned attention across graphs of varying density and size. These limitations directly hinder the deployment of AI-driven forecasting systems in real-world public health surveillance, where graph topology varies widely across datasets and prior spatial knowledge may be incomplete or unavailable.
+
+\textbf{AI methodological contributions:}
+
+\begin{enumerate}
+    \item \textbf{Self-regulating additive structural bias in graph attention.} We introduce a novel graph attention mechanism (EAGAM) in which a learnable low-rank graph bias and an optional adjacency prior are added directly to attention scores before softmax normalisation. Because the softmax function is shift-invariant, this additive prior self-regulates across graph densities---negligible on dense graphs, meaningful on sparse ones---eliminating fragile graph-size-dependent thresholds found in prior work. This mechanism is general-purpose and applicable beyond the epidemic forecasting domain.
+
+    \item \textbf{Adjacency-free spatial learning.} Unlike all baseline methods (EpiGNN, Cola-GNN, DCRNN), which require predefined adjacency matrices, MSAGAT-Net learns spatial relationships entirely from data through learnable graph bias parameters. Adjacency matrices become optional soft priors rather than mandatory inputs. Ablation confirms comparable or better performance without any adjacency input, demonstrating that AI models can discover transmission pathways directly from epidemic signals.
+
+    \item \textbf{Adaptive multi-hop spatial module with anti-oversmoothing.} We propose a Multi-Scale Spatial Feature Module (MSSFM) that aggregates multi-hop graph convolutions with graph-size-adaptive hop depth and locality-biased fusion weights, preventing oversmoothing on small graphs while retaining spatial context on larger ones.
+
+    \item \textbf{Learnable decay rate and highway autoregressive connection.} The progressive prediction refinement module uses a learnable exponential decay rate (in log-domain) rather than a fixed constant, and a highway autoregressive connection stabilises multi-horizon forecasts by blending spatiotemporal predictions with a simple autoregressive baseline.
+\end{enumerate}
+
+\textbf{Medical and public health impact:}
+
+We evaluate MSAGAT-Net on six diverse epidemiological datasets spanning influenza surveillance (Japan, US), COVID-19 case counts (Australia, UK local authorities), and ICU bed occupancy (NHS England). MSAGAT-Net achieves the best RMSE in the majority of experimental settings, with improvements of up to 23.5\% on LTLA-Timeseries (372 local authorities) and 22.2\% on NHS-Timeseries over the strongest baselines. Ablation studies reveal that optimal architectural choices are fundamentally horizon-dependent, providing actionable insights for the design of AI-driven public health surveillance systems.
+
+The elimination of mandatory adjacency matrices is particularly significant for practical deployment: public health agencies can apply MSAGAT-Net to new regions or diseases without the prerequisite of constructing spatial graphs from mobility data or geographical coordinates, lowering the barrier to adoption in resource-constrained settings.
+
+This work aligns closely with the journal's focus on AI theory and practice in medicine, contributing both novel AI methodology and rigorous evaluation on real-world healthcare datasets. All data used are publicly available, and code is available at \url{https://github.com/michaelajao/MSAGAT-Net} to support reproducibility.
+
+This manuscript represents original research that has not been published elsewhere and is not under consideration by another journal. All authors have approved this submission and have no conflicts of interest to declare.
+
+We appreciate your time and consideration and look forward to your feedback.
+
+\closing{Sincerely,\\[1em]
+Michael Ajao-Olarinoye\\
+Centre for Computational Science and Mathematical Modelling\\
+Coventry University\\
+Coventry, United Kingdom\\
+\texttt{olarinoyem@coventry.ac.uk}
+}
+
+\end{letter}
+\end{document}

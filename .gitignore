@@ -46,12 +46,17 @@ tensorboard/
 *.log
 events.out.tfevents.*
 
-# Report outputs (generated, not source)
-report/
+# Old report folder
 reportOLD/
 
-# Paper and documentation (separate from source code)
-doc/
+# LaTeX build artifacts (auto-generated)
+*.aux
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.spl
+*.abs
 
 # Experimental models (not part of MSAGAT-Net paper)
 experimental/

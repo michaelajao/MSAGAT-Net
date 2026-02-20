@@ -1,0 +1,524 @@
+\begin{thebibliography}{50}
+\expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\href}[2]{#2}
+\providecommand{\path}[1]{#1}
+\providecommand{\DOIprefix}{doi:}
+\providecommand{\ArXivprefix}{arXiv:}
+\providecommand{\URLprefix}{URL: }
+\providecommand{\Pubmedprefix}{pmid:}
+\providecommand{\doi}[1]{\href{http://dx.doi.org/#1}{\path{#1}}}
+\providecommand{\Pubmed}[1]{\href{pmid:#1}{\path{#1}}}
+\providecommand{\bibinfo}[2]{#2}
+\ifx\xfnm\relax \def\xfnm[#1]{\unskip,\space#1}\fi
+%Type = Article
+\bibitem[{Ahmadini et~al.(2025)Ahmadini, Raghav, Mahnashi, Islam~Rather and
+  Ali}]{Ahmadini2025}
+\bibinfo{author}{Ahmadini, A.A.H.}, \bibinfo{author}{Raghav, Y.S.},
+  \bibinfo{author}{Mahnashi, A.M.}, \bibinfo{author}{Islam~Rather, K.U.},
+  \bibinfo{author}{Ali, I.}, \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{Neural networks to model covid-19 dynamics and
+  allocate healthcare resources}.
+\newblock \bibinfo{journal}{Scientific Reports} \bibinfo{volume}{15},
+  \bibinfo{pages}{15326}.
+\newblock \URLprefix \url{https://doi.org/10.1038/s41598-025-00153-9},
+  \DOIprefix\doi{10.1038/s41598-025-00153-9}.
+%Type = Inproceedings
+\bibitem[{Ajao-Olarinoye et~al.(2023)Ajao-Olarinoye, Palade, Mousavi, He and
+  Wark}]{ajao2023deep}
+\bibinfo{author}{Ajao-Olarinoye, M.}, \bibinfo{author}{Palade, V.},
+  \bibinfo{author}{Mousavi, S.}, \bibinfo{author}{He, F.},
+  \bibinfo{author}{Wark, P.A.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Deep learning based forecasting of covid-19
+  hospitalisation in england: A comparative analysis}, in:
+  \bibinfo{booktitle}{2023 International Conference on Machine Learning and
+  Applications (ICMLA)}, \bibinfo{organization}{IEEE}. pp.
+  \bibinfo{pages}{1344--1349}.
+%Type = Article
+\bibitem[{{Ben Taieb} et~al.(2012){Ben Taieb}, Bontempi, Atiya and
+  Sorjamaa}]{BENTAIEB20127067}
+\bibinfo{author}{{Ben Taieb}, S.}, \bibinfo{author}{Bontempi, G.},
+  \bibinfo{author}{Atiya, A.F.}, \bibinfo{author}{Sorjamaa, A.},
+  \bibinfo{year}{2012}.
+\newblock \bibinfo{title}{A review and comparison of strategies for multi-step
+  ahead time series forecasting based on the nn5 forecasting competition}.
+\newblock \bibinfo{journal}{Expert Systems with Applications}
+  \bibinfo{volume}{39}, \bibinfo{pages}{7067--7083}.
+\newblock \DOIprefix\doi{https://doi.org/10.1016/j.eswa.2012.01.039}.
+%Type = Article
+\bibitem[{Brooks et~al.(2018)Brooks, Farrow, Hyun, Tibshirani and
+  Rosenfeld}]{Brooks2018Nonmechanistic}
+\bibinfo{author}{Brooks, L.}, \bibinfo{author}{Farrow, D.C.},
+  \bibinfo{author}{Hyun, S.}, \bibinfo{author}{Tibshirani, R.},
+  \bibinfo{author}{Rosenfeld, R.}, \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Nonmechanistic forecasts of seasonal influenza with
+  iterative one-week-ahead distributions}.
+\newblock \bibinfo{journal}{PLoS Computational Biology} \bibinfo{volume}{14}.
+\newblock \DOIprefix\doi{10.1371/journal.pcbi.1006134}.
+%Type = Inproceedings
+\bibitem[{Cao et~al.(2022)Cao, Jiang, Yang, Fan, Song and
+  Shibasaki}]{cao2022mepognn}
+\bibinfo{author}{Cao, Q.}, \bibinfo{author}{Jiang, R.}, \bibinfo{author}{Yang,
+  C.}, \bibinfo{author}{Fan, Z.}, \bibinfo{author}{Song, X.},
+  \bibinfo{author}{Shibasaki, R.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Mepognn: Metapopulation epidemic forecasting with
+  graph neural networks}, in: \bibinfo{booktitle}{Joint European conference on
+  machine learning and knowledge discovery in databases},
+  \bibinfo{organization}{Springer}. pp. \bibinfo{pages}{453--468}.
+%Type = Article
+\bibitem[{Chandra et~al.(2021)Chandra, Goyal and Gupta}]{chandra2021evaluation}
+\bibinfo{author}{Chandra, R.}, \bibinfo{author}{Goyal, S.},
+  \bibinfo{author}{Gupta, R.}, \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{Evaluation of deep learning models for multi-step
+  ahead time series prediction}.
+\newblock \bibinfo{journal}{Ieee Access} \bibinfo{volume}{9},
+  \bibinfo{pages}{83105--83123}.
+%Type = Inproceedings
+\bibitem[{Chollet(2017)}]{chollet2017xception}
+\bibinfo{author}{Chollet, F.}, \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{Xception: Deep learning with depthwise separable
+  convolutions}, in: \bibinfo{booktitle}{Proceedings of the IEEE conference on
+  computer vision and pattern recognition}, pp. \bibinfo{pages}{1251--1258}.
+\newblock \DOIprefix\doi{10.1109/CVPR.2017.625}.
+%Type = Article
+\bibitem[{{De Angelis} et~al.(2015){De Angelis}, Presanis, Birrell, Tomba and
+  House}]{DEANGELIS201583}
+\bibinfo{author}{{De Angelis}, D.}, \bibinfo{author}{Presanis, A.M.},
+  \bibinfo{author}{Birrell, P.J.}, \bibinfo{author}{Tomba, G.S.},
+  \bibinfo{author}{House, T.}, \bibinfo{year}{2015}.
+\newblock \bibinfo{title}{Four key challenges in infectious disease modelling
+  using data from multiple sources}.
+\newblock \bibinfo{journal}{Epidemics} \bibinfo{volume}{10},
+  \bibinfo{pages}{83--87}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S175543651400053X},
+  \DOIprefix\doi{https://doi.org/10.1016/j.epidem.2014.09.004}.
+  \bibinfo{note}{challenges in Modelling Infectious DIsease Dynamics}.
+%Type = Inproceedings
+\bibitem[{Deng et~al.(2020)Deng, Wang, Rangwala, Wang and
+  Ning}]{dengColaGNNCrosslocationAttention2020a}
+\bibinfo{author}{Deng, S.}, \bibinfo{author}{Wang, S.},
+  \bibinfo{author}{Rangwala, H.}, \bibinfo{author}{Wang, L.},
+  \bibinfo{author}{Ning, Y.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Cola-{{GNN}}: {{Cross-location Attention}} based
+  {{Graph Neural Networks}} for {{Long-term ILI Prediction}}}, in:
+  \bibinfo{booktitle}{Proceedings of the 29th {{ACM International Conference}}
+  on {{Information}} \& {{Knowledge Management}}},
+  \bibinfo{publisher}{Association for Computing Machinery},
+  \bibinfo{address}{New York, NY, USA}. pp. \bibinfo{pages}{245--254}.
+\newblock \DOIprefix\doi{10.1145/3340531.3411975}.
+%Type = Article
+\bibitem[{Gao et~al.(2023)Gao, Heintz, Mack, Glass, Cross and
+  Sun}]{gao2023evidence}
+\bibinfo{author}{Gao, J.}, \bibinfo{author}{Heintz, J.}, \bibinfo{author}{Mack,
+  C.}, \bibinfo{author}{Glass, L.}, \bibinfo{author}{Cross, A.},
+  \bibinfo{author}{Sun, J.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Evidence-driven spatiotemporal covid-19
+  hospitalization prediction with ising dynamics}.
+\newblock \bibinfo{journal}{Nature communications} \bibinfo{volume}{14},
+  \bibinfo{pages}{3093}.
+%Type = Article
+\bibitem[{Gao et~al.(2021)Gao, Sharma, Qian, Glass, Spaeder, Romberg, Sun and
+  Xiao}]{gao2021stan}
+\bibinfo{author}{Gao, J.}, \bibinfo{author}{Sharma, R.}, \bibinfo{author}{Qian,
+  C.}, \bibinfo{author}{Glass, L.M.}, \bibinfo{author}{Spaeder, J.},
+  \bibinfo{author}{Romberg, J.}, \bibinfo{author}{Sun, J.},
+  \bibinfo{author}{Xiao, C.}, \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{Stan: spatio-temporal attention network for pandemic
+  prediction using real-world evidence}.
+\newblock \bibinfo{journal}{Journal of the American Medical Informatics
+  Association} \bibinfo{volume}{28}, \bibinfo{pages}{733--743}.
+\newblock \DOIprefix\doi{10.1093/jamia/ocaa322}.
+%Type = Article
+\bibitem[{Giuliani et~al.(2020)Giuliani, Dickson, Espa and
+  Santi}]{giuliani2020modelling}
+\bibinfo{author}{Giuliani, D.}, \bibinfo{author}{Dickson, M.M.},
+  \bibinfo{author}{Espa, G.}, \bibinfo{author}{Santi, F.},
+  \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Modelling and predicting the spatio-temporal spread
+  of covid-19 in italy}.
+\newblock \bibinfo{journal}{BMC infectious diseases} \bibinfo{volume}{20},
+  \bibinfo{pages}{1--10}.
+\newblock \DOIprefix\doi{10.1186/s12879-020-05415-7}.
+%Type = Inproceedings
+\bibitem[{Glorot and Bengio(2010)}]{glorot2010understanding}
+\bibinfo{author}{Glorot, X.}, \bibinfo{author}{Bengio, Y.},
+  \bibinfo{year}{2010}.
+\newblock \bibinfo{title}{Understanding the difficulty of training deep
+  feedforward neural networks}, in: \bibinfo{booktitle}{Proceedings of the 13th
+  International Conference on Artificial Intelligence and Statistics},
+  \bibinfo{publisher}{PMLR}. pp. \bibinfo{pages}{249--256}.
+\newblock \URLprefix \url{https://proceedings.mlr.press/v9/glorot10a.html}.
+%Type = Article
+\bibitem[{Han et~al.(2025)Han, Xun, Cai, Yang and Li}]{han2025dygraphformer}
+\bibinfo{author}{Han, S.}, \bibinfo{author}{Xun, Y.}, \bibinfo{author}{Cai,
+  J.}, \bibinfo{author}{Yang, H.}, \bibinfo{author}{Li, Y.},
+  \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{Dygraphformer: Transformer combining dynamic
+  spatio-temporal graph network for multivariate time series forecasting}.
+\newblock \bibinfo{journal}{Neural Networks} \bibinfo{volume}{181},
+  \bibinfo{pages}{106776}.
+\newblock \DOIprefix\doi{https://doi.org/10.1016/j.neunet.2024.106776}.
+%Type = Article
+\bibitem[{Heltberg et~al.(2022)Heltberg, Michelsen, Martiny, Christensen,
+  Jensen, Halasa and Petersen}]{heltberg2022spatial}
+\bibinfo{author}{Heltberg, M.L.}, \bibinfo{author}{Michelsen, C.},
+  \bibinfo{author}{Martiny, E.S.}, \bibinfo{author}{Christensen, L.E.},
+  \bibinfo{author}{Jensen, M.H.}, \bibinfo{author}{Halasa, T.},
+  \bibinfo{author}{Petersen, T.C.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Spatial heterogeneity affects predictions from
+  early-curve fitting of pandemic outbreaks: a case study using population data
+  from denmark}.
+\newblock \bibinfo{journal}{Royal Society Open Science} \bibinfo{volume}{9},
+  \bibinfo{pages}{220018}.
+\newblock \DOIprefix\doi{10.1098/rsos.220018}.
+%Type = Article
+\bibitem[{Hochreiter and Schmidhuber(1997)}]{hochreiter1997long}
+\bibinfo{author}{Hochreiter, S.}, \bibinfo{author}{Schmidhuber, J.},
+  \bibinfo{year}{1997}.
+\newblock \bibinfo{title}{Long short-term memory}.
+\newblock \bibinfo{journal}{Neural computation} \bibinfo{volume}{9},
+  \bibinfo{pages}{1735--1780}.
+\newblock \DOIprefix\doi{10.1162/neco.1997.9.8.1735}.
+%Type = Article
+\bibitem[{Kamalov et~al.(2022)Kamalov, Rajab, Cherukuri, Elnagar and
+  Safaraliev}]{Kamalov2022ReviewDL}
+\bibinfo{author}{Kamalov, F.}, \bibinfo{author}{Rajab, K.},
+  \bibinfo{author}{Cherukuri, A.}, \bibinfo{author}{Elnagar, A.},
+  \bibinfo{author}{Safaraliev, M.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Deep learning for covid-19 forecasting:
+  State-of-the-art review}.
+\newblock \bibinfo{journal}{Neurocomputing} \bibinfo{volume}{511},
+  \bibinfo{pages}{142--154}.
+\newblock \DOIprefix\doi{10.1016/j.neucom.2022.09.005}.
+%Type = Article
+\bibitem[{Kim et~al.(2025)Kim, Kim and Jang}]{kimForecastingEpidemicSpread2025}
+\bibinfo{author}{Kim, M.}, \bibinfo{author}{Kim, J.H.}, \bibinfo{author}{Jang,
+  B.}, \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{Forecasting {{Epidemic Spread With Recurrent Graph
+  Gate Fusion Transformers}}}.
+\newblock \bibinfo{journal}{IEEE Journal of Biomedical and Health Informatics}
+  \bibinfo{volume}{29}, \bibinfo{pages}{1546--1559}.
+\newblock \DOIprefix\doi{10.1109/JBHI.2024.3488274}.
+%Type = Article
+\bibitem[{Kong et~al.(2023)Kong, Ojha, Gao, Suganthan and
+  Sn{\'a}{\v{s}}el}]{kong2023low}
+\bibinfo{author}{Kong, L.}, \bibinfo{author}{Ojha, V.}, \bibinfo{author}{Gao,
+  R.}, \bibinfo{author}{Suganthan, P.N.}, \bibinfo{author}{Sn{\'a}{\v{s}}el,
+  V.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Low-rank and global-representation-key-based
+  attention for graph transformer}.
+\newblock \bibinfo{journal}{Information Sciences} \bibinfo{volume}{642},
+  \bibinfo{pages}{119108}.
+\newblock \DOIprefix\doi{10.1016/j.ins.2023.119108}.
+%Type = Inproceedings
+\bibitem[{Lai et~al.(2018)Lai, Chang, Yang and Liu}]{lai2018modeling}
+\bibinfo{author}{Lai, G.}, \bibinfo{author}{Chang, W.C.},
+  \bibinfo{author}{Yang, Y.}, \bibinfo{author}{Liu, H.}, \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Modeling long-and short-term temporal patterns with
+  deep neural networks}, in: \bibinfo{booktitle}{The 41st international ACM
+  SIGIR conference on research \& development in information retrieval}, pp.
+  \bibinfo{pages}{95--104}.
+%Type = Article
+\bibitem[{Li et~al.(2023)Li, Liu and Li}]{li2023multi}
+\bibinfo{author}{Li, T.}, \bibinfo{author}{Liu, L.}, \bibinfo{author}{Li, M.},
+  \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Multi-scale residual depthwise separable convolution
+  for metro passenger flow prediction}.
+\newblock \bibinfo{journal}{Applied Sciences} \bibinfo{volume}{13},
+  \bibinfo{pages}{11272}.
+\newblock \DOIprefix\doi{10.3390/app132011272}.
+%Type = Article
+\bibitem[{Li et~al.(2017)Li, Yu, Shahabi and Liu}]{li2017diffusion}
+\bibinfo{author}{Li, Y.}, \bibinfo{author}{Yu, R.}, \bibinfo{author}{Shahabi,
+  C.}, \bibinfo{author}{Liu, Y.}, \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{Diffusion convolutional recurrent neural network:
+  Data-driven traffic forecasting}.
+\newblock \bibinfo{journal}{arXiv preprint arXiv:1707.01926} .
+%Type = Article
+\bibitem[{{Lijing Wang} et~al.(2022){Lijing Wang}, {Lijing Wang}, {Aniruddha
+  Adiga}, {Aniruddha Adiga}, {Jiangzhuo Chen}, {Jiangzhuo Chen}, {Adam
+  Sadilek}, {Adam Sadilek}, {Srinivasan Venkatramanan}, {Srinivasan
+  Venkatramanan}, {Madhav V. Marathe} and {Madhav
+  Marathe}}]{lijingwangCausalGNNCausalBasedGraph2022}
+\bibinfo{author}{{Lijing Wang}}, \bibinfo{author}{{Lijing Wang}},
+  \bibinfo{author}{{Aniruddha Adiga}}, \bibinfo{author}{{Aniruddha Adiga}},
+  \bibinfo{author}{{Jiangzhuo Chen}}, \bibinfo{author}{{Jiangzhuo Chen}},
+  \bibinfo{author}{{Adam Sadilek}}, \bibinfo{author}{{Adam Sadilek}},
+  \bibinfo{author}{{Srinivasan Venkatramanan}}, \bibinfo{author}{{Srinivasan
+  Venkatramanan}}, \bibinfo{author}{{Madhav V. Marathe}},
+  \bibinfo{author}{{Madhav Marathe}}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{{{CausalGNN}}: {{Causal-Based Graph Neural Networks}}
+  for {{Spatio-Temporal Epidemic Forecasting}}}.
+\newblock \bibinfo{journal}{Proceedings of the ... AAAI Conference on
+  Artificial Intelligence} \bibinfo{volume}{36}, \bibinfo{pages}{12191--12199}.
+\newblock \DOIprefix\doi{10.1609/aaai.v36i11.21479}.
+%Type = Misc
+\bibitem[{Liu et~al.(2024)Liu, Wan, Prakash, Lau and
+  Jin}]{liuReviewGraphNeural2024a}
+\bibinfo{author}{Liu, Z.}, \bibinfo{author}{Wan, G.}, \bibinfo{author}{Prakash,
+  B.A.}, \bibinfo{author}{Lau, M.S.Y.}, \bibinfo{author}{Jin, W.},
+  \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{A {{Review}} of {{Graph Neural Networks}} in
+  {{Epidemic Modeling}}}.
+\newblock \DOIprefix\doi{10.48550/arXiv.2403.19852},
+  \href{http://arxiv.org/abs/2403.19852}{\tt arXiv:2403.19852}.
+%Type = Article
+\bibitem[{Luo et~al.(2023)Luo, Li, Wang, Cui and Liu}]{Luo2023Interpretable}
+\bibinfo{author}{Luo, L.}, \bibinfo{author}{Li, B.}, \bibinfo{author}{Wang,
+  X.}, \bibinfo{author}{Cui, L.}, \bibinfo{author}{Liu, G.},
+  \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Interpretable spatial identity neural network-based
+  epidemic prediction}.
+\newblock \bibinfo{journal}{Scientific Reports} \bibinfo{volume}{13}.
+\newblock \DOIprefix\doi{10.1038/s41598-023-45177-1}.
+%Type = Article
+\bibitem[{Ma et~al.(2024)Ma, Qiu, Van~Mieghem and Kitsak}]{ma2024reporting}
+\bibinfo{author}{Ma, L.}, \bibinfo{author}{Qiu, Z.},
+  \bibinfo{author}{Van~Mieghem, P.}, \bibinfo{author}{Kitsak, M.},
+  \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Reporting delays: A widely neglected impact factor in
+  covid-19 forecasts}.
+\newblock \bibinfo{journal}{PNAS nexus} \bibinfo{volume}{3},
+  \bibinfo{pages}{pgae204}.
+%Type = Article
+\bibitem[{Moss et~al.(2020)Moss, Zarebski, Dawson, Franklin, Birrell and
+  McCaw}]{Moss_Zarebski_Dawson_Franklin_Birrell_McCaw_2020}
+\bibinfo{author}{Moss, R.}, \bibinfo{author}{Zarebski, A.E.},
+  \bibinfo{author}{Dawson, P.}, \bibinfo{author}{Franklin, L.J.},
+  \bibinfo{author}{Birrell, F.A.}, \bibinfo{author}{McCaw, J.M.},
+  \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Anatomy of a seasonal influenza epidemic forecast}.
+\newblock \bibinfo{journal}{Communicable Diseases Intelligence}
+  \bibinfo{volume}{43}.
+\newblock \URLprefix
+  \url{https://ojs.cdi.cdc.gov.au/index.php/cdi/article/view/553},
+  \DOIprefix\doi{10.33321/cdi.2019.43.7}.
+%Type = Misc
+\bibitem[{{NHS England}(2024)}]{NHS2024HospitalActivity}
+\bibinfo{author}{{NHS England}}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Covid-19 hospital activity}.
+\newblock
+  \bibinfo{howpublished}{\url{https://www.england.nhs.uk/statistics/statistical-work-areas/covid-19-hospital-activity/}}.
+\newblock \bibinfo{note}{Accessed 2025-05-10}.
+%Type = Article
+\bibitem[{Oluwasakin and Khaliq(2023)}]{oluwasakin2023data}
+\bibinfo{author}{Oluwasakin, E.O.}, \bibinfo{author}{Khaliq, A.Q.},
+  \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Data-driven deep learning neural networks for
+  predicting the number of individuals infected by {{COVID-19}} omicron
+  variant}.
+\newblock \bibinfo{journal}{Epidemiologia} \bibinfo{volume}{4},
+  \bibinfo{pages}{420--453}.
+\newblock \DOIprefix\doi{10.3390/epidemiologia4040037}.
+%Type = Article
+\bibitem[{Panja et~al.(2022)Panja, Chakraborty, Kumar and
+  Liu}]{Panja2022Epicasting}
+\bibinfo{author}{Panja, M.}, \bibinfo{author}{Chakraborty, T.},
+  \bibinfo{author}{Kumar, U.}, \bibinfo{author}{Liu, N.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Epicasting: An ensemble wavelet neural network for
+  forecasting epidemics}.
+\newblock \bibinfo{journal}{Neural Networks} \bibinfo{volume}{165},
+  \bibinfo{pages}{185--212}.
+\newblock \DOIprefix\doi{https://doi.org/10.1016/j.neunet.2023.05.049}.
+%Type = Article
+\bibitem[{Pu et~al.(2024)Pu, Zhu, Wu, Leng, Bo and Wang}]{pu2024dynamic}
+\bibinfo{author}{Pu, X.}, \bibinfo{author}{Zhu, J.}, \bibinfo{author}{Wu, Y.},
+  \bibinfo{author}{Leng, C.}, \bibinfo{author}{Bo, Z.}, \bibinfo{author}{Wang,
+  H.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Dynamic adaptive spatio–temporal graph network for
+  covid-19 forecasting}.
+\newblock \bibinfo{journal}{CAAI Transactions on Intelligence Technology}
+  \bibinfo{volume}{9}, \bibinfo{pages}{769--786}.
+\newblock \URLprefix
+  \url{https://ietresearch.onlinelibrary.wiley.com/doi/abs/10.1049/cit2.12238},
+  \DOIprefix\doi{https://doi.org/10.1049/cit2.12238},
+  \href{http://arxiv.org/abs/https://ietresearch.onlinelibrary.wiley.com/doi/pdf/10.1049/cit2.12238}{\tt
+  arXiv:https://ietresearch.onlinelibrary.wiley.com/doi/pdf/10.1049/cit2.12238}.
+%Type = Article
+\bibitem[{Puny et~al.(2020)Puny, Ben-Hamu and Lipman}]{puny2020global}
+\bibinfo{author}{Puny, O.}, \bibinfo{author}{Ben-Hamu, H.},
+  \bibinfo{author}{Lipman, Y.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Global attention improves graph networks
+  generalization}.
+\newblock \bibinfo{journal}{arXiv preprint arXiv:2006.07846}
+  \DOIprefix\doi{10.48550/arXiv.2006.07846}.
+%Type = Article
+\bibitem[{Qiu et~al.(2024)Qiu, Tan and Bao}]{Qiu2024MSGNN}
+\bibinfo{author}{Qiu, M.}, \bibinfo{author}{Tan, Z.}, \bibinfo{author}{Bao,
+  B.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{{MSGNN: Multi-scale Spatio-temporal Graph Neural
+  Network for Epidemic Forecasting}}.
+\newblock \bibinfo{journal}{Data Mining and Knowledge Discovery}
+  \bibinfo{volume}{38}, \bibinfo{pages}{2348--2376}.
+\newblock \URLprefix \url{https://doi.org/10.1007/s10618-024-01035-w},
+  \DOIprefix\doi{10.1007/s10618-024-01035-w}.
+%Type = Article
+\bibitem[{Shi et~al.(2025)Shi, Zhu, Zhu, Cheng and Zhong}]{s25082507}
+\bibinfo{author}{Shi, Y.}, \bibinfo{author}{Zhu, X.}, \bibinfo{author}{Zhu,
+  X.}, \bibinfo{author}{Cheng, B.}, \bibinfo{author}{Zhong, Y.},
+  \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{Kalman filter-based epidemiological model for
+  post-covid-19 era surveillance and prediction}.
+\newblock \bibinfo{journal}{Sensors} \bibinfo{volume}{25}.
+\newblock \URLprefix \url{https://www.mdpi.com/1424-8220/25/8/2507},
+  \DOIprefix\doi{10.3390/s25082507}.
+%Type = Article
+\bibitem[{da~Silva et~al.(2021)da~Silva, de~Lima, da~Silva, Silva, Marques,
+  de~Ara{\'u}jo, Albuquerque~J{\'u}nior, de~Souza, de~Santana, Gomes
+  et~al.}]{da2021covid}
+\bibinfo{author}{da~Silva, C.C.}, \bibinfo{author}{de~Lima, C.L.},
+  \bibinfo{author}{da~Silva, A.C.G.}, \bibinfo{author}{Silva, E.L.},
+  \bibinfo{author}{Marques, G.S.}, \bibinfo{author}{de~Ara{\'u}jo, L.J.B.},
+  \bibinfo{author}{Albuquerque~J{\'u}nior, L.A.}, \bibinfo{author}{de~Souza,
+  S.B.J.}, \bibinfo{author}{de~Santana, M.A.}, \bibinfo{author}{Gomes, J.C.},
+  et~al., \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{Covid-19 dynamic monitoring and real-time
+  spatio-temporal forecasting}.
+\newblock \bibinfo{journal}{Frontiers in public health} \bibinfo{volume}{9},
+  \bibinfo{pages}{641253}.
+\newblock \DOIprefix\doi{10.3389/fpubh.2021.641253}.
+%Type = Article
+\bibitem[{Stone et~al.(2007)Stone, Olinky and Huppert}]{Stone2007Seasonal}
+\bibinfo{author}{Stone, L.}, \bibinfo{author}{Olinky, R.},
+  \bibinfo{author}{Huppert, A.}, \bibinfo{year}{2007}.
+\newblock \bibinfo{title}{Seasonal dynamics of recurrent epidemics}.
+\newblock \bibinfo{journal}{Nature} \bibinfo{volume}{446},
+  \bibinfo{pages}{533--536}.
+\newblock \DOIprefix\doi{10.1038/nature05638}.
+%Type = Article
+\bibitem[{Velickovic et~al.(2017)Velickovic, Cucurull, Casanova, Romero, Lio,
+  Bengio et~al.}]{velickovic2017graph}
+\bibinfo{author}{Velickovic, P.}, \bibinfo{author}{Cucurull, G.},
+  \bibinfo{author}{Casanova, A.}, \bibinfo{author}{Romero, A.},
+  \bibinfo{author}{Lio, P.}, \bibinfo{author}{Bengio, Y.}, et~al.,
+  \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{Graph attention networks}.
+\newblock \bibinfo{journal}{stat} \bibinfo{volume}{1050},
+  \bibinfo{pages}{10--48550}.
+\newblock \DOIprefix\doi{https://doi.org/10.48550/arXiv.1710.10903}.
+%Type = Article
+\bibitem[{Venna et~al.(2019)Venna, Tavanaei, Gottumukkala, Raghavan, Maida and
+  Nichols}]{venna2019novel}
+\bibinfo{author}{Venna, S.R.}, \bibinfo{author}{Tavanaei, A.},
+  \bibinfo{author}{Gottumukkala, R.N.}, \bibinfo{author}{Raghavan, V.V.},
+  \bibinfo{author}{Maida, A.S.}, \bibinfo{author}{Nichols, S.},
+  \bibinfo{year}{2019}.
+\newblock \bibinfo{title}{A novel data-driven model for real-time influenza
+  forecasting}.
+\newblock \bibinfo{journal}{IEEE Access} \bibinfo{volume}{7},
+  \bibinfo{pages}{7691--7701}.
+\newblock \DOIprefix\doi{10.1109/ACCESS.2018.2888585}.
+%Type = Article
+\bibitem[{Verma et~al.(2022)Verma, Mandal and Gupta}]{verma2022temporal}
+\bibinfo{author}{Verma, H.}, \bibinfo{author}{Mandal, S.},
+  \bibinfo{author}{Gupta, A.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Temporal deep learning architecture for prediction of
+  covid-19 cases in india}.
+\newblock \bibinfo{journal}{Expert Systems with Applications}
+  \bibinfo{volume}{195}, \bibinfo{pages}{116611}.
+%Type = Inproceedings
+\bibitem[{Wang et~al.(2019)Wang, Chen and Marathe}]{wang2019defsi}
+\bibinfo{author}{Wang, L.}, \bibinfo{author}{Chen, J.},
+  \bibinfo{author}{Marathe, M.}, \bibinfo{year}{2019}.
+\newblock \bibinfo{title}{Defsi: Deep learning based epidemic forecasting with
+  synthetic information}, in: \bibinfo{booktitle}{Proceedings of the AAAI
+  conference on artificial intelligence}, pp. \bibinfo{pages}{9607--9612}.
+\newblock \DOIprefix\doi{10.1609/aaai.v33i01.33019607}.
+%Type = Article
+\bibitem[{Wang et~al.(2020)Wang, Li, Khabsa, Fang and Ma}]{wang2020linformer}
+\bibinfo{author}{Wang, S.}, \bibinfo{author}{Li, B.Z.},
+  \bibinfo{author}{Khabsa, M.}, \bibinfo{author}{Fang, H.},
+  \bibinfo{author}{Ma, H.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Linformer: Self-attention with linear complexity}.
+\newblock \bibinfo{journal}{arXiv preprint arXiv:2006.04768} .
+%Type = Inproceedings
+\bibitem[{Wang et~al.(2024)Wang, Zhu, Liang, Wang, Harrison, Ma and
+  Gao}]{wang_deepest_2024}
+\bibinfo{author}{Wang, Y.}, \bibinfo{author}{Zhu, Y.}, \bibinfo{author}{Liang,
+  L.}, \bibinfo{author}{Wang, Y.}, \bibinfo{author}{Harrison, E.M.},
+  \bibinfo{author}{Ma, L.}, \bibinfo{author}{Gao, J.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{{DeepEST}: {A} {Python} {Library} for
+  {Spatio}-{Temporal} {Epidemiology} {Prediction}}, in:
+  \bibinfo{booktitle}{KDD'24 Workshop: Artificial Intelligence and Data Science
+  for Healthcare: Bridging Data-Centric AI and People-Centric Healthcare}.
+\newblock \URLprefix \url{https://openreview.net/forum?id=YzWC6huGQq}.
+%Type = Inproceedings
+\bibitem[{Wu et~al.(2018)Wu, Yang, Nishiura and Saitoh}]{wu2018deep}
+\bibinfo{author}{Wu, Y.}, \bibinfo{author}{Yang, Y.},
+  \bibinfo{author}{Nishiura, H.}, \bibinfo{author}{Saitoh, M.},
+  \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Deep learning for epidemiological predictions}, in:
+  \bibinfo{booktitle}{The 41st international ACM SIGIR conference on research
+  \& development in information retrieval}, pp. \bibinfo{pages}{1085--1088}.
+%Type = Inproceedings
+\bibitem[{Xie et~al.(2023)Xie, Zhang, Li, Zhou and Tan}]{xie2022epignn}
+\bibinfo{author}{Xie, F.}, \bibinfo{author}{Zhang, Z.}, \bibinfo{author}{Li,
+  L.}, \bibinfo{author}{Zhou, B.}, \bibinfo{author}{Tan, Y.},
+  \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Epignn: Exploring spatial transmission with graph
+  neural network for regional epidemic forecasting}, in:
+  \bibinfo{booktitle}{Joint European Conference on Machine Learning and
+  Knowledge Discovery in Databases}, \bibinfo{organization}{Springer}. pp.
+  \bibinfo{pages}{469--485}.
+\newblock \DOIprefix\doi{10.1007/978-3-031-26422-1_29}.
+%Type = Article
+\bibitem[{Yang et~al.(2023)Yang, Shi, Zhang, Wang, Cao, Wang
+  et~al.}]{yang2023self}
+\bibinfo{author}{Yang, L.}, \bibinfo{author}{Shi, R.}, \bibinfo{author}{Zhang,
+  Q.}, \bibinfo{author}{Wang, Z.}, \bibinfo{author}{Cao, X.},
+  \bibinfo{author}{Wang, C.}, et~al., \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Self-supervised graph neural networks via low-rank
+  decomposition}.
+\newblock \bibinfo{journal}{Advances in Neural Information Processing Systems}
+  \bibinfo{volume}{36}, \bibinfo{pages}{34295--34307}.
+%Type = Article
+\bibitem[{Yu et~al.(2022)Yu, Sun, Liu and Zhang}]{yu2022traffic}
+\bibinfo{author}{Yu, Y.}, \bibinfo{author}{Sun, W.}, \bibinfo{author}{Liu, J.},
+  \bibinfo{author}{Zhang, C.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Traffic flow prediction based on depthwise separable
+  convolution fusion network}.
+\newblock \bibinfo{journal}{Journal of Big Data} \bibinfo{volume}{9},
+  \bibinfo{pages}{83}.
+\newblock \DOIprefix\doi{10.1186/s40537-022-00637-9}.
+%Type = Article
+\bibitem[{Zeroual et~al.(2020)Zeroual, Harrou, Dairi and Sun}]{zeroual2020deep}
+\bibinfo{author}{Zeroual, A.}, \bibinfo{author}{Harrou, F.},
+  \bibinfo{author}{Dairi, A.}, \bibinfo{author}{Sun, Y.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Deep learning methods for forecasting {{COVID-19}}
+  time-{{Series}} data: {{A Comparative}} study}.
+\newblock \bibinfo{journal}{Chaos, solitons \& fractals} \bibinfo{volume}{140},
+  \bibinfo{pages}{110121}.
+\newblock \DOIprefix\doi{10.1016/j.chaos.2020.110121}.
+%Type = Article
+\bibitem[{Zhang et~al.(2019)Zhang, James and Liu}]{zhang2019spatial}
+\bibinfo{author}{Zhang, C.}, \bibinfo{author}{James, J.}, \bibinfo{author}{Liu,
+  Y.}, \bibinfo{year}{2019}.
+\newblock \bibinfo{title}{Spatial-temporal graph attention networks: A deep
+  learning approach for traffic forecasting}.
+\newblock \bibinfo{journal}{Ieee Access} \bibinfo{volume}{7},
+  \bibinfo{pages}{166246--166256}.
+\newblock \DOIprefix\doi{10.1109/ACCESS.2019.2953888}.
+%Type = Article
+\bibitem[{Zhang et~al.(2021)Zhang, Guo, Zhao, Zheng and Chen}]{zhang2021graph}
+\bibinfo{author}{Zhang, S.}, \bibinfo{author}{Guo, Y.}, \bibinfo{author}{Zhao,
+  P.}, \bibinfo{author}{Zheng, C.}, \bibinfo{author}{Chen, X.},
+  \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{A graph-based temporal attention framework for
+  multi-sensor traffic flow forecasting}.
+\newblock \bibinfo{journal}{IEEE Transactions on Intelligent Transportation
+  Systems} \bibinfo{volume}{23}, \bibinfo{pages}{7743--7758}.
+\newblock \DOIprefix\doi{10.1109/TITS.2021.3072118}.
+%Type = Article
+\bibitem[{{Zhiwei Ding} et~al.(2023){Zhiwei Ding}, {Feng Sha}, {Yi Zhang} and
+  {Zhouwang Yang}}]{zhiweidingBiologyInformedRecurrentNeural2023}
+\bibinfo{author}{{Zhiwei Ding}}, \bibinfo{author}{{Feng Sha}},
+  \bibinfo{author}{{Yi Zhang}}, \bibinfo{author}{{Zhouwang Yang}},
+  \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Biology-{{Informed Recurrent Neural Network}} for
+  {{Pandemic Prediction Using Multimodal Data}}}.
+\newblock \bibinfo{journal}{Biomimetics} \bibinfo{volume}{8},
+  \bibinfo{pages}{158--158}.
+\newblock \DOIprefix\doi{10.3390/biomimetics8020158}.
+
+\end{thebibliography}

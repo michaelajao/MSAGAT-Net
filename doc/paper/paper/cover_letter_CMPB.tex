@@ -1,0 +1,55 @@
+\documentclass[12pt]{letter}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{hyperref}
+\usepackage{parskip}
+
+\begin{document}
+
+\begin{letter}{%
+Professor Filippo Molinari, PhD\\
+Editor-in-Chief\\
+Computer Methods and Programs in Biomedicine\\
+Polytechnic of Turin\\
+Department of Electronics and Telecommunications\\
+Corso Duca Degli Abruzzi 24\\
+Torino, 10129, Italy
+}
+
+\opening{Dear Professor Molinari,}
+
+We are pleased to submit our research article titled ``MSAGAT-Net: Multi-Scale Adaptive Graph Attention Network for Efficient Spatiotemporal Epidemic Forecasting'' for consideration as a Research Article in \emph{Computer Methods and Programs in Biomedicine}.
+
+We acknowledge that a previous version of this work (Manuscript Number: CMPB-D-25-06919) was declined at the editorial evaluation stage due to insufficient novelty and lack of impact in the field of computer methods. We have taken this feedback seriously and have fundamentally redesigned the model architecture, re-run all experiments, and substantially rewritten the manuscript. We believe this submission represents a new contribution that merits fresh consideration. The key differences from the prior submission are summarised below.
+
+\textbf{New computer methods contributions (absent in the prior submission):}
+
+\begin{enumerate}
+    \item \textbf{Self-regulating additive structural bias in graph attention.} The previous submission used ELU-based linearised attention---an established technique. The new EAGAM module introduces a fundamentally different mechanism: a learnable low-rank graph bias and an optional adjacency prior are added directly to attention scores before softmax normalisation. Because the softmax function is shift-invariant, this additive prior self-regulates across graph densities---negligible on dense graphs, meaningful on sparse ones---eliminating fragile graph-size-dependent thresholds. This is a general-purpose computational mechanism applicable beyond epidemic forecasting.
+
+    \item \textbf{Adjacency-free spatial learning.} The previous submission, like all baseline methods (EpiGNN, Cola-GNN, DCRNN), required predefined adjacency matrices. The new architecture learns spatial relationships entirely from data through learnable graph bias parameters, with adjacency matrices being optional soft priors. Ablation confirms comparable or better performance without any adjacency input.
+
+    \item \textbf{Adaptive multi-hop spatial module with anti-oversmoothing.} The previous submission used a Dilated Multi-Scale Temporal Feature Module (DMTFM) based on dilated convolutions---a technique borrowed from Cola-GNN. This has been replaced by a Multi-Scale Spatial Feature Module (MSSFM) that aggregates multi-hop graph convolutions with graph-size-adaptive hop depth ($S = \min(S_{\max}, \max(2, \lfloor N/5 \rfloor))$) and locality-biased fusion weights. This mechanism prevents oversmoothing on small graphs while retaining spatial context on larger ones.
+
+    \item \textbf{Learnable decay rate and highway autoregressive connection.} The PPRM decay rate is now learned in log-domain rather than being fixed, and a new highway autoregressive connection stabilises training by blending spatiotemporal predictions with a simple autoregressive baseline.
+\end{enumerate}
+
+\textbf{Substantially improved experimental results:}
+
+The redesigned architecture achieves much larger improvements over baselines than the prior submission: up to 23.5\% RMSE reduction on LTLA-Timeseries (372 local authorities) and 22.2\% on NHS-Timeseries, compared to the prior submission's best improvement of 11.2\% on a single dataset. MSAGAT-Net now achieves the best or second-best RMSE in the majority of experimental settings across six datasets.
+
+This work aligns closely with the journal's focus on formal computing methods and their application in biomedical research. The contributions are primarily methodological---the self-regulating structural bias mechanism and adaptive multi-hop convolutions are general computational innovations---demonstrated through rigorous evaluation on epidemiological forecasting tasks. All data used are publicly available, and code is available at \url{https://github.com/michaelajao/MSAGAT-Net} to support reproducibility.
+
+This manuscript represents original research that has not been published elsewhere and is not under consideration by another journal. All authors have approved this submission and have no conflicts of interest to declare.
+
+We appreciate your time and consideration and look forward to your feedback.
+
+\closing{Sincerely,\\[1em]
+Michael Ajao-Olarinoye\\
+Centre for Computational Science and Mathematical Modelling\\
+Coventry University\\
+Coventry, United Kingdom\\
+\texttt{olarinoyem@coventry.ac.uk}
+}
+
+\end{letter}
+\end{document}
