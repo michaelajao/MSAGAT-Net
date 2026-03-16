@@ -519,3 +519,4 @@
 [20260209_101621] MSTAGAT-Net | Dataset: japan, Window: 20, Horizon: 3, Ablation: no_pprm, Seed: 42 | MAE: 465.8603, RMSE: 1305.6040, PCC: 0.8562, R2: 0.7153
 [20260209_101636] MSTAGAT-Net | Dataset: japan, Window: 20, Horizon: 7, Ablation: no_pprm, Seed: 42 | MAE: 561.8884, RMSE: 1468.7052, PCC: 0.8669, R2: 0.6397
 [20260209_101702] MSTAGAT-Net | Dataset: japan, Window: 20, Horizon: 14, Ablation: no_pprm, Seed: 42 | MAE: 636.2056, RMSE: 1612.3384, PCC: 0.7920, R2: 0.5658
+[20260316_220924] MSAGAT-Net | Dataset: japan, Window: 20, Horizon: 3, Ablation: none, Seed: 42 | MAE: 504.9486, RMSE: 1385.1425, PCC: 0.8359, R2: 0.6796

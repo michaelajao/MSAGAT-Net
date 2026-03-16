@@ -33,6 +33,8 @@ desktop.ini
 # Model Checkpoints
 save/
 save_all/
+save_final/
+save_verify/
 *.pth
 *.pt
 *.ckpt
@@ -66,5 +68,15 @@ optimize.py
 .cache/
 tmp/
 
-# Cursor plans
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.out
+
+# Cursor/Claude plans
 .cursor/plans/
+.claude/

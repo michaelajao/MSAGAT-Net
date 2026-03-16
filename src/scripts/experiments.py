@@ -43,9 +43,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 from src.data import DataBasicLoader
 from src.models import MSAGATNet_Ablation
-from experimental.models_novel import EpiDelayNet, EpiDelayNet_Ablation
-from experimental.models_novel_full import EpiDelayNetFull
-from src.training import Trainer
+from src.train import Trainer
 from src.utils import plot_loss_curves, save_metrics
 
 # Setup logging
@@ -143,11 +141,8 @@ SEEDS = [5, 30, 45, 123, 1000]
 # Ablation configurations
 ABLATIONS = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
 
-# EpiDelay-Net ablations
-EPIDELAY_ABLATIONS = ['none', 'no_delay', 'no_leadlag', 'no_rt', 'no_phase']
-
 # Available models
-MODELS = ['msagat', 'epidelay', 'epidelay_full']
+MODELS = ['msagat']
 
 
 # =============================================================================
@@ -173,15 +168,13 @@ def run_single_experiment(
         dataset: Dataset name
         horizon: Prediction horizon
         seed: Random seed
-        ablation: Ablation variant 
-            - For MSAGAT: 'none', 'no_agam', 'no_mtfm', 'no_pprm'
-            - For EpiDelay: 'none', 'no_delay', 'no_leadlag', 'no_rt', 'no_phase'
+        ablation: Ablation variant ('none', 'no_agam', 'no_mtfm', 'no_pprm')
         save_dir: Directory to save model checkpoints
         use_adj_prior: Override dataset config for adjacency prior
         use_graph_bias: Override dataset config for graph bias
         verbose: Print progress
         force_cpu: Force CPU training even if GPU available
-        model_type: Model to use ('msagat' or 'epidelay')
+        model_type: Model to use ('msagat')
         
     Returns:
         Dictionary of final metrics
@@ -198,9 +191,9 @@ def run_single_experiment(
         sim_mat=config['sim_mat'],
         window=TRAIN_CONFIG['window'],
         horizon=horizon,
-        train=0.5,
+        train=0.6,
         val=0.2,
-        test=0.3,
+        test=0.2,
         epochs=TRAIN_CONFIG['epochs'],
         batch=TRAIN_CONFIG['batch'],
         lr=TRAIN_CONFIG['lr'],
@@ -242,19 +235,9 @@ def run_single_experiment(
     # Load data
     data_loader = DataBasicLoader(args)
     
-    # Create model based on model_type
-    if model_type == 'epidelay':
-        if ablation == 'none':
-            model = EpiDelayNet(args, data_loader)
-        else:
-            model = EpiDelayNet_Ablation(args, data_loader)
-        model_name = 'EpiDelay-Net'
-    elif model_type == 'epidelay_full':
-        model = EpiDelayNetFull(args, data_loader)
-        model_name = 'EpiDelay-Net-Full'
-    else:
-        model = MSAGATNet_Ablation(args, data_loader)
-        model_name = 'MSAGAT-Net'
+    # Create model
+    model = MSAGATNet_Ablation(args, data_loader)
+    model_name = 'MSAGAT-Net'
     
     if args.cuda:
         model.cuda()
@@ -317,7 +300,7 @@ def run_single_experiment(
 def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = False, force_cpu: bool = False, save_dir: str = 'save_all', model_type: str = 'msagat'):
     """Run main comparison experiments (Tables 1 & 2)."""
     
-    model_display = 'EpiDelay-Net' if model_type == 'epidelay' else 'MSAGAT-Net'
+    model_display = 'MSAGAT-Net'
     print("\n" + "="*80)
     print(f"MAIN EXPERIMENTS: {model_display} with Optimal Settings")
     print("="*80)
@@ -355,7 +338,7 @@ def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = 
                     failed += 1
                     print(f"  [FAIL] {e}")
     
-    model_display = 'EpiDelay-Net' if model_type == 'epidelay' else 'MSAGAT-Net'
+    model_display = 'MSAGAT-Net'
     print(f"\n{'='*80}")
     print(f"MAIN EXPERIMENTS ({model_display}): {completed-failed}/{total} completed, {failed} failed")
     print(f"{'='*80}")
@@ -364,8 +347,8 @@ def run_main_experiments(datasets: List[str], seeds: List[int], dry_run: bool = 
 def run_ablation_experiments(datasets: List[str], seeds: List[int], dry_run: bool = False, force_cpu: bool = False, save_dir: str = 'save_all', model_type: str = 'msagat'):
     """Run ablation study experiments (Tables 3 & 4)."""
     
-    model_display = 'EpiDelay-Net' if model_type == 'epidelay' else 'MSAGAT-Net'
-    ablations = EPIDELAY_ABLATIONS if model_type == 'epidelay' else ABLATIONS
+    model_display = 'MSAGAT-Net'
+    ablations = ABLATIONS
     
     print("\n" + "="*80)
     print(f"ABLATION EXPERIMENTS ({model_display}): Component Contributions")
@@ -450,10 +433,10 @@ Examples:
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed')
     parser.add_argument('--ablation', type=str, default='none',
-                        help='Ablation variant (msagat: none/no_agam/no_mtfm/no_pprm, epidelay: none/no_delay/no_leadlag/no_rt/no_phase)')
+                        help='Ablation variant (none/no_agam/no_mtfm/no_pprm)')
     parser.add_argument('--model', type=str, default='msagat',
-                        choices=['msagat', 'epidelay', 'epidelay_full'],
-                        help='Model type (msagat, epidelay, or epidelay_full)')
+                        choices=['msagat'],
+                        help='Model type')
     parser.add_argument('--cpu', action='store_true',
                         help='Force CPU training (disable CUDA)')
     
