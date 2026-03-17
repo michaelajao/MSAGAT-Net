@@ -77,7 +77,6 @@ class MetricsResult:
     rmse_states: float
     pcc: float
     pcc_states: float
-    mape: float
     r2: float
     r2_states: float
     var: float
@@ -91,7 +90,7 @@ class MetricsResult:
             'mae': self.mae, 'std_MAE': self.mae_std,
             'rmse': self.rmse, 'rmse_states': self.rmse_states,
             'pcc': self.pcc, 'pcc_states': self.pcc_states,
-            'MAPE': self.mape, 'R2': self.r2, 'R2_states': self.r2_states,
+            'R2': self.r2, 'R2_states': self.r2_states,
             'Var': self.var, 'Vars': self.var_states, 'Peak': self.peak_mae,
         }
 
@@ -168,8 +167,6 @@ def evaluate(model, data_loader, batch_size, horizon, device,
     y_pred_flat = y_pred_states.flatten()
     rmse = sqrt(mean_squared_error(y_true_flat, y_pred_flat))
     mae = mean_absolute_error(y_true_flat, y_pred_flat)
-    mape = np.mean(np.abs((y_pred_flat - y_true_flat) / (y_true_flat + 1e-5))) / 1e7
-
     pcc = 1.0
     if compute_pcc:
         if np.std(y_true_flat) < 1e-10 or np.std(y_pred_flat) < 1e-10:
@@ -184,7 +181,7 @@ def evaluate(model, data_loader, batch_size, horizon, device,
     return MetricsResult(
         loss=total_loss / n_samples, mae=mae, mae_std=std_mae,
         rmse=rmse, rmse_states=rmse_states, pcc=pcc, pcc_states=pcc_states,
-        mape=mape, r2=r2, r2_states=r2_states, var=var, var_states=var_states,
+        r2=r2, r2_states=r2_states, var=var, var_states=var_states,
         peak_mae=peak_mae_val, y_true=y_true_states, y_pred=y_pred_states,
     )
 
