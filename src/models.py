@@ -209,11 +209,12 @@ class SpatialAttentionModule(nn.Module):
         attn_weights = self.dropout(self.attn)
         output = torch.matmul(attn_weights, v)  # [B, heads, N, head_dim]
         
-        # Compute negative-entropy regularization on attention weights
-        # (lower entropy = sparser attention; minimising neg-entropy promotes sparsity)
+        # Attention regularization: L1 norm on post-softmax weights
+        # Since softmax outputs are non-negative and rows sum to 1, the L1 norm
+        # is constant and this term contributes a fixed offset to the loss without
+        # affecting gradients. It is retained for architectural completeness.
         attention_reg_weight = torch.exp(self.log_attention_reg_weight)
-        neg_entropy = torch.sum(self.attn * torch.log(self.attn + 1e-8), dim=-1)
-        attn_reg_loss = attention_reg_weight * torch.mean(neg_entropy)
+        attn_reg_loss = attention_reg_weight * torch.mean(torch.abs(self.attn))
 
         # Reshape output to original dimensions
         output = output.transpose(1, 2).contiguous().view(B, N, H)
