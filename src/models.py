@@ -104,7 +104,7 @@ class SpatialAttentionModule(nn.Module):
         num_nodes: Number of nodes in the graph
         dropout: Dropout probability for regularization
         attention_heads: Number of parallel attention heads
-        attention_regularization_weight: Weight for L1 regularization on attention
+        attention_regularization_weight: Weight for entropy regularization on attention
         bottleneck_dim: Dimension of the low-rank projection
         adj_matrix: Predefined adjacency matrix [num_nodes, num_nodes] (optional)
     """
@@ -209,9 +209,11 @@ class SpatialAttentionModule(nn.Module):
         attn_weights = self.dropout(self.attn)
         output = torch.matmul(attn_weights, v)  # [B, heads, N, head_dim]
         
-        # Compute regularization loss on attention weights
+        # Compute negative-entropy regularization on attention weights
+        # (lower entropy = sparser attention; minimising neg-entropy promotes sparsity)
         attention_reg_weight = torch.exp(self.log_attention_reg_weight)
-        attn_reg_loss = attention_reg_weight * torch.mean(torch.abs(self.attn))
+        neg_entropy = torch.sum(self.attn * torch.log(self.attn + 1e-8), dim=-1)
+        attn_reg_loss = attention_reg_weight * torch.mean(neg_entropy)
 
         # Reshape output to original dimensions
         output = output.transpose(1, 2).contiguous().view(B, N, H)
