@@ -19,8 +19,7 @@ MSAGAT-Net integrates four core components:
 ### 2. Efficient Adaptive Graph Attention Module (EAGAM)
 - Scaled dot-product softmax attention with low-rank QKV projections
 - Additive structural bias: learnable low-rank graph bias (U@V) added directly to attention scores
-- Optional adjacency prior with learnable scale for soft, self-regulating structure guidance
-- L1 regularisation on attention weights to promote sparsity
+- Optional adjacency prior with learnable scale whose influence self-attenuates on dense graphs
 
 ### 3. Multi-Scale Spatial Feature Module (MSSFM)
 - Multi-hop graph convolutions using powers of the normalised adjacency
@@ -63,7 +62,7 @@ python -m src.train --single --dataset japan --horizon 5 --seed 42
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `--dataset` | `japan` | Dataset name |
-| `--horizon` | `5` | Forecast horizon in days |
+| `--horizon` | `5` | Forecast horizon (steps; weekly or daily depending on dataset) |
 | `--seed` | `42` | Random seed |
 | `--ablation` | `none` | Ablation variant (`none`, `no_agam`, `no_mtfm`, `no_pprm`) |
 | `--save_dir` | `save_all` | Directory for model checkpoints |
@@ -102,7 +101,7 @@ python -m src.evaluate --aggregate --format latex
 | `hidden_dim` | 32 | Hidden feature dimension |
 | `attention_heads` | 4 | Number of attention heads |
 | `bottleneck_dim` | 8 | Low-rank projection bottleneck |
-| `num_scales` | 4 | Spatial scales (hop depths 1, 2, 4, 8) |
+| `num_scales` | 4 | Maximum spatial scales (hop depths 0 to S-1) |
 | `kernel_size` | 3 | Convolution kernel size |
 | `feature_channels` | 16 | Feature extractor output channels |
 | `dropout` | 0.2 | Dropout probability |
@@ -110,7 +109,7 @@ python -m src.evaluate --aggregate --format latex
 | `weight_decay` | 5e-4 | L2 weight decay |
 | `batch_size` | 32 | Training batch size |
 | `patience` | 100 | Early stopping patience |
-| `window` | 20 | Lookback window (days) |
+| `window` | 20 | Lookback window (time steps) |
 
 ---
 
@@ -124,15 +123,21 @@ All evaluations report:
 
 ---
 
-## Citation
+## Paper
+
+If you use this code, please cite:
+
+> M. Ajao-olarinoye, V. Palade, F. He, P. A. Wark, S. Mousavi, Z. Mukandavire, "MSAGAT-Net: Multi-Scale Temporal Adaptive Graph Attention for Efficient Spatiotemporal Epidemic Forecasting," *Artificial Intelligence in Medicine*, 2026. (Under review)
 
 ```bibtex
 @article{ajaoolarinoye2026msagat,
-  title={MSAGAT-Net: Multi-Scale Adaptive Graph Attention Network for
+  title={{MSAGAT-Net}: Multi-Scale Temporal Adaptive Graph Attention for
          Efficient Spatiotemporal Epidemic Forecasting},
-  author={Ajao-Olarinoye, Michael and others},
-  journal={Under Review},
-  year={2026}
+  author={Ajao-olarinoye, Michael and Palade, Vasile and He, Fei and
+          Wark, Petra A. and Mousavi, Seyed and Mukandavire, Zindoga},
+  journal={Artificial Intelligence in Medicine},
+  year={2026},
+  note={Under review}
 }
 ```
 

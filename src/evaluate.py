@@ -177,7 +177,7 @@ def fig_ablation_study():
 
 def fig_component_impact():
     setup_style()
-    for ds, horizons in [('japan', [3, 7, 14])]:
+    for ds, horizons in [('japan', [3, 7, 14]), ('ltla_timeseries', [3, 7, 14]), ('nhs_timeseries', [3, 7, 14])]:
         data = []
         for h in horizons:
             full_df = load_metrics(ds, h, 'none')
