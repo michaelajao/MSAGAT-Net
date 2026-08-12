@@ -2,9 +2,9 @@
 MSAGAT-Net Model Architectures
 
 This module contains all neural network architectures for the MSAGAT-Net framework:
-- Core building blocks (attention, spatial modules, convolutions)
-- Main MSAGAT_Net model
-- Ablation study variants (MSAGATNet_Ablation)
+- Core building blocks (attention, spatial modules, convolutions, quantile head)
+- MSAGATNet_Ablation: the model used for all experiments; its `ablation`
+  argument selects the full model ('none') or a component-ablated variant
 
 Architecture Components:
     1. SpatialAttentionModule: Scaled dot-product attention with additive structural bias
@@ -37,6 +37,63 @@ HIGHWAY_WINDOW = 4  # For autoregressive component (critical for stable forecast
 # =============================================================================
 # CORE BUILDING BLOCKS
 # =============================================================================
+
+class QuantileHead(nn.Module):
+    """Monotone quantile forecasts around the lead-h point forecast.
+
+    Predicts positive increments that are cumulatively summed away from the
+    median on both sides, so quantile crossing is impossible by construction.
+    The median quantile is tied to the point forecast, which keeps the point
+    metrics of the probabilistic model identical in expectation to the
+    deterministic path.
+    """
+
+    def __init__(self, hidden_dim, quantile_levels, dropout=DROPOUT):
+        super().__init__()
+        levels = sorted(float(q) for q in quantile_levels)
+        self.register_buffer('levels', torch.tensor(levels, dtype=torch.float32))
+        self.median_idx = min(range(len(levels)),
+                              key=lambda i: abs(levels[i] - 0.5))
+        n_offsets = len(levels) - 1
+        self.proj = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim // 2, n_offsets),
+        )
+
+    def forward(self, features, point):
+        """
+        Args:
+            features: [batch, nodes, hidden] spatial features
+            point: [batch, nodes] lead-h point forecast (model output space)
+        Returns:
+            quantiles [batch, nodes, n_levels], monotone along the last axis.
+        """
+        inc = F.softplus(self.proj(features))          # [B, N, Q-1] positive
+        m = self.median_idx
+        parts = []
+        if m > 0:
+            low = inc[..., :m]
+            low = torch.flip(torch.cumsum(torch.flip(low, [-1]), -1), [-1])
+            parts.append(point.unsqueeze(-1) - low)
+        parts.append(point.unsqueeze(-1))
+        if m < inc.shape[-1]:
+            up = torch.cumsum(inc[..., m:], -1)
+            parts.append(point.unsqueeze(-1) + up)
+        return torch.cat(parts, dim=-1)
+
+
+def pinball_loss(quantile_pred, target, levels):
+    """Mean pinball (quantile) loss.
+
+    Args:
+        quantile_pred: [batch, nodes, n_levels]
+        target: [batch, nodes]
+        levels: [n_levels] tensor of quantile levels in (0, 1)
+    """
+    diff = target.unsqueeze(-1) - quantile_pred
+    return torch.mean(torch.maximum(levels * diff, (levels - 1.0) * diff))
 
 class DepthwiseSeparableConv1D(nn.Module):
     """
@@ -433,184 +490,6 @@ class HorizonPredictor(nn.Module):
 # MAIN MODEL
 # =============================================================================
 
-class MSAGAT_Net(nn.Module):
-    """
-    MSAGAT-Net (Multi-Scale Adaptive Graph Attention Network)
-    
-    A spatiotemporal forecasting model with four key components:
-    - TFEM: Temporal Feature Extraction Module (depthwise separable convolutions along time)
-    - EAGAM: Efficient Adaptive Graph Attention Module (graph-structure-aware attention)
-    - MSSFM: Multi-Scale Spatial Feature Module (multi-hop graph convolutions)
-    - PPRM: Progressive Prediction Refinement Module (horizon prediction with learnable decay)
-    
-    Data flow:
-    1. Input [B, T, N] -> TFEM extracts temporal features -> [B, N, D]
-    2. LR-AGAM computes graph-structure-aware attention -> [B, N, D] (residual)
-    3. MSSFM captures multi-hop spatial patterns -> [B, N, D] (residual)
-    4. PPRM generates predictions -> [B, H, N]
-    5. Highway connection blends with autoregressive component
-    
-    Args:
-        args: Model configuration with attributes:
-            - window: Input window size
-            - horizon: Prediction horizon
-            - hidden_dim, kernel_size, bottleneck_dim, etc.
-        data: Data object with attributes:
-            - m: Number of nodes
-            - adj: Adjacency matrix (optional)
-    """
-    
-    def __init__(self, args, data):
-        super().__init__()
-        
-        self.num_nodes = data.m
-        self.window = args.window
-        self.horizon = args.horizon
-        self.hidden_dim = getattr(args, 'hidden_dim', HIDDEN_DIM)
-        self.kernel_size = getattr(args, 'kernel_size', KERNEL_SIZE)
-        self.bottleneck_dim = getattr(args, 'bottleneck_dim', BOTTLENECK_DIM)
-        
-        # Get adjacency matrix if available (always passed to modules)
-        adj_matrix = getattr(data, 'adj', None)
-        if adj_matrix is not None and not isinstance(adj_matrix, torch.Tensor):
-            adj_matrix = torch.tensor(adj_matrix, dtype=torch.float32)
-
-        # Feature Extraction Component (TFEM)
-        self.feature_channels = getattr(args, 'feature_channels', FEATURE_CHANNELS)
-        self.feature_extractor = DepthwiseSeparableConv1D(
-            in_channels=1, 
-            out_channels=self.feature_channels,
-            kernel_size=self.kernel_size, 
-            padding=self.kernel_size // 2,
-            dropout=getattr(args, 'dropout', DROPOUT)
-        )
-
-        # Low-rank projection of extracted features
-        self.feature_projection_low = nn.Linear(
-            self.feature_channels * self.window, self.bottleneck_dim
-        )
-        self.feature_projection_high = nn.Linear(
-            self.bottleneck_dim, self.hidden_dim
-        )
-        self.feature_norm = nn.LayerNorm(self.hidden_dim)
-        self.feature_act = nn.ReLU()
-
-        # Spatial Component (EAGAM) - graph structure always used
-        self.spatial_module = SpatialAttentionModule(
-            self.hidden_dim, 
-            num_nodes=self.num_nodes,
-            dropout=getattr(args, 'dropout', DROPOUT),
-            attention_heads=getattr(args, 'attention_heads', ATTENTION_HEADS),
-            bottleneck_dim=self.bottleneck_dim,
-            adj_matrix=adj_matrix
-        )
-
-        # Multi-Scale Spatial Feature Component (MSSFM) - multi-hop graph convolutions
-        self.spatial_refinement_module = MultiScaleSpatialModule(
-            self.hidden_dim,
-            num_nodes=self.num_nodes,
-            num_scales=getattr(args, 'num_scales', NUM_SPATIAL_SCALES),
-            dropout=getattr(args, 'dropout', DROPOUT),
-            adj_matrix=adj_matrix
-        )
-
-        # Prediction Component (PPRM)
-        self.prediction_module = HorizonPredictor(
-            self.hidden_dim, 
-            self.horizon,
-            bottleneck_dim=self.bottleneck_dim,
-            dropout=getattr(args, 'dropout', DROPOUT)
-        )
-        
-        # Highway/Autoregressive Connection
-        self.highway_window = min(getattr(args, 'highway_window', HIGHWAY_WINDOW), self.window)
-        if self.highway_window > 0:
-            self.highway = nn.Linear(self.highway_window, self.horizon)
-        else:
-            self.highway = None
-        self.highway_ratio = nn.Parameter(torch.tensor(0.5))
-        
-        # Initialize weights properly (Xavier - used by all successful models)
-        self._init_weights()
-        
-    # Parameters with special initialization that must NOT be overwritten
-    _PRESERVE_PARAMS = {
-        'fusion_weight',      # MSSFM locality-biased init: exp(-0.5 * k)
-        'log_decay',          # PPRM learnable decay: -2.3 -> ~0.1
-        'adj_scale',          # EAGAM adjacency scale: 1.0
-        'highway_ratio',      # Highway blend: 0.5
-        'log_attention_reg_weight',  # Attention reg: log(1e-5)
-    }
-
-    def _init_weights(self):
-        """Initialize weights using Xavier uniform, preserving special inits."""
-        for name, p in self.named_parameters():
-            # Skip parameters with carefully designed initializations
-            if any(pname in name for pname in self._PRESERVE_PARAMS):
-                continue
-            if p.dim() >= 2:
-                nn.init.xavier_uniform_(p)
-            elif p.dim() == 1 and p.size(0) > 0:
-                if 'bias' in name:
-                    nn.init.zeros_(p)
-                else:
-                    stdv = 1. / math.sqrt(p.size(0))
-                    p.data.uniform_(-stdv, stdv)
-            # Skip 0-dimensional tensors (scalars)
-
-    def forward(self, x, idx=None):
-        """
-        Forward pass of the MSAGAT-Net model.
-        
-        Args:
-            x: Input time series [batch, time_window, nodes]
-            idx: Node indices (optional, unused)
-        Returns:
-            tuple: (Predictions [batch, horizon, nodes], Attention reg loss)
-        """
-        B, T, N = x.shape
-        x_last = x[:, -1, :]  # Last observed values
-        
-        # Feature Extraction
-        x_temp = x.permute(0, 2, 1).contiguous().view(B * N, 1, T)
-        temporal_features = self.feature_extractor(x_temp)
-        temporal_features = temporal_features.view(B, N, -1)
-        
-        # Feature projection through bottleneck
-        features = self.feature_projection_low(temporal_features)
-        features = self.feature_projection_high(features)
-        features = self.feature_norm(features)
-        features = self.feature_act(features)
-        
-        # Spatial Processing (EAGAM)
-        graph_features, attn_reg_loss = self.spatial_module(features)
-        
-        # Multi-Scale Spatial Feature Processing (MSSFM)
-        fusion_features = self.spatial_refinement_module(graph_features)
-        
-        # Prediction (PPRM)
-        model_pred = self.prediction_module(fusion_features, x_last)
-        model_pred = model_pred.transpose(1, 2)  # [batch, horizon, nodes]
-        
-        # Highway/Autoregressive connection
-        if self.highway is not None and self.highway_window > 0:
-            # Get recent observations
-            z = x[:, -self.highway_window:, :]  # [B, hw, N]
-            z = z.permute(0, 2, 1).contiguous()  # [B, N, hw]
-            z = z.view(B * N, self.highway_window)  # [B*N, hw]
-            z = self.highway(z)  # [B*N, H]
-            z = z.view(B, N, self.horizon)  # [B, N, H]
-            z = z.transpose(1, 2)  # [B, H, N]
-            
-            # Blend with sigmoid-gated ratio
-            ratio = torch.sigmoid(self.highway_ratio)
-            predictions = ratio * model_pred + (1 - ratio) * z
-        else:
-            predictions = model_pred
-        
-        return predictions, attn_reg_loss
-
-
 # =============================================================================
 # ABLATION STUDY COMPONENTS
 # =============================================================================
@@ -822,6 +701,27 @@ class MSAGATNet_Ablation(nn.Module):
         else:
             self.highway = None
         self.highway_ratio = nn.Parameter(torch.tensor(0.5))
+
+        # Optional learnable gate on the spatial pathway. Cross-scale ablations
+        # show the spatial modules can hurt on very small graphs (N<=8); the
+        # gate lets the model attenuate spatial mixing where the graph carries
+        # no usable signal, instead of being forced through it.
+        # sigmoid(0) = 0.5 starts the blend balanced.
+        if getattr(args, 'spatial_gate', False):
+            self.spatial_gate = nn.Parameter(torch.tensor(0.0))
+        else:
+            self.spatial_gate = None
+
+        # Optional probabilistic output: monotone quantile forecasts for the
+        # lead-h step, centred on the point forecast. self.last_quantiles is
+        # populated on every forward pass when enabled.
+        q_levels = getattr(args, 'quantiles', None)
+        if q_levels:
+            self.quantile_head = QuantileHead(self.hidden_dim, q_levels,
+                                              dropout=dropout)
+        else:
+            self.quantile_head = None
+        self.last_quantiles = None
         
         # Initialize weights
         self._init_weights()
@@ -832,6 +732,7 @@ class MSAGATNet_Ablation(nn.Module):
         'log_decay',          # PPRM learnable decay: -2.3 -> ~0.1
         'adj_scale',          # EAGAM adjacency scale: 1.0
         'highway_ratio',      # Highway blend: 0.5
+        'spatial_gate',       # Spatial pathway gate: sigmoid(0) = 0.5
         'log_attention_reg_weight',  # Attention reg: log(1e-5)
     }
 
@@ -877,14 +778,19 @@ class MSAGATNet_Ablation(nn.Module):
         
         # Apply graph attention
         graph_features, attn_reg_loss = self.graph_attention(features)
-        
+
         # Apply multi-scale spatial refinement
         fusion_features = self.spatial_refinement_module(graph_features)
-        
+
+        # Gated blend of spatial pathway vs purely temporal features
+        if self.spatial_gate is not None:
+            g = torch.sigmoid(self.spatial_gate)
+            fusion_features = g * fusion_features + (1 - g) * features
+
         # Generate model predictions
         model_pred = self.prediction_module(fusion_features, x_last)
         model_pred = model_pred.transpose(1, 2)
-        
+
         # Highway/Autoregressive connection
         if self.highway is not None and self.highway_window > 0:
             z = x[:, -self.highway_window:, :]
@@ -893,12 +799,16 @@ class MSAGATNet_Ablation(nn.Module):
             z = self.highway(z)
             z = z.view(B, N, self.horizon)
             z = z.transpose(1, 2)
-            
+
             ratio = torch.sigmoid(self.highway_ratio)
             predictions = ratio * model_pred + (1 - ratio) * z
         else:
             predictions = model_pred
-        
+
+        if self.quantile_head is not None:
+            self.last_quantiles = self.quantile_head(
+                fusion_features, predictions[:, -1, :])
+
         return predictions, attn_reg_loss
 
 

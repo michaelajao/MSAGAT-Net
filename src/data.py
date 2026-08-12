@@ -255,10 +255,49 @@ class DataBasicLoader:
             
             X = inputs[excerpt, :]
             Y = targets[excerpt, :]
-            
+
             if self.cuda:
                 X = X.cuda()
                 Y = Y.cuda()
-                
-            yield [Variable(X), Variable(Y), index]
+
+            yield [Variable(X), Variable(Y), excerpt]
             start_idx += batch_size
+
+    def growth_targets(self, idx_set, horizon: int):
+        """
+        Log-growth targets and anchors for growth-space forecasting.
+
+        For a sample with lead-h target rawdat[idx], the anchor is the last
+        observed value rawdat[idx - horizon] and the target is
+        g = log((rawdat[idx] + 1) / (anchor + 1)). Predictions invert via
+        y_hat = (anchor + 1) * exp(g_hat) - 1. Negative raw values (reporting
+        corrections) are clipped to zero before the transform.
+
+        Returns:
+            (targets [n, nodes], anchors [n, nodes]) as float tensors.
+        """
+        n = len(idx_set)
+        g = torch.zeros((n, self.m))
+        anchors = torch.zeros((n, self.m))
+        for i, idx in enumerate(idx_set):
+            y = np.clip(self.rawdat[idx, :], 0, None)
+            a = np.clip(self.rawdat[idx - horizon, :], 0, None)
+            anchors[i] = torch.from_numpy(a)
+            g[i] = torch.from_numpy(np.log((y + 1.0) / (a + 1.0)))
+        return g, anchors
+
+    def multistep_targets(self, idx_set, horizon: int) -> torch.Tensor:
+        """
+        Build per-lead targets for progressive-refinement supervision.
+
+        For a sample whose lead-h target is dat[idx], slice j holds the
+        lead-(j+1) observation dat[idx - horizon + 1 + j], so the final slice
+        equals the standard single-step target.
+
+        Returns:
+            Tensor of shape [len(idx_set), horizon, nodes] in normalized units.
+        """
+        Y = torch.zeros((len(idx_set), horizon, self.m))
+        for i, idx in enumerate(idx_set):
+            Y[i] = torch.from_numpy(self.dat[idx - horizon + 1: idx + 1, :])
+        return Y

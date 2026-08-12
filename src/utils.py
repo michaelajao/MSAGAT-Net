@@ -526,10 +526,10 @@ ALL_RESULTS_TXT = "all_results.txt"
 def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
                  window: int = None, horizon: int = None, logger=None,
                  model_name: str = None, ablation: str = None, seed: int = None,
-                 use_adj_prior: bool = False):
+                 use_adj_prior: bool = False, sim_mat: str = 'default'):
     """
     Append metrics to consolidated CSV and TXT files in dataset-specific folder.
-    
+
     Args:
         metrics: Dictionary of metric values
         save_path: Path for individual file (used to extract directory)
@@ -541,11 +541,13 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
         ablation: Ablation variant
         seed: Random seed used for experiment
         use_adj_prior: Whether adjacency prior was used
+        sim_mat: Adjacency matrix identifier; 'default' means the dataset's
+            standard matrix. Distinguishes threshold-sensitivity runs.
     """
     # Use the dataset-specific directory from save_path
     results_dir = os.path.dirname(save_path)
     os.makedirs(results_dir, exist_ok=True)
-    
+
     # Build record
     info = {
         "model": model_name or "MSAGAT-Net",
@@ -555,18 +557,19 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
         "ablation": ablation or "none",
         "seed": seed or 42,
         "use_adj": use_adj_prior,
+        "sim_mat": sim_mat,
         "timestamp": time.strftime("%Y%m%d_%H%M%S"),
     }
-    
+
     data = {
         **info,
         **{k: v for k, v in metrics.items() if not isinstance(v, np.ndarray)},
     }
-    
+
     # Append to consolidated CSV
     csv_path = os.path.join(results_dir, ALL_RESULTS_CSV)
     df = pd.DataFrame([data])
-    
+
     if os.path.exists(csv_path):
         df_old = pd.read_csv(csv_path)
         # Add seed column if it doesn't exist (backward compatibility)
@@ -575,14 +578,23 @@ def save_metrics(metrics: Dict, save_path: str, dataset: str = None,
         # Add use_adj column if it doesn't exist (backward compatibility)
         if 'use_adj' not in df_old.columns:
             df_old['use_adj'] = False  # Default for old entries
-        # Remove duplicate entries (now including seed and use_adj)
+        if 'model' not in df_old.columns:
+            df_old['model'] = 'MSAGAT-Net'
+        if 'sim_mat' not in df_old.columns:
+            df_old['sim_mat'] = 'default'
+        # Remove duplicate entries. The key must include model and sim_mat:
+        # without them an EpiSIG/MSTAGAT row or a threshold-sensitivity run
+        # sharing (dataset, window, horizon, ablation, seed, use_adj) would
+        # silently overwrite a main-campaign row.
         mask = ~(
-            (df_old['dataset'] == dataset) & 
-            (df_old['window'] == window) & 
-            (df_old['horizon'] == horizon) & 
+            (df_old['model'] == info['model']) &
+            (df_old['dataset'] == dataset) &
+            (df_old['window'] == window) &
+            (df_old['horizon'] == horizon) &
             (df_old['ablation'] == (ablation or "none")) &
             (df_old['seed'] == (seed or 42)) &
-            (df_old['use_adj'] == use_adj_prior)
+            (df_old['use_adj'] == use_adj_prior) &
+            (df_old['sim_mat'] == sim_mat)
         )
         df_old = df_old[mask]
         df = pd.concat([df_old, df], ignore_index=True)

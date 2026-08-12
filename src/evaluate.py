@@ -321,12 +321,31 @@ def fig_diagnostic_predictions():
 
 AGG_METRICS = ['mae', 'rmse', 'pcc', 'R2']
 
-def find_seed_results(dataset, horizon, ablation):
+CAMPAIGN_SEEDS = [42, 30, 45, 123, 1000]
+
+def find_seed_results(dataset, horizon, ablation, model='MSAGAT-Net',
+                      use_adj=True, sim_mat='default', seeds=None):
+    """Rows for one experimental cell, filtered so incomparable runs
+    (other models, no-adjacency variants, threshold-sensitivity matrices,
+    non-campaign seeds) never pool into the same mean +/- std."""
     csv_path = os.path.join(METRICS_DIR, dataset, 'all_results.csv')
     if not os.path.exists(csv_path):
         return pd.DataFrame()
     df = pd.read_csv(csv_path)
-    return df[(df['horizon'] == horizon) & (df['ablation'] == ablation)]
+    if 'model' not in df.columns:
+        df['model'] = 'MSAGAT-Net'
+    if 'use_adj' not in df.columns:
+        df['use_adj'] = False
+    if 'sim_mat' not in df.columns:
+        df['sim_mat'] = 'default'
+    df = df[(df['horizon'] == horizon) & (df['ablation'] == ablation) &
+            (df['model'] == model) & (df['use_adj'] == use_adj) &
+            (df['sim_mat'] == sim_mat) &
+            (df['seed'].isin(seeds or CAMPAIGN_SEEDS))]
+    # One row per seed: keep the newest run when a seed was re-run.
+    if 'timestamp' in df.columns:
+        df = df.sort_values('timestamp').drop_duplicates('seed', keep='last')
+    return df
 
 def aggregate_metrics(df):
     result = {'n_seeds': len(df), 'seeds': list(df['seed'].values) if 'seed' in df.columns else []}
@@ -334,7 +353,8 @@ def aggregate_metrics(df):
         col = next((c for c in df.columns if c.lower() == metric.lower()), None)
         if col:
             vals = df[col].values
-            result.update({f'{metric}_mean': np.mean(vals), f'{metric}_std': np.std(vals)})
+            result.update({f'{metric}_mean': np.mean(vals),
+                           f'{metric}_std': np.std(vals, ddof=1) if len(vals) > 1 else 0.0})
     return result
 
 def run_aggregation(datasets, horizons, ablations, fmt='markdown'):

@@ -35,7 +35,13 @@ from scipy.stats import pearsonr
 
 from .utils import peak_error, plot_loss_curves, save_metrics
 from .data import DataBasicLoader
-from .models import MSAGATNet_Ablation
+from .models import MSAGATNet_Ablation, pinball_loss
+
+# CDC FluSight / COVID-19 Forecast Hub convention: 23 quantiles
+# = median + 11 central intervals (Bracher et al. 2021; Cramer et al. 2022).
+DEFAULT_QUANTILES = [0.01, 0.025, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4,
+                     0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9,
+                     0.95, 0.975, 0.99]
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 logger = logging.getLogger(__name__)
@@ -84,6 +90,7 @@ class MetricsResult:
     peak_mae: float
     y_true: np.ndarray = field(repr=False)
     y_pred: np.ndarray = field(repr=False)
+    y_pred_q: np.ndarray = field(default=None, repr=False)
 
     def to_dict(self) -> Dict:
         return {
@@ -98,7 +105,7 @@ class MetricsResult:
 # ── Core training / evaluation ──────────────────────────────────────────────
 
 def train_epoch(model, data_loader, optimizer, batch_size, horizon, device,
-                max_grad_norm=1.0):
+                max_grad_norm=1.0, y_multi=None, growth=None, q_levels=None):
     model.train()
     total_loss, n_samples = 0.0, 0.0
 
@@ -106,8 +113,22 @@ def train_epoch(model, data_loader, optimizer, batch_size, horizon, device,
         X, Y, index = inputs[0], inputs[1], inputs[2]
         optimizer.zero_grad()
         output, attn_reg_loss = model(X, index)
-        y_expanded = Y.unsqueeze(1).expand(-1, horizon, -1)
-        loss = nn.MSELoss()(output, y_expanded) + attn_reg_loss
+        if growth is not None:
+            # Growth-space supervision: the model predicts the log-growth
+            # ratio relative to the last observation instead of the level.
+            target_last = growth[0][index].to(output.device)
+            target = target_last.unsqueeze(1).expand(-1, horizon, -1)
+        elif y_multi is not None:
+            # Progressive supervision: slice j is trained toward the true
+            # lead-(j+1) observation instead of the lead-h target repeated.
+            target = y_multi[index].to(output.device)
+            target_last = target[:, -1, :]
+        else:
+            target_last = Y
+            target = Y.unsqueeze(1).expand(-1, horizon, -1)
+        loss = nn.MSELoss()(output, target) + attn_reg_loss
+        if q_levels is not None and model.last_quantiles is not None:
+            loss = loss + pinball_loss(model.last_quantiles, target_last, q_levels)
         total_loss += loss.item()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm)
@@ -118,10 +139,11 @@ def train_epoch(model, data_loader, optimizer, batch_size, horizon, device,
 
 
 def evaluate(model, data_loader, batch_size, horizon, device,
-             dataset='val', compute_pcc=True):
+             dataset='val', compute_pcc=True, y_multi=None, growth=None,
+             q_levels=None, g_bounds=None):
     model.eval()
     total_loss, n_samples = 0.0, 0.0
-    y_true_list, y_pred_list, x_value_list = [], [], []
+    y_true_list, y_pred_list, x_value_list, q_list = [], [], [], []
 
     data = data_loader.val if dataset == 'val' else data_loader.test
 
@@ -129,20 +151,58 @@ def evaluate(model, data_loader, batch_size, horizon, device,
         for inputs in data_loader.get_batches(data, batch_size, shuffle=False):
             X, Y, index = inputs[0], inputs[1], inputs[2]
             output, attn_reg_loss = model(X, index)
-            y_expanded = Y.unsqueeze(1).expand(-1, horizon, -1)
-            loss = nn.MSELoss()(output, y_expanded) + attn_reg_loss
+            if growth is not None:
+                target_last = growth[0][index].to(output.device)
+                target = target_last.unsqueeze(1).expand(-1, horizon, -1)
+            elif y_multi is not None:
+                target = y_multi[index].to(output.device)
+                target_last = target[:, -1, :]
+            else:
+                target_last = Y
+                target = Y.unsqueeze(1).expand(-1, horizon, -1)
+            loss = nn.MSELoss()(output, target) + attn_reg_loss
+            if q_levels is not None and model.last_quantiles is not None:
+                loss = loss + pinball_loss(model.last_quantiles, target_last,
+                                           q_levels)
             total_loss += loss.item()
             n_samples += output.size(0) * data_loader.m
             x_value_list.append(X.cpu())
             y_true_list.append(Y.cpu())
             y_pred_list.append(output.cpu())
+            if q_levels is not None and model.last_quantiles is not None:
+                q_list.append(model.last_quantiles.detach().cpu())
 
     x_value_mx = torch.cat(x_value_list)
     y_pred_mx = torch.cat(y_pred_list)[:, -1, :]
     y_true_mx = torch.cat(y_true_list)
 
-    y_true_states = y_true_mx.numpy() * (data_loader.max - data_loader.min) + data_loader.min
-    y_pred_states = y_pred_mx.numpy() * (data_loader.max - data_loader.min) + data_loader.min
+    scale = data_loader.max - data_loader.min
+    y_true_states = y_true_mx.numpy() * scale + data_loader.min
+    if growth is not None:
+        # Model output is a log-growth ratio; invert with per-sample anchors
+        # (batches are un-shuffled, so split order is preserved). Predicted
+        # growth is clipped to the training-observed range so exp() cannot
+        # blow up on out-of-distribution logits.
+        anchors = growth[1].numpy()
+        g_pred = y_pred_mx.numpy()
+        if g_bounds is not None:
+            lo = g_bounds[0].numpy()[None, :]
+            hi = g_bounds[1].numpy()[None, :]
+            g_pred = np.clip(g_pred, lo, hi)
+        y_pred_states = (anchors + 1.0) * np.exp(g_pred) - 1.0
+    else:
+        y_pred_states = y_pred_mx.numpy() * scale + data_loader.min
+
+    y_pred_q_states = None
+    if q_list:
+        q_mx = torch.cat(q_list).numpy()          # [n, nodes, Q]
+        if growth is not None:
+            if g_bounds is not None:
+                q_mx = np.clip(q_mx, lo[..., None], hi[..., None])
+            y_pred_q_states = (anchors[..., None] + 1.0) * np.exp(q_mx) - 1.0
+        else:
+            y_pred_q_states = (q_mx * scale[None, :, None]
+                               + data_loader.min[None, :, None])
 
     rmse_states = np.mean(np.sqrt(
         mean_squared_error(y_true_states, y_pred_states, multioutput='raw_values')))
@@ -183,6 +243,7 @@ def evaluate(model, data_loader, batch_size, horizon, device,
         rmse=rmse, rmse_states=rmse_states, pcc=pcc, pcc_states=pcc_states,
         r2=r2, r2_states=r2_states, var=var, var_states=var_states,
         peak_mae=peak_mae_val, y_true=y_true_states, y_pred=y_pred_states,
+        y_pred_q=y_pred_q_states,
     )
 
 
@@ -221,6 +282,44 @@ class Trainer:
             lr=self.config.lr, weight_decay=self.config.weight_decay,
         )
 
+        # Progressive-refinement supervision: precompute per-lead targets once.
+        self.y_multi_train = None
+        self.y_multi_val = None
+        if getattr(config, 'pprm_supervision', 'repeat') == 'multistep':
+            self.y_multi_train = data_loader.multistep_targets(
+                data_loader.train_set, self.horizon)
+            self.y_multi_val = data_loader.multistep_targets(
+                data_loader.valid_set, self.horizon)
+
+        # Growth-space forecasting: precompute log-growth targets + anchors.
+        self.growth_train = self.growth_val = self.growth_test = None
+        self.g_bounds = None
+        if getattr(config, 'target_space', 'level') == 'loggrowth':
+            self.growth_train = data_loader.growth_targets(
+                data_loader.train_set, self.horizon)
+            self.growth_val = data_loader.growth_targets(
+                data_loader.valid_set, self.horizon)
+            self.growth_test = data_loader.growth_targets(
+                data_loader.test_set, self.horizon)
+            # Inversion guard: epidemic growth over a fixed lead is bounded;
+            # clip predicted log-growth to the training-observed per-node range
+            # (+/- 0.5 nats) so a single wild logit cannot detonate through
+            # exp() at inversion time.
+            g = self.growth_train[0]
+            self.g_bounds = (g.min(dim=0).values - 0.5,
+                             g.max(dim=0).values + 0.5)
+
+        # Probabilistic output: quantile levels used by the pinball loss.
+        self.q_levels = None
+        if getattr(config, 'quantiles', None):
+            self.q_levels = torch.tensor(sorted(config.quantiles),
+                                         dtype=torch.float32,
+                                         device=self.device)
+
+        # Re-evaluate an existing checkpoint without retraining (used when an
+        # inversion/metric change invalidates outputs but not weights).
+        self.eval_only = getattr(config, 'eval_only', False)
+
         self.writer = None
         if self.config.use_tensorboard:
             try:
@@ -239,6 +338,18 @@ class Trainer:
 
     def train(self) -> MetricsResult:
         os.makedirs(self.config.save_dir, exist_ok=True)
+        ckpt = os.path.join(self.config.save_dir, f'{self.log_token}.pt')
+        if self.eval_only and os.path.exists(ckpt):
+            print(f'Eval-only: loading {ckpt}')
+            self._load_best_checkpoint()
+            final = evaluate(self.model, self.data_loader,
+                             self.config.batch_size, self.horizon, self.device,
+                             dataset='test', growth=self.growth_test,
+                             q_levels=self.q_levels, g_bounds=self.g_bounds)
+            print(f'Final  MAE {final.mae:.4f}  RMSE {final.rmse:.4f}  '
+                  f'PCC {final.pcc:.4f}  R2 {final.r2:.4f}')
+            return final
+
         print(f'Begin training  |  Parameters: '
               f'{sum(p.numel() for p in self.model.parameters() if p.requires_grad):,}')
 
@@ -247,10 +358,14 @@ class Trainer:
             train_loss = train_epoch(
                 self.model, self.data_loader, self.optimizer,
                 self.config.batch_size, self.horizon, self.device,
-                max_grad_norm=self.config.max_grad_norm)
+                max_grad_norm=self.config.max_grad_norm,
+                y_multi=self.y_multi_train, growth=self.growth_train,
+                q_levels=self.q_levels)
             val_metrics = evaluate(
                 self.model, self.data_loader, self.config.batch_size,
-                self.horizon, self.device, dataset='val')
+                self.horizon, self.device, dataset='val',
+                y_multi=self.y_multi_val, growth=self.growth_val,
+                q_levels=self.q_levels, g_bounds=self.g_bounds)
 
             self.train_losses.append(train_loss)
             self.val_losses.append(val_metrics.loss)
@@ -268,7 +383,9 @@ class Trainer:
                 self._save_checkpoint()
                 test_metrics = evaluate(
                     self.model, self.data_loader, self.config.batch_size,
-                    self.horizon, self.device, dataset='test')
+                    self.horizon, self.device, dataset='test',
+                    growth=self.growth_test, q_levels=self.q_levels,
+                    g_bounds=self.g_bounds)
                 print(f'  TEST  MAE {test_metrics.mae:.4f}  RMSE {test_metrics.rmse:.4f}  '
                       f'PCC {test_metrics.pcc:.4f}  R2 {test_metrics.r2:.4f}')
             else:
@@ -280,7 +397,9 @@ class Trainer:
 
         self._load_best_checkpoint()
         final = evaluate(self.model, self.data_loader, self.config.batch_size,
-                         self.horizon, self.device, dataset='test')
+                         self.horizon, self.device, dataset='test',
+                         growth=self.growth_test, q_levels=self.q_levels,
+                         g_bounds=self.g_bounds)
         print(f'\nFinal  MAE {final.mae:.4f}  RMSE {final.rmse:.4f}  '
               f'PCC {final.pcc:.4f}  R2 {final.r2:.4f}')
 
@@ -329,10 +448,14 @@ ABLATIONS = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
 # ── Single experiment ────────────────────────────────────────────────────────
 
 def run_single_experiment(dataset, horizon, seed, ablation='none',
-                          save_dir='save_all', verbose=True, force_cpu=False):
+                          save_dir='save_all', verbose=True, force_cpu=False,
+                          use_adj_prior=True, sim_mat=None,
+                          save_predictions=True, pprm_supervision='repeat',
+                          spatial_gate=False, target_space='level',
+                          quantiles=None, eval_only=False):
     cfg = DATASET_CONFIGS[dataset]
     args = Namespace(
-        dataset=dataset, sim_mat=cfg['sim_mat'],
+        dataset=dataset, sim_mat=sim_mat or cfg['sim_mat'],
         window=TRAIN_DEFAULTS['window'], horizon=horizon,
         train=0.6, val=0.2, test=0.2,
         epochs=TRAIN_DEFAULTS['epochs'], batch=TRAIN_DEFAULTS['batch'],
@@ -343,11 +466,13 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
         attention_regularization_weight=1e-5,
         num_scales=TRAIN_DEFAULTS['num_scales'], kernel_size=3,
         feature_channels=16, bottleneck_dim=TRAIN_DEFAULTS['bottleneck_dim'],
-        use_adj_prior=True, adj_weight=0.1, use_graph_bias=True,
+        use_adj_prior=use_adj_prior, adj_weight=0.1, use_graph_bias=True,
         adaptive=False, seed=seed, gpu=0,
         cuda=torch.cuda.is_available() and not force_cpu,
         save_dir=save_dir, mylog=True, highway_window=4,
         extra='', label='', pcc='',
+        pprm_supervision=pprm_supervision, spatial_gate=spatial_gate,
+        target_space=target_space, quantiles=quantiles, eval_only=eval_only,
     )
 
     random.seed(seed)
@@ -355,9 +480,11 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
     torch.manual_seed(seed)
     if args.cuda:
         torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
         os.environ["CUDA_VISIBLE_DEVICES"] = "0"
         torch.cuda.set_device(0)
     torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
     data_loader = DataBasicLoader(args)
     model = MSAGATNet_Ablation(args, data_loader)
@@ -366,11 +493,25 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
     if args.cuda:
         model.cuda()
 
-    log_token = f"{model_name}.{dataset}.w-{args.window}.h-{horizon}.{ablation}.seed-{seed}.with_adj"
+    adj_tag = 'with_adj' if use_adj_prior else 'no_adj'
+    sim_tag = f".{sim_mat}" if sim_mat else ""
+    variant_tag = ""
+    if pprm_supervision != 'repeat':
+        variant_tag += f".pprm-{pprm_supervision}"
+    if spatial_gate:
+        variant_tag += ".sgate"
+    if target_space != 'level':
+        variant_tag += f".{target_space}"
+    if quantiles:
+        variant_tag += ".quant"
+    log_token = (f"{model_name}.{dataset}.w-{args.window}.h-{horizon}."
+                 f"{ablation}.seed-{seed}.{adj_tag}{sim_tag}{variant_tag}")
 
     if verbose:
         print(f"\n{'='*60}")
-        print(f"Training: {dataset} | h={horizon} | seed={seed} | ablation={ablation}")
+        print(f"Training: {dataset} | h={horizon} | seed={seed} | ablation={ablation}"
+              f" | adj={use_adj_prior} | sim_mat={sim_mat or 'default'}"
+              f" | pprm={pprm_supervision} | gate={spatial_gate}")
         print(f"{'='*60}")
 
     trainer = Trainer(model, data_loader, args, log_token)
@@ -381,9 +522,38 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
     dataset_results_dir = os.path.join(RESULTS_DIR, dataset)
     os.makedirs(dataset_results_dir, exist_ok=True)
 
+    if save_predictions:
+        pred_dir = os.path.join(BASE_DIR, 'report', 'predictions', dataset)
+        os.makedirs(pred_dir, exist_ok=True)
+        payload = dict(
+            y_true=final_metrics.y_true, y_pred=final_metrics.y_pred,
+            model=model_name, dataset=dataset, horizon=horizon,
+            window=args.window, seed=seed, ablation=ablation,
+            use_adj=use_adj_prior, sim_mat=sim_mat or 'default',
+            pprm_supervision=pprm_supervision, spatial_gate=spatial_gate,
+            target_space=target_space, protocol='lead_h')
+        if final_metrics.y_pred_q is not None:
+            payload['y_pred_q'] = final_metrics.y_pred_q
+            payload['quantile_levels'] = np.array(sorted(quantiles))
+        # Validation-split predictions are the calibration set for conformal
+        # intervals, so persist them alongside the test split.
+        val_metrics = evaluate(trainer.model, data_loader, args.batch,
+                               horizon, trainer.device, dataset='val',
+                               growth=trainer.growth_val,
+                               q_levels=trainer.q_levels,
+                               g_bounds=trainer.g_bounds)
+        payload['y_true_val'] = val_metrics.y_true
+        payload['y_pred_val'] = val_metrics.y_pred
+        if val_metrics.y_pred_q is not None:
+            payload['y_pred_q_val'] = val_metrics.y_pred_q
+        np.savez_compressed(os.path.join(pred_dir, f"{log_token}.npz"),
+                            **payload)
+
+    model_tag = model_name + variant_tag
     results_csv = os.path.join(dataset_results_dir, f"final_metrics_{log_token}.csv")
     save_metrics(final_metrics.to_dict(), results_csv, dataset, args.window,
-                 horizon, logger, model_name, ablation, seed, True)
+                 horizon, logger, model_tag, ablation, seed, use_adj_prior,
+                 sim_mat=sim_mat or 'default')
 
     if verbose:
         print(f"Results saved to {results_csv}")
@@ -417,22 +587,24 @@ def run_main_experiments(datasets, seeds, dry_run=False, force_cpu=False,
 def run_ablation_experiments(datasets, seeds, dry_run=False, force_cpu=False,
                              save_dir='save_all'):
     ablation_horizons = [3, 7, 14]
-    total = len(datasets) * len(ABLATIONS) * len(ablation_horizons)
+    total = len(datasets) * len(ABLATIONS) * len(ablation_horizons) * len(seeds)
     done, failed = 0, 0
 
     for dataset in datasets:
         for ablation in ABLATIONS:
             for horizon in ablation_horizons:
-                done += 1
-                print(f"\n[{done}/{total}] {dataset} h={horizon} ablation={ablation}")
-                if dry_run:
-                    continue
-                try:
-                    run_single_experiment(dataset, horizon, seeds[0], ablation=ablation,
-                                          save_dir=save_dir, force_cpu=force_cpu)
-                except Exception as e:
-                    failed += 1
-                    print(f"  FAIL: {e}")
+                for seed in seeds:
+                    done += 1
+                    print(f"\n[{done}/{total}] {dataset} h={horizon} "
+                          f"ablation={ablation} seed={seed}")
+                    if dry_run:
+                        continue
+                    try:
+                        run_single_experiment(dataset, horizon, seed, ablation=ablation,
+                                              save_dir=save_dir, force_cpu=force_cpu)
+                    except Exception as e:
+                        failed += 1
+                        print(f"  FAIL: {e}")
 
     print(f"\nAblation experiments: {done-failed}/{total} completed, {failed} failed")
 
@@ -454,12 +626,46 @@ def main():
     parser.add_argument('--seeds', nargs='+', type=int, default=SEEDS)
     parser.add_argument('--save_dir', type=str, default='save_all')
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--use_adj_prior', action=argparse.BooleanOptionalAction,
+                        default=True)
+    parser.add_argument('--sim_mat', type=str, default=None,
+                        help="override the dataset's adjacency file "
+                             "(e.g. ltla-adj-200 for threshold sensitivity)")
+    parser.add_argument('--pprm_supervision', choices=['repeat', 'multistep'],
+                        default='repeat',
+                        help='repeat: all refinement slices supervised with the '
+                             'lead-h target; multistep: slice j supervised with '
+                             'the true lead-(j+1) observation')
+    parser.add_argument('--spatial_gate', action='store_true',
+                        help='learnable gate blending spatial pathway output '
+                             'with purely temporal features')
+    parser.add_argument('--target_space', choices=['level', 'loggrowth'],
+                        default='level',
+                        help='loggrowth: predict log((y_t+1)/(y_anchor+1)) '
+                             'instead of the level')
+    parser.add_argument('--quantiles', nargs='*', type=float, default=None,
+                        help='enable probabilistic quantile outputs; pass '
+                             'levels or leave empty for the default set')
+    parser.add_argument('--eval_only', action='store_true',
+                        help='re-evaluate an existing checkpoint without '
+                             'retraining')
     args = parser.parse_args()
+
+    quantiles = args.quantiles
+    if quantiles is not None and len(quantiles) == 0:
+        quantiles = DEFAULT_QUANTILES
 
     if args.single:
         run_single_experiment(args.dataset, args.horizon, args.seed,
                               ablation=args.ablation, save_dir=args.save_dir,
-                              force_cpu=args.cpu)
+                              force_cpu=args.cpu,
+                              use_adj_prior=args.use_adj_prior,
+                              sim_mat=args.sim_mat,
+                              pprm_supervision=args.pprm_supervision,
+                              spatial_gate=args.spatial_gate,
+                              target_space=args.target_space,
+                              quantiles=quantiles,
+                              eval_only=args.eval_only)
     else:
         datasets = args.datasets or list(DATASET_CONFIGS.keys())
         if args.experiment in ('main', 'all'):
