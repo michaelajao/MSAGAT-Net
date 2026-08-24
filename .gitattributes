@@ -1,0 +1,14 @@
+# Normalise line endings: LF in the repository, native in the working tree.
+* text=auto eol=lf
+
+# Data and result files: never touch content.
+*.txt -text
+*.csv -text
+*.npz binary
+*.npy binary
+*.pt binary
+*.png binary
+*.pdf binary
+
+# Windows-only scripts keep CRLF.
+*.ps1 text eol=crlf
