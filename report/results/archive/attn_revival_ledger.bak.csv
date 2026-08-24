@@ -1,0 +1,4 @@
+stamp,kind,exp,mean_val_rmse,nhs_timeseries.h3,nhs_timeseries.h7,nhs_timeseries.h14,japan.h3,japan.h5,ent_mean,ent_min,uv_share,gate_pass,note,alpha_first,alpha_mean_lag,alpha_entropy
+20260819_015807,baseline-v2,,252.4675,2.8285,7.2757,19.8442,627.7834,604.6056,,,,,"frozen v2, from existing npz",,,
+20260819_015829,baseline-noagam,,295.6082,4.3832,9.5302,23.025,767.8387,673.2641,,,,,"the bar: EAGAM removed, v2 space, proxy grid",,,
+20260819_020156,config,"nodecay,regpre",233.3,2.8082,7.1788,16.311,504.7393,635.4625,0.8537,0.2859,0.7797,True,exp-1 per program.md: decay-free u/v + gradient-bearing pre-softmax L1 on U@V (directions 1a+1b together),,,

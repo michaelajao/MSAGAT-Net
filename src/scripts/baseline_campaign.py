@@ -125,13 +125,20 @@ def main():
     lock = threading.Lock()
     state = {'done': 0, 'failed': 0}
 
+    run_log_dir = os.path.join(LOG_DIR, 'runs')
+    os.makedirs(run_log_dir, exist_ok=True)
+
     def run_one(spec):
         m, d, adj, h, s, growth = spec
         cwd, cmd = build_cmd(m, d, adj, h, s, growth=growth)
+        tag = m + ('_lg' if growth else '')
+        # Per-run stdout+stderr goes to its own file: a discarded traceback
+        # costs hours of re-running to diagnose on the heavy LTLA cells.
+        run_log = os.path.join(run_log_dir, f'{tag}.{d}.h-{h}.seed-{s}.log')
         t0 = time.time()
-        result = subprocess.run(cmd, cwd=cwd,
-                                stdout=subprocess.DEVNULL,
-                                stderr=subprocess.STDOUT)
+        with open(run_log, 'w', encoding='utf-8') as out:
+            result = subprocess.run(cmd, cwd=cwd, stdout=out,
+                                    stderr=subprocess.STDOUT)
         ok = (result.returncode == 0
               and os.path.exists(npz_path(m, d, h, s, growth=growth)))
         with lock:
@@ -141,9 +148,10 @@ def main():
             print(f'[{state["done"]}/{len(todo)}] {m}.{d}.h-{h}.seed-{s} '
                   f'{"ok" if ok else "FAIL"} {time.time() - t0:.0f}s', flush=True)
             with open(log_path, 'a', encoding='utf-8') as fh:
-                fh.write(f'{time.strftime("%Y%m%d_%H%M%S")} {m}.{d}.h-{h}.seed-{s} '
+                detail = '' if ok else f' log={os.path.basename(run_log)}'
+                fh.write(f'{time.strftime("%Y%m%d_%H%M%S")} {tag}.{d}.h-{h}.seed-{s} '
                          f'{"ok" if ok else f"FAIL rc={result.returncode}"} '
-                         f'{time.time() - t0:.0f}s\n')
+                         f'{time.time() - t0:.0f}s{detail}\n')
 
     if args.parallel <= 1:
         for spec in todo:

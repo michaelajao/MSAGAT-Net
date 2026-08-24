@@ -1,0 +1,173 @@
+"""Rebuild attn_revival_ledger.csv with a uniform schema.
+
+The ledger lost the 19 Aug rows (exp-2..exp-11, R1-R6) when the pre-fix
+append_row crashed mid-rewrite. Every lost row was captured verbatim by the
+session monitor at write time; they are restored here exactly as logged, and
+all rows are normalised onto one 17-column header. Provenance: monitor events
+of session 1577ac1c, 19-20 Aug 2026.
+"""
+
+import csv
+import os
+
+BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+LEDGER = os.path.join(BASE, 'report', 'results', 'attn_revival_ledger.csv')
+
+H = ['stamp', 'kind', 'exp', 'mean_val_rmse',
+     'nhs_timeseries.h3', 'nhs_timeseries.h7', 'nhs_timeseries.h14',
+     'japan.h3', 'japan.h5', 'ent_mean', 'ent_min', 'uv_share',
+     'alpha_first', 'alpha_mean_lag', 'alpha_entropy', 'gate_pass', 'note']
+
+
+def row(stamp, kind, exp, vals, ent=('', '', ''), alpha=('', '', ''),
+        gate='', note=''):
+    return dict(zip(H, [stamp, kind, exp, *vals, *ent, *alpha, gate, note]))
+
+
+ROWS = [
+    row('20260819_015807', 'baseline-v2', '',
+        [252.4675, 2.8285, 7.2757, 19.8442, 627.7834, 604.6056],
+        note='frozen v2, from existing npz'),
+    row('20260819_015829', 'baseline-noagam', '',
+        [295.6082, 4.3832, 9.5302, 23.025, 767.8387, 673.2641],
+        note='the bar: EAGAM removed, v2 space, proxy grid'),
+    row('20260819_020156', 'config', 'nodecay,regpre',
+        [233.3, 2.8082, 7.1788, 16.311, 504.7393, 635.4625],
+        (0.8537, 0.2859, 0.7797), gate='True',
+        note='exp-1 per program.md: decay-free u/v + gradient-bearing '
+             'pre-softmax L1 on U@V (directions 1a+1b together) [KEPT - '
+             'campaign winner]'),
+    row('20260819_021151', 'config', 'nodecay,regpre,temp',
+        [289.5478, 2.7642, 7.3384, 16.5567, 559.6473, 861.4324],
+        (0.7934, 0.1674, 0.5468), gate='True',
+        note='exp-2: direction 2 (learnable pre-softmax temperature, init '
+             'exp(0)=1) on top of kept exp-1 [INVALIDATED: _init_weights '
+             're-ran uniform_(-1,1) over log_attn_temp; re-run as exp-2R]'),
+    row('20260819_022131', 'config', 'nodecay,regpre,init10',
+        [233.3, 2.8082, 7.1788, 16.311, 504.7393, 635.4625],
+        (0.8537, 0.2859, 0.7797), gate='True',
+        note='exp-3: direction 3 (u/v init scaled 10x) on kept exp-1 '
+             '[INVALIDATED: _init_weights re-ran xavier over u/v, wiping the '
+             'scaling - bit-identical to exp-1; re-run as exp-3R]'),
+    row('20260819_023832', 'config', 'nodecay,regpre,temp',
+        [260.7399, 2.7559, 7.7077, 18.6963, 611.2715, 663.2683],
+        (0.8506, 0.153, 0.6388), gate='True',
+        note='exp-2R: rerun after init-order fix (temp now truly starts at '
+             '1.0) [DISCARDED: worse than exp-1 in 4/5, mean +9.1%]'),
+    row('20260819_024413', 'config', 'nodecay,regpre,init10',
+        [248.0708, 2.8533, 7.4395, 14.844, 589.6534, 625.5637],
+        (0.7357, 0.053, 0.8535), gate='True',
+        note='exp-3R: rerun after init-order fix (u/v scaling now survives '
+             '_init_weights) [DISCARDED: +2.3% vs exp-1; won nhs h14]'),
+    row('20260819_065426', 'config', 'nodecay,regpre,lrx10',
+        [249.843, 2.8247, 7.2541, 16.9115, 624.0022, 598.2226],
+        (0.7126, 0.0331, 0.8946), gate='True',
+        note='exp-4: direction 4 (10x lr on u/v/adj_scale) on kept exp-1 '
+             '[DISCARDED: beat the BAR 5/5 but +4.6% vs exp-1]'),
+    row('20260819_070558', 'config', 'nodecay,regpre,adjstd',
+        [238.816, 2.8246, 7.2903, 20.3258, 610.7136, 552.9258],
+        (0.8015, 0.1288, 0.6179), gate='True',
+        note='exp-5: direction 7, standardise adjacency term per row '
+             '[DISCARDED: +7.0% vs exp-1; won japan h5]'),
+    row('20260819_071244', 'config', 'nodecay,regpre,scorenorm',
+        [268.3058, 3.0028, 7.6053, 17.0148, 620.6227, 693.2832],
+        (0.7727, 0.3628, 0.6621), gate='True',
+        note='exp-6: direction 8, normalise combined logits [DISCARDED: '
+             'worst, 0/5 vs exp-1, +9.8%]'),
+    row('20260819_072111', 'config', 'nodecay,regpre,multgate',
+        [234.5135, 2.9356, 7.2268, 17.4359, 612.0582, 532.9109],
+        (0.9952, 0.9723, 0.0), gate='False',
+        note='exp-7: direction 9, multiplicative structural gating [GATE '
+             'FAIL on entropy 0.9952 - attention collapsed to uniform while '
+             'RMSE nearly tied exp-1; uv_share not meaningful under the '
+             'multiplicative form]'),
+    row('20260819_072757', 'config', 'nodecay,regpre,rank2',
+        [342.0844, 2.7559, 8.6193, 15.3866, 817.7342, 865.9262],
+        (0.9599, 0.3632, 0.5264), gate='True',
+        note='exp-8: direction 6, graph-bias rank 8->2 [DISCARDED: +22.2%]'),
+    row('20260819_073347', 'config', 'nodecay,regpre,rank16',
+        [283.0158, 2.7035, 8.9556, 19.5733, 657.3652, 726.4815],
+        (0.9152, 0.0888, 0.6633), gate='True',
+        note='exp-9: direction 6, graph-bias rank 8->16 [DISCARDED: +17.1%; '
+             'rank sweep symmetric, direction 6 closed]'),
+    row('20260819_073909', 'config', 'nodecay,regpre,adjstd,lrx10',
+        [269.1508, 2.6952, 7.2679, 17.0222, 624.653, 694.1158],
+        (0.688, 0.0635, 0.8482), gate='True',
+        note='exp-10: combination of the two individually-best non-kept '
+             'changes [DISCARDED: complementarity did not compose]'),
+    row('20260819_074544', 'config', 'nodecay,regent',
+        [228.7447, 3.0251, 7.4775, 17.288, 504.6693, 611.2634],
+        (0.7417, 0.001, 0.8826), gate='True',
+        note='exp-11: DIRECTION 10 (MARKED) - explicit row-entropy penalty '
+             '[DISCARDED: raw mean looked better than exp-1 but loses 3/5 '
+             'per-cell, +2.8%]'),
+    row('20260819_111242', 'config', 'nodecay,regpre + renewal lag14 tau>=1',
+        [321.0194, 3.1916, 8.1834, 18.3244, 718.4181, 856.9795],
+        (0.5523, 0.0006, 0.94), (0.2508, 4.869, 0.8689), gate='True',
+        note='R1: renewal decoder, single conv, kernel tau=1..14 '
+             '[0/5 vs exp-1, +23.4%]'),
+    row('20260819_111712', 'config',
+        'nodecay,regpre,renewal_lag0 + renewal lag14 tau>=0',
+        [269.887, 2.905, 8.1834, 18.2018, 631.7703, 688.3748],
+        (0.5647, 0.003, 0.948), (0.2877, 3.568, 0.8165), gate='True',
+        note='R2 ABLATION: mass allowed at tau=0 [0/5 vs exp-1, +12.5% - '
+             'best renewal variant; the guarded-against collapse never '
+             'occurred]'),
+    row('20260819_112704', 'config', 'nodecay,regpre + renewal lag7 tau>=1',
+        [270.7027, 3.2603, 7.9377, 18.2886, 595.3961, 728.631],
+        (0.5486, 0.0027, 0.9555), (0.4059, 2.631, 0.8252), gate='True',
+        note='R3: direction 1, lag 7 [0/5 vs exp-1, +14.3%]'),
+    row('20260819_113717', 'config', 'nodecay,regpre + renewal lag21 tau>=1',
+        [382.3446, 3.2455, 8.4467, 18.5221, 790.9422, 1090.5665],
+        (0.539, 0.0, 0.9362), (0.3735, 5.516, 0.7354), gate='True',
+        note='R4: direction 1, lag 21 [0/5 vs exp-1, +35.0%; lag sweep '
+             'monotone - shorter kernel = less damage]'),
+    row('20260819_114943', 'config',
+        'nodecay,regpre,renewres,renewal_lag0 + renewal lag7',
+        [280.8492, 2.9313, 8.1922, 17.7314, 575.8888, 799.5022],
+        (0.7424, 0.0988, 0.8446), (0.2426, 2.224, 0.9428), gate='True',
+        note='R5: direction 2 residual gamma on best renewal config '
+             '[0/5 vs exp-1, +13.4%; learned gamma ~0 at h=3]'),
+    row('20260819_115735', 'config',
+        'nodecay,regpre,renewres + renewal lag7 tau>=1',
+        [286.5528, 2.8941, 8.0199, 19.6463, 577.0745, 825.1294],
+        (0.7246, 0.0013, 0.8725), (0.2277, 3.352, 0.9536), gate='True',
+        note='R6: direction 2 residual gamma, tau>=1 [0/5 vs exp-1, '
+             '+15.9%]'),
+    row('20260820_040012', 'config', 'nodecay,regpre,reniter + renewal lag7',
+        [327.1612, 3.0087, 8.1463, 17.9496, 703.1453, 903.5563],
+        (0.5026, 0.0077, 0.968), gate='True',
+        note='I1: ITERATED renewal lag7 - rolls the equation forward h '
+             'steps [0/5 vs exp-1, +22.4%; kernel now a genuine delay '
+             'distribution]'),
+    row('20260820_040055', 'config', 'nodecay,regpre,reniter + renewal lag14',
+        [345.85, 2.9187, 7.8091, 19.8313, 644.3659, 1054.3251],
+        (0.4716, 0.0055, 0.9559), (0.1504, 5.466, 0.7353), gate='True',
+        note='I2: iterated renewal lag14 [0/5 vs exp-1, +25.6%]'),
+    row('20260820_041126', 'config',
+        'nodecay,regpre,reniter,renewres + renewal lag7',
+        [320.1477, 2.9156, 8.483, 17.0233, 716.5523, 855.7641],
+        (0.5563, 0.0143, 0.9496), gate='True',
+        note='I3: iterated + residual gamma [0/5 vs exp-1, +20.6%; gamma at '
+             'h=3 recovered 0.00->0.199, confirming the stale-kernel '
+             'diagnosis at short horizons]'),
+    row('20260820_091733', 'config',
+        'nodecay,regpre,reniter,giunif + renewal lag7',
+        [327.1157, 2.9021, 10.1671, 19.6844, 692.4795, 910.3454],
+        (0.4633, 0.0192, 0.97), gate='True',
+        note='G1: kernel FROZEN UNIFORM - no generation-interval shape '
+             '(control arm)'),
+    row('20260820_102134', 'config',
+        'nodecay,regpre,reniter + renewal lag7 + gifix5.2-1.72',
+        [252.0793, 3.1093, 10.1426, 20.3513, 540.1229, 686.6705],
+        (0.4665, 0.0006, 0.9566), gate='True',
+        note='G2: kernel FROZEN to the literature COVID generation '
+             'interval, gamma(5.2, 1.72), Ferretti et al. 2020'),
+]
+
+with open(LEDGER, 'w', newline='', encoding='utf-8') as fh:
+    w = csv.DictWriter(fh, fieldnames=H)
+    w.writeheader()
+    for r in ROWS:
+        w.writerow(r)
+print(f'rebuilt {LEDGER}: {len(ROWS)} rows, uniform {len(H)}-column schema')

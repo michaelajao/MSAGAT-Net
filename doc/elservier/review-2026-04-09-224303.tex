@@ -1,0 +1,197 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6em}
+
+\begin{document}
+
+\title{Technical Review of ``MSAGAT-Net: Multi-Scale Temporal Adaptive Graph Attention for Efficient Spatiotemporal Epidemic Forecasting''}
+\author{}
+\date{2026-04-09}
+\maketitle
+
+\section*{Overall assessment}
+
+This is a technically ambitious manuscript with several genuinely interesting design ideas, especially the optional additive adjacency prior, the graph-size-adaptive spatial aggregation, and the cross-dataset empirical scope. I explicitly checked symbol definitions, dimensional consistency, sign/branch-convention issues, figure/table-to-text alignment, and implementation-facing formulas. I did not find inverse-trigonometric or sign-convention errors, but I did find one definite mathematical problem in the attention regulariser, one definite arithmetic inconsistency in the adaptive hop-depth rule, one major loss-definition inconsistency, and several places where the manuscript states stronger claims than the presented evidence supports.
+
+In its current form, the paper reads as promising but not yet technically settled. The highest-priority revisions are mathematical/implementation-facing rather than stylistic.
+
+\section*{Highest-priority fixes}
+
+\begin{enumerate}
+\item Replace or reformulate the post-softmax attention sparsity penalty.
+\item Make the training objective consistent across the attention-regularisation subsection, the total-loss equation, Table~2, and Algorithm~1.
+\item Reconcile the adaptive hop-depth formula with the reported dataset-specific hop counts; the current text is arithmetically inconsistent for the 10-node US-Region dataset.
+\item State the temporal train/validation/test split protocol explicitly enough to rule out forecasting leakage.
+\end{enumerate}
+
+\section*{Technical findings}
+
+\begin{enumerate}
+
+\item \textbf{Definite error: the attention regularisation term is ineffective as written.}
+
+\textbf{Location:} subsection ``Attention Regularisation'', especially
+\[
+\mathcal{L}_{\text{attn}} = \lambda \lVert \mathbf{A}_h \rVert_1.
+\]
+
+\textbf{Problem:} the manuscript defines $\mathbf{A}_h$ as the row-wise softmax output used for value aggregation. If $\lVert \cdot \rVert_1$ is the elementwise $L_1$ norm (which is what the accompanying prose strongly suggests), then each row of $\mathbf{A}_h$ is nonnegative and sums to $1$, so the penalty is constant after softmax and cannot promote row sparsity.
+
+\textbf{Why it matters:} the paper currently presents this term as a mechanism that ``directly encourages each node to attend to a sparse subset of other nodes''. As written, that claim is not mathematically correct, and the regulariser does not do the advertised job.
+
+\textbf{Suggested fix:} either (i) redefine the sparsity term using a non-constant surrogate such as row-wise entropy, sparsemax/entmax, or a pre-softmax penalty on the structural-bias parameters, or (ii) if the induced matrix $1$-norm is intended, state that explicitly and rewrite the explanation because the current interpretation is about row sparsity rather than maximum column mass.
+
+\item \textbf{Definite inconsistency: the attention-loss weighting is defined three different ways.}
+
+\textbf{Location:} the ``Attention Regularisation'' subsection, the total-loss equation in the training section, Table~2, and Algorithm~1.
+
+\textbf{Problem:} the paper first defines $\mathcal{L}_{\text{attn}} = \lambda \lVert \mathbf{A}_h \rVert_1$, then later writes
+\[
+\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{forecast}} + \lambda_{\text{attn}}\mathcal{L}_{\text{attn}},
+\]
+while Algorithm~1 uses $\mathcal{L}_{\text{MSE}}(\hat{\mathbf{Y}}, \mathbf{y}) + \mathcal{L}_{\text{attn}}$ with no outer factor. As written, the regulariser is weighted once, weighted twice, or notated under two different symbols depending on which part of the manuscript the reader follows.
+
+\textbf{Why it matters:} this is a reproducibility problem. An implementer cannot recover the intended optimisation objective unambiguously.
+
+\textbf{Suggested fix:} choose one convention and propagate it everywhere. For example, define $\mathcal{L}_{\text{attn}}$ without its coefficient, then use $\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{forecast}} + \lambda_{\text{attn}}\mathcal{L}_{\text{attn}}$ consistently in the text, table, and pseudocode.
+
+\item \textbf{Definite arithmetic inconsistency: the reported hop counts do not follow the stated rule.}
+
+\textbf{Location:} subsection ``Adaptive Hop Depth and Locality-Biased Fusion''.
+
+\textbf{Problem:} the manuscript states
+\[
+S = \min(S_{\max}, \max(2, \lfloor N/5 \rfloor)),
+\]
+and then says this yields $S=2$ for Australia-COVID and NHS-Timeseries, and $S=4$ for all other datasets. However, Table~1 reports that the US-Region dataset has $N=10$, so the stated formula gives
+\[
+S = \min(4, \max(2, \lfloor 10/5 \rfloor)) = 2,
+\]
+not $4$.
+
+\textbf{Why it matters:} this is a direct mismatch between the documented algorithm and the dataset-level description.
+
+\textbf{Suggested fix:} either correct the formula, or correct the sentence describing the realised hop counts. A small table listing the actual $S$ used for each dataset would remove the ambiguity entirely.
+
+\item \textbf{Likely issue / implementation ambiguity: the split description is not sufficient to rule out temporal leakage.}
+
+\textbf{Location:} subsection ``Training and Optimisation Strategy''.
+
+\textbf{Problem:} the manuscript states a $60\%{:}20\%{:}20\%$ train/validation/test split and mentions a fixed random seed, but it does not say whether the split is chronological, whether validation/test windows are strictly later in time than training windows, or whether sliding windows are prevented from crossing split boundaries.
+
+\textbf{Why it matters:} for forecasting tasks, random or improperly windowed splits can leak future information into training and materially inflate test performance.
+
+\textbf{Suggested fix:} state explicitly that the split is chronological (if that is what was done), give the exact temporal cut points, and clarify how sliding-window samples are generated near split boundaries.
+
+\item \textbf{Likely issue: EAGAM mixes per-head and stacked-head notation.}
+
+\textbf{Location:} subsection ``Multi-Head Attention Mechanism''.
+
+\textbf{Problem:} the text says ``within each head we compute''
+\[
+\mathbf{S}_h = \frac{\mathbf{Q}_h \mathbf{K}_h^T}{\sqrt{d_{\text{head}}}},
+\]
+but then assigns $\mathbf{S}_h \in \mathbb{R}^{h \times N \times N}$. The same overload appears for $\mathbf{A}_h$ and $\mathbf{O}_h$.
+
+\textbf{Why it matters:} this conflates a specific head index with a stacked tensor over all heads, which makes the implementation-facing math harder to follow and increases the chance of reader error.
+
+\textbf{Suggested fix:} use a separate symbol for the stacked tensor, or index a single head explicitly, e.g. $\mathbf{S}^{(m)} \in \mathbb{R}^{N \times N}$ for head $m$ and $\mathbf{S} \in \mathbb{R}^{h \times N \times N}$ for the stacked object.
+
+\item \textbf{Unsupported claim: the self-regulating prior is described more strongly than the current math proves.}
+
+\textbf{Location:} abstract, subsection ``Self-Regulating Additive Adjacency Prior'', Figure~3 caption, and Conclusion.
+
+\textbf{Problem:} the manuscript repeatedly says that the adjacency prior's influence ``adapts automatically with graph density'' and can become effectively invisible on dense graphs by softmax shift-invariance. Shift-invariance cancels exact row-wise constant offsets; it does not imply that every dense row-normalised adjacency prior is harmless. A dense but non-uniform prior can still perturb the attention distribution materially.
+
+\textbf{Why it matters:} the current wording turns an empirical tendency into a general guarantee.
+
+\textbf{Suggested fix:} qualify the claim to something like: when the row-normalised prior is close to uniform, its additive effect is attenuated by softmax shift-invariance. If a stronger claim is intended, add either a formal bound or an empirical diagnostic based on row-wise variance of $\tilde{\mathbf{A}}$.
+
+\item \textbf{Unsupported explanatory claims: several result interpretations need either evidence or softer wording.}
+
+\textbf{Location:} the paragraphs interpreting learned attention and the Australia-COVID results.
+
+\textbf{Problem:} the manuscript attributes learned attention structure to ``commuter flows, air travel routes, and socioeconomic links'', and attributes the Australia-COVID behaviour to border closures ``effectively decoupling spatial transmission''. These are plausible interpretations, but they are not demonstrated by the experiments currently shown.
+
+\textbf{Why it matters:} readers may take these explanations as established findings rather than hypotheses.
+
+\textbf{Suggested fix:} either support these claims with external mobility/policy evidence or rephrase them as plausible interpretations rather than conclusions.
+
+\end{enumerate}
+
+\section*{Meaningful editorial findings}
+
+\begin{enumerate}
+
+\item \textbf{Location:} results overview and influenza performance discussion.
+
+\textbf{Problem:} the weekly influenza datasets are repeatedly described as ``3, 5, 10, and 15 days ahead'', even though Table~1 marks Japan, US-Region, and US-State as \emph{weekly} datasets.
+
+\textbf{Why it matters:} the forecast-horizon unit is wrong.
+
+\textbf{Suggested fix:} change these references to ``steps ahead'' or ``weeks ahead'' for the weekly datasets, and reserve ``days'' for the daily COVID/NHS datasets.
+
+\item \textbf{Location:} dataset names across Table~1, the results tables, MSSFM discussion, and the conclusion.
+
+\textbf{Problem:} the LTLA dataset appears under three names (LTLA-COVID, LTLA-TimeSeries, LTLA-Timeseries) and the NHS dataset also appears under three names (NHS-ICUBeds, NHS-TimeSeries, NHS-Timeseries). Similar singular/plural drift appears for Japan-Prefecture(s), US-Region(s), and US-State(s).
+
+\textbf{Why it matters:} the naming drift makes it look as though multiple datasets are being discussed.
+
+\textbf{Suggested fix:} choose one canonical name per dataset and use it everywhere, including tables, figures, captions, and the conclusion.
+
+\item \textbf{Location:} influenza dataset subsection.
+
+\textbf{Problem:} the official name ``Centers for Disease Control and Prevention'' is written as ``Centres''.
+
+\textbf{Why it matters:} proper names should preserve official spelling even in UK-English prose.
+
+\textbf{Suggested fix:} change this to ``Centers for Disease Control and Prevention (CDC)''.
+
+\item \textbf{Location:} NHS-Timeseries results paragraph.
+
+\textbf{Problem:} the sentence ``EpiGNN leads at 14-day (0.869 vs 0.869, effectively tied)'' contradicts the table as written. The rounded PCC values shown in the table are tied, not a lead.
+
+\textbf{Why it matters:} the prose overstates a comparison that the reported numbers do not support.
+
+\textbf{Suggested fix:} write ``tied to three decimals'' or report more precision if there is a genuine lead.
+
+\item \textbf{Location:} spatial graph construction / preprocessing description.
+
+\textbf{Problem:} the 7-day rolling-mean smoother is described without saying explicitly whether it applies only to the daily datasets or also to the weekly influenza series.
+
+\textbf{Why it matters:} this is a preprocessing ambiguity, and applying a 7-day smoother to weekly data would be nonsensical.
+
+\textbf{Suggested fix:} state the preprocessing pipeline separately for weekly and daily datasets.
+
+\item \textbf{Location:} bibliography entry \texttt{lijingwangCausalGNNCausalBasedGraph2022} in \texttt{ref.bib}.
+
+\textbf{Problem:} the author list contains duplicated names and the venue field reads ``Proceedings of the ... AAAI Conference on Artificial Intelligence''.
+
+\textbf{Why it matters:} this is an obvious bibliography-import artifact that reduces professionalism and may distort the rendered reference.
+
+\textbf{Suggested fix:} deduplicate the author list and replace the venue field with the correct conference/journal title string.
+
+\end{enumerate}
+
+\section*{Proofing sweep}
+
+\begin{itemize}
+\item I ran the mandated micro-proofing scan via \texttt{scripts/proofing\_scan.py}. Most automatic hits were false positives caused by mathematical ellipses (for example $x_1, x_2, \ldots, x_T$) or bibliography access-date notes, so I would not elevate those to manuscript errors.
+\item The prose around the aggregated-prediction figure refers to ``confidence bands'', but the caption describes ``$\pm 1$ standard deviation bands''. If these are empirical dispersion bands rather than predictive uncertainty intervals, ``confidence'' is the wrong term. Use ``standard-deviation bands'' or ``dispersion bands'' consistently.
+\item The manuscript mixes \texttt{TimeSeries} and \texttt{Timeseries}. Standardising one spelling throughout would remove a visible copyediting distraction.
+\end{itemize}
+
+\section*{Items needing external verification}
+
+\begin{itemize}
+\item If the manuscript wishes to retain the interpretation that learned attention captures commuter-flow / air-travel / socioeconomic pathways, that claim needs external corroboration rather than qualitative intuition alone.
+\item The explanation that Australia's border-closure regime suppressed spatial coupling is plausible, but the current manuscript does not test it directly; either support it externally or soften it.
+\item The Data Availability statement claims that all datasets and code are publicly available in the repository. That should be verified against the public repository state before submission.
+\end{itemize}
+
+\end{document}

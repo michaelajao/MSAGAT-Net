@@ -48,12 +48,24 @@ tensorboard/
 *.log
 events.out.tfevents.*
 
-# Report outputs (generated, not source)
-report/
+# Report outputs: ignore the bulk artefacts, keep the numbers the papers cite
+report/predictions/
+report/attention/
+report/figures/
+report/logs/
 reportOLD/
+!report/results/
+!report/results/**/*.csv
+!report/manifests/
+!report/manifests/**/*.json
 
-# Paper and documentation (separate from source code)
-doc/
+# Documentation and papers: keep the research record and LaTeX sources,
+# ignore build products and the literature dump
+doc/**/*.pdf
+doc/**/*.docx
+doc/**/*.zip
+doc/GNN forecasting/
+doc/**/msagat_figs/
 
 # Experimental models (not part of MSAGAT-Net paper)
 experimental/

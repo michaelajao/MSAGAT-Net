@@ -15,8 +15,16 @@ p-values across baselines are Holm-Bonferroni adjusted.
 Primary comparison: median-RMSE seed for each model (no ensemble advantage).
 Supplementary: per-seed agreement counts.
 
+Each baseline exists in two arms: the published level-space configuration and
+the log-growth arm from the target-space generality experiment (`_lg` tag).
+With `--arms best` (the default) every baseline is represented by whichever arm
+scores better, so MSAGAT-Net is tested against the strongest available version
+of each competitor. That is deliberately conservative -- selecting the
+baseline's arm on test RMSE favours the baseline, never us.
+
 Usage (from the repository root):
     python -m src.scripts.dm_test
+    python -m src.scripts.dm_test --variant v1 --arms level
     python -m src.scripts.dm_test --selftest
 """
 
@@ -35,19 +43,30 @@ OUT_CSV = os.path.join(BASE_DIR, 'report', 'results', 'dm_tests.csv')
 
 BASELINES = ['cola_gnn', 'CNNRNN_Res', 'lstnet', 'dcrnn', 'epignn']
 
-MSAGAT_RE = re.compile(
-    r'^MSAGAT-Net\.(?P<ds>.+)\.w-20\.h-(?P<h>\d+)\.none\.seed-(?P<s>\d+)\.with_adj\.npz$')
+# MSAGAT-Net arms, distinguished by the log-token suffix the trainer writes.
+# v2 (log-growth targets + 23 quantile heads) is the paper's model; v1 is the
+# level-space target ablation.
+VARIANTS = {'v1': 'with_adj', 'v2': 'with_adj.loggrowth.quant'}
+
+# Baselines carry a '_lg' tag when trained on log-growth targets.
 BASE_RE = re.compile(
-    r'^(?P<m>' + '|'.join(BASELINES) + r')\.(?P<ds>.+)\.w-20\.h-(?P<h>\d+)'
-    r'\.none\.seed-(?P<s>\d+)\.npz$')
+    r'^(?P<m>(?:' + '|'.join(BASELINES) + r')(?:_lg)?)\.(?P<ds>[^.]+)'
+    r'\.w-20\.h-(?P<h>\d+)\.none\.seed-(?P<s>\d+)\.npz$')
 
 
-def collect():
+def msagat_re(variant):
+    return re.compile(
+        r'^MSAGAT-Net\.(?P<ds>[^.]+)\.w-20\.h-(?P<h>\d+)\.none\.seed-(?P<s>\d+)\.'
+        + re.escape(VARIANTS[variant]) + r'\.npz$')
+
+
+def collect(variant):
     """-> {(dataset, horizon): {model: {seed: path}}}"""
+    ours_re = msagat_re(variant)
     runs = {}
     for path in glob.glob(os.path.join(PRED_DIR, '*', '*.npz')):
         fname = os.path.basename(path)
-        m = MSAGAT_RE.match(fname)
+        m = ours_re.match(fname)
         model = 'MSAGAT-Net' if m else None
         if m is None:
             m = BASE_RE.match(fname)
@@ -57,6 +76,23 @@ def collect():
         key = (m.group('ds'), int(m.group('h')))
         runs.setdefault(key, {}).setdefault(model, {})[int(m.group('s'))] = path
     return runs
+
+
+def choose_arm(models, base, mode):
+    """Pick which arm of a baseline family to test against.
+
+    'level' uses the published level-space configuration; 'best' uses whichever
+    of {level, log-growth} has the lower median-seed RMSE, so the comparison is
+    against the strongest available version of that competitor.
+    Returns (tag, {seed: path}) or (None, None) when the family is absent.
+    """
+    arms = [(t, models.get(t, {})) for t in (base, base + '_lg')]
+    arms = [(t, sp) for t, sp in arms if sp]
+    if not arms:
+        return None, None
+    if mode == 'level':
+        return (base, models[base]) if models.get(base) else (None, None)
+    return min(arms, key=lambda ts: rmse(ts[1][median_seed(ts[1])]))
 
 
 def rmse(path):
@@ -120,9 +156,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--selftest', action='store_true')
     ap.add_argument('--alpha', type=float, default=0.05)
+    ap.add_argument('--variant', choices=sorted(VARIANTS), default='v2',
+                    help='which MSAGAT-Net arm to test (default v2, the '
+                         'log-growth + quantile model the paper reports)')
+    ap.add_argument('--arms', choices=['best', 'level'], default='best',
+                    help="baseline arm: 'best' of level/log-growth per "
+                         "baseline (conservative), or the published 'level'")
     args = ap.parse_args()
 
-    runs = collect()
+    runs = collect(args.variant)
 
     if args.selftest:
         # Two seeds of the same architecture are NOT guaranteed equal in
@@ -167,14 +209,14 @@ def main():
         our_seed = median_seed(ours)
         family = []
         for base in BASELINES:
-            theirs = models.get(base, {})
+            tag, theirs = choose_arm(models, base, args.arms)
             if not theirs:
                 continue
             their_seed = median_seed(theirs)
             aligned, e2_ours, e2_base = load_pair(ours[our_seed],
                                                   theirs[their_seed])
             if not aligned:
-                print(f'WARN {ds} h={h} {base}: y_true misaligned, skipped')
+                print(f'WARN {ds} h={h} {tag}: y_true misaligned, skipped')
                 continue
             dm, p = dm_stat(e2_ours, e2_base, h)
             agree = 0
@@ -185,6 +227,7 @@ def main():
                     agree += int(p_i < args.alpha and dm_i < 0)
             family.append({
                 'dataset': ds, 'horizon': h, 'baseline': base,
+                'baseline_arm': 'loggrowth' if tag.endswith('_lg') else 'level',
                 'msagat_seed': our_seed, 'baseline_seed': their_seed,
                 'msagat_rmse': rmse(ours[our_seed]),
                 'baseline_rmse': rmse(theirs[their_seed]),
@@ -204,11 +247,17 @@ def main():
         return
 
     df = pd.DataFrame(rows)
-    os.makedirs(os.path.dirname(OUT_CSV), exist_ok=True)
-    df.to_csv(OUT_CSV, index=False)
+    out_csv = OUT_CSV.replace('.csv', f'_{args.variant}_{args.arms}.csv')
+    os.makedirs(os.path.dirname(out_csv), exist_ok=True)
+    df.to_csv(out_csv, index=False)
     print(df.to_string(index=False,
                        float_format=lambda v: f'{v:.4g}'))
-    print(f'\nwrote {OUT_CSV}')
+    wins = df[(df['dm'] < 0) & df['significant']]
+    losses = df[(df['dm'] > 0) & df['significant']]
+    print(f'\n{len(df)} comparisons: {len(wins)} significant wins, '
+          f'{len(losses)} significant losses, '
+          f'{len(df) - len(wins) - len(losses)} ties (Holm, alpha={args.alpha})')
+    print(f'wrote {out_csv}')
 
 
 if __name__ == '__main__':

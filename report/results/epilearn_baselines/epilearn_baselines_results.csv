@@ -1,0 +1,2 @@
+model,dataset,horizon,seed,rmse,mae,pcc,r2,mape
+GraphWaveNet,japan,3,42,1041.9254,322.7963,0.9012,0.7422,1.02982075e+14

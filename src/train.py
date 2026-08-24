@@ -43,6 +43,15 @@ DEFAULT_QUANTILES = [0.01, 0.025, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4,
                      0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9,
                      0.95, 0.975, 0.99]
 
+# The log-growth decoder y = (anchor+1)*exp(g) - 1 is multiplicative, so a
+# plausible growth rate applied to a large anchor can decode to a level far
+# outside anything ever observed. Inverted levels are therefore capped at
+# GROWTH_LEVEL_CAP x the per-node training maximum -- a train-only decoding
+# constraint. The multiplier was selected once on the validation split
+# (a single global value; per-dataset and per-cell selection both overfit
+# validation and were worse on test).
+GROWTH_LEVEL_CAP = 3.0
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 logger = logging.getLogger(__name__)
 
@@ -140,7 +149,7 @@ def train_epoch(model, data_loader, optimizer, batch_size, horizon, device,
 
 def evaluate(model, data_loader, batch_size, horizon, device,
              dataset='val', compute_pcc=True, y_multi=None, growth=None,
-             q_levels=None, g_bounds=None):
+             q_levels=None, g_bounds=None, level_cap=None):
     model.eval()
     total_loss, n_samples = 0.0, 0.0
     y_true_list, y_pred_list, x_value_list, q_list = [], [], [], []
@@ -190,6 +199,8 @@ def evaluate(model, data_loader, batch_size, horizon, device,
             hi = g_bounds[1].numpy()[None, :]
             g_pred = np.clip(g_pred, lo, hi)
         y_pred_states = (anchors + 1.0) * np.exp(g_pred) - 1.0
+        if level_cap is not None:
+            y_pred_states = np.clip(y_pred_states, 0.0, level_cap[None, :])
     else:
         y_pred_states = y_pred_mx.numpy() * scale + data_loader.min
 
@@ -200,6 +211,9 @@ def evaluate(model, data_loader, batch_size, horizon, device,
             if g_bounds is not None:
                 q_mx = np.clip(q_mx, lo[..., None], hi[..., None])
             y_pred_q_states = (anchors[..., None] + 1.0) * np.exp(q_mx) - 1.0
+            if level_cap is not None:
+                y_pred_q_states = np.clip(y_pred_q_states, 0.0,
+                                          level_cap[None, :, None])
         else:
             y_pred_q_states = (q_mx * scale[None, :, None]
                                + data_loader.min[None, :, None])
@@ -277,10 +291,40 @@ class Trainer:
             self.device = torch.device('cpu')
 
         self.horizon = config.horizon
-        self.optimizer = torch.optim.Adam(
-            filter(lambda p: p.requires_grad, model.parameters()),
-            lr=self.config.lr, weight_decay=self.config.weight_decay,
-        )
+        # Weight decay drove the learnable graph bias (u, v) to ~1e-36 on
+        # trained checkpoints: once the softmax is flat the aggregation is a
+        # uniform mean, so the gradient on a logit bias vanishes and decay wins.
+        # Under attn_fix these attention-shaping parameters get their own
+        # decay-free group.
+        no_decay_keys = ('graph_attention.u', 'graph_attention.v',
+                         'graph_attention.adj_scale',
+                         'graph_attention.log_attn_temp')
+        trainable = [(n, p) for n, p in model.named_parameters()
+                     if p.requires_grad]
+        exp = set(t for t in getattr(config, 'attn_exp', '').split(',') if t)
+        lr_mult = 1.0
+        for t in exp:
+            if t.startswith('lrx'):
+                lr_mult = float(t[3:])
+        if getattr(config, 'attn_fix', False) or 'nodecay' in exp:
+            shaped = [p for n, p in trainable if n in no_decay_keys]
+            rest = [p for n, p in trainable if n not in no_decay_keys]
+            groups = [{'params': rest,
+                       'weight_decay': self.config.weight_decay},
+                      {'params': shaped, 'weight_decay': 0.0,
+                       'lr': self.config.lr * lr_mult}]
+        elif lr_mult != 1.0:
+            shaped = [p for n, p in trainable if n in no_decay_keys]
+            rest = [p for n, p in trainable if n not in no_decay_keys]
+            groups = [{'params': rest,
+                       'weight_decay': self.config.weight_decay},
+                      {'params': shaped,
+                       'weight_decay': self.config.weight_decay,
+                       'lr': self.config.lr * lr_mult}]
+        else:
+            groups = [{'params': [p for _, p in trainable],
+                       'weight_decay': self.config.weight_decay}]
+        self.optimizer = torch.optim.Adam(groups, lr=self.config.lr)
 
         # Progressive-refinement supervision: precompute per-lead targets once.
         self.y_multi_train = None
@@ -294,6 +338,7 @@ class Trainer:
         # Growth-space forecasting: precompute log-growth targets + anchors.
         self.growth_train = self.growth_val = self.growth_test = None
         self.g_bounds = None
+        self.level_cap = None
         if getattr(config, 'target_space', 'level') == 'loggrowth':
             self.growth_train = data_loader.growth_targets(
                 data_loader.train_set, self.horizon)
@@ -308,6 +353,10 @@ class Trainer:
             g = self.growth_train[0]
             self.g_bounds = (g.min(dim=0).values - 0.5,
                              g.max(dim=0).values + 0.5)
+            # data_loader.max is the per-node maximum over the raw training
+            # window, so the cap uses no validation or test information.
+            self.level_cap = GROWTH_LEVEL_CAP * np.asarray(data_loader.max,
+                                                           dtype=np.float64)
 
         # Probabilistic output: quantile levels used by the pinball loss.
         self.q_levels = None
@@ -345,7 +394,8 @@ class Trainer:
             final = evaluate(self.model, self.data_loader,
                              self.config.batch_size, self.horizon, self.device,
                              dataset='test', growth=self.growth_test,
-                             q_levels=self.q_levels, g_bounds=self.g_bounds)
+                             q_levels=self.q_levels, g_bounds=self.g_bounds,
+                             level_cap=self.level_cap)
             print(f'Final  MAE {final.mae:.4f}  RMSE {final.rmse:.4f}  '
                   f'PCC {final.pcc:.4f}  R2 {final.r2:.4f}')
             return final
@@ -365,7 +415,8 @@ class Trainer:
                 self.model, self.data_loader, self.config.batch_size,
                 self.horizon, self.device, dataset='val',
                 y_multi=self.y_multi_val, growth=self.growth_val,
-                q_levels=self.q_levels, g_bounds=self.g_bounds)
+                q_levels=self.q_levels, g_bounds=self.g_bounds,
+                level_cap=self.level_cap)
 
             self.train_losses.append(train_loss)
             self.val_losses.append(val_metrics.loss)
@@ -385,7 +436,7 @@ class Trainer:
                     self.model, self.data_loader, self.config.batch_size,
                     self.horizon, self.device, dataset='test',
                     growth=self.growth_test, q_levels=self.q_levels,
-                    g_bounds=self.g_bounds)
+                    g_bounds=self.g_bounds, level_cap=self.level_cap)
                 print(f'  TEST  MAE {test_metrics.mae:.4f}  RMSE {test_metrics.rmse:.4f}  '
                       f'PCC {test_metrics.pcc:.4f}  R2 {test_metrics.r2:.4f}')
             else:
@@ -399,7 +450,7 @@ class Trainer:
         final = evaluate(self.model, self.data_loader, self.config.batch_size,
                          self.horizon, self.device, dataset='test',
                          growth=self.growth_test, q_levels=self.q_levels,
-                         g_bounds=self.g_bounds)
+                         g_bounds=self.g_bounds, level_cap=self.level_cap)
         print(f'\nFinal  MAE {final.mae:.4f}  RMSE {final.rmse:.4f}  '
               f'PCC {final.pcc:.4f}  R2 {final.r2:.4f}')
 
@@ -452,7 +503,9 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
                           use_adj_prior=True, sim_mat=None,
                           save_predictions=True, pprm_supervision='repeat',
                           spatial_gate=False, target_space='level',
-                          quantiles=None, eval_only=False):
+                          quantiles=None, eval_only=False, attn_fix=False,
+                          attn_exp='', renewal=False, renewal_lag=0,
+                          gi_fix=None):
     cfg = DATASET_CONFIGS[dataset]
     args = Namespace(
         dataset=dataset, sim_mat=sim_mat or cfg['sim_mat'],
@@ -473,6 +526,8 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
         extra='', label='', pcc='',
         pprm_supervision=pprm_supervision, spatial_gate=spatial_gate,
         target_space=target_space, quantiles=quantiles, eval_only=eval_only,
+        attn_fix=attn_fix, attn_exp=attn_exp,
+        renewal=renewal, renewal_lag=renewal_lag, gi_fix=gi_fix,
     )
 
     random.seed(seed)
@@ -504,6 +559,14 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
         variant_tag += f".{target_space}"
     if quantiles:
         variant_tag += ".quant"
+    if attn_fix:
+        variant_tag += ".attnfix"
+    if attn_exp:
+        variant_tag += ".exp-" + attn_exp.replace(',', '-')
+    if renewal:
+        variant_tag += f".renewal{renewal_lag or ''}"
+    if gi_fix:
+        variant_tag += f".gifix{gi_fix[0]:g}-{gi_fix[1]:g}"
     log_token = (f"{model_name}.{dataset}.w-{args.window}.h-{horizon}."
                  f"{ablation}.seed-{seed}.{adj_tag}{sim_tag}{variant_tag}")
 
@@ -541,7 +604,8 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
                                horizon, trainer.device, dataset='val',
                                growth=trainer.growth_val,
                                q_levels=trainer.q_levels,
-                               g_bounds=trainer.g_bounds)
+                               g_bounds=trainer.g_bounds,
+                               level_cap=trainer.level_cap)
         payload['y_true_val'] = val_metrics.y_true
         payload['y_pred_val'] = val_metrics.y_pred
         if val_metrics.y_pred_q is not None:
@@ -646,6 +710,23 @@ def main():
     parser.add_argument('--quantiles', nargs='*', type=float, default=None,
                         help='enable probabilistic quantile outputs; pass '
                              'levels or leave empty for the default set')
+    parser.add_argument('--renewal', action='store_true',
+                        help='renewal-equation decoder: backbone predicts '
+                             'log R, a learned generation-interval kernel '
+                             'supplies the convolution')
+    parser.add_argument('--gi_fix', nargs=2, type=float, default=None,
+                        metavar=('MEAN', 'SD'),
+                        help='freeze the generation-interval kernel to a '
+                             'discretised gamma with this mean and sd '
+                             '(disables learning it)')
+    parser.add_argument('--renewal_lag', type=int, default=0,
+                        help='generation-interval kernel length (0 = auto)')
+    parser.add_argument('--attn_exp', default='',
+                        help='comma-separated attention-revival experiment '
+                             'tokens, e.g. "nodecay,regpre" (see program.md)')
+    parser.add_argument('--attn_fix', action='store_true',
+                        help='learnable attention temperature + no weight decay '
+                             'on the attention-shaping parameters')
     parser.add_argument('--eval_only', action='store_true',
                         help='re-evaluate an existing checkpoint without '
                              'retraining')
@@ -665,7 +746,12 @@ def main():
                               spatial_gate=args.spatial_gate,
                               target_space=args.target_space,
                               quantiles=quantiles,
-                              eval_only=args.eval_only)
+                              eval_only=args.eval_only,
+                              attn_fix=args.attn_fix,
+                              attn_exp=args.attn_exp,
+                              renewal=args.renewal,
+                              renewal_lag=args.renewal_lag,
+                              gi_fix=args.gi_fix)
     else:
         datasets = args.datasets or list(DATASET_CONFIGS.keys())
         if args.experiment in ('main', 'all'):

@@ -35,10 +35,12 @@ HORIZONS = {
 
 
 def run_spec(dataset, horizon, seed, ablation='none', sim_mat=None,
-             pprm='repeat', gate=False, target_space='level', quant=False):
+             pprm='repeat', gate=False, target_space='level', quant=False,
+             attn_fix=False, attn_exp=''):
     return {'dataset': dataset, 'horizon': horizon, 'seed': seed,
             'ablation': ablation, 'sim_mat': sim_mat, 'pprm': pprm,
-            'gate': gate, 'target_space': target_space, 'quant': quant}
+            'gate': gate, 'target_space': target_space, 'quant': quant,
+            'attn_fix': attn_fix, 'attn_exp': attn_exp}
 
 
 def token_for(spec):
@@ -53,6 +55,10 @@ def token_for(spec):
         variant_tag += f".{spec['target_space']}"
     if spec.get('quant'):
         variant_tag += '.quant'
+    if spec.get('attn_fix'):
+        variant_tag += '.attnfix'
+    if spec.get('attn_exp'):
+        variant_tag += '.exp-' + spec['attn_exp'].replace(',', '-')
     return (f"MSAGAT-Net.{spec['dataset']}.w-20.h-{spec['horizon']}."
             f"{spec['ablation']}.seed-{spec['seed']}.{adj_tag}{sim_tag}{variant_tag}")
 
@@ -148,7 +154,38 @@ def chunk_v2_main():
             for d in HORIZONS for h in HORIZONS[d] for s in SEEDS]
 
 
+def chunk_attnfix():
+    """A/B for the inert-attention fix: v2 grid re-run with a learnable logit
+    temperature and the attention-shaping parameters excluded from weight decay.
+
+    Ordered small-graph-first so LTLA (372 nodes) runs last -- it is the
+    slowest cell and shares the GPU with the baseline campaign."""
+    order = ['nhs_timeseries', 'australia-covid', 'region785', 'japan',
+             'state360', 'ltla_timeseries']
+    return [run_spec(d, h, s, target_space='loggrowth', quant=True,
+                     attn_fix=True)
+            for d in order for h in HORIZONS[d] for s in SEEDS]
+
+
+def chunk_attn_revival():
+    """5-seed confirmation of the attention-revival winner on the full grid.
+
+    This is the campaign's single planned contact with the test split: the
+    configuration was selected entirely on validation over the proxy grid
+    (see program.md and report/results/attn_revival_ledger.csv), and this run
+    produces the per-timestep predictions the DM tests need. Small graphs
+    first so LTLA, which shares the GPU with the baseline campaign, runs last.
+    """
+    order = ['nhs_timeseries', 'australia-covid', 'region785', 'japan',
+             'state360', 'ltla_timeseries']
+    return [run_spec(d, h, s, target_space='loggrowth', quant=True,
+                     attn_exp='nodecay,regpre')
+            for d in order for h in HORIZONS[d] for s in SEEDS]
+
+
 CHUNKS = {
+    'attn_revival': chunk_attn_revival,
+    'attnfix': chunk_attnfix,
     'main_uk': chunk_main_uk,
     'main_influenza': chunk_main_influenza,
     'main_rest': chunk_main_rest,
@@ -195,6 +232,10 @@ def main():
             cmd += ['--spatial_gate']
         if spec.get('quant'):
             cmd += ['--quantiles']
+        if spec.get('attn_fix'):
+            cmd += ['--attn_fix']
+        if spec.get('attn_exp'):
+            cmd += ['--attn_exp', spec['attn_exp']]
         if args.eval_only:
             cmd += ['--eval_only']
 
