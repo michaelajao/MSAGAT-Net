@@ -30,7 +30,7 @@ import re
 
 __all__ = [
     'DEFAULT_N_QUANTILES', 'DEFAULT_LEVEL_CAP',
-    'build_token', 'parse_token',
+    'build_token', 'build_variant_tag', 'parse_token',
     'npz_path', 'ckpt_path', 'attention_path', 'manifest_path',
 ]
 
@@ -58,7 +58,31 @@ def build_token(dataset, horizon, seed, window=20, ablation='none',
     else:
         adj_tag = 'with_adj' if use_adj_prior else 'no_adj'
     sim_tag = f".{sim_mat}" if sim_mat else ""
+    variant = build_variant_tag(
+        pprm_supervision=pprm_supervision, spatial_gate=spatial_gate,
+        target_space=target_space, quantiles=quantiles, attn_fix=attn_fix,
+        attn_exp=attn_exp, renewal=renewal, renewal_lag=renewal_lag,
+        gi_fix=gi_fix, n_quantiles=n_quantiles, level_cap=level_cap)
 
+    head = (f"{model_name}.{dataset}.w-{window}.h-{horizon}."
+            f"{ablation}.seed-{seed}")
+    if adj_tag:
+        head += f".{adj_tag}"
+    return head + sim_tag + variant
+
+
+def build_variant_tag(pprm_supervision='repeat', spatial_gate=False,
+                      target_space='level', quantiles=False, attn_fix=False,
+                      attn_exp=None, renewal=False, renewal_lag=None,
+                      gi_fix=None, n_quantiles=None, level_cap=None):
+    """Return just the variant suffix of a token.
+
+    ``save_metrics`` keys its dedup mask on the ``model`` column, which is
+    ``"MSAGAT-Net" + variant_tag``. Sharing this function with
+    :func:`build_token` keeps the CSV key and the filename from drifting
+    apart, which is how a 7-quantile run and a 23-quantile run came to
+    collide on both.
+    """
     variant = ""
     if pprm_supervision != 'repeat':
         variant += f".pprm-{pprm_supervision}"
@@ -83,12 +107,7 @@ def build_token(dataset, horizon, seed, window=20, ablation='none',
     if (target_space != 'level' and level_cap is not None
             and level_cap != DEFAULT_LEVEL_CAP):
         variant += f".cap{level_cap:g}"
-
-    head = (f"{model_name}.{dataset}.w-{window}.h-{horizon}."
-            f"{ablation}.seed-{seed}")
-    if adj_tag:
-        head += f".{adj_tag}"
-    return head + sim_tag + variant
+    return variant
 
 
 _HEAD = re.compile(

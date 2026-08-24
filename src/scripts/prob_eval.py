@@ -18,6 +18,8 @@ import re
 import numpy as np
 import pandas as pd
 
+from ..csvmerge import merge_rows
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PRED_DIR = os.path.join(BASE_DIR, 'report', 'predictions')
 OUT_CSV = os.path.join(BASE_DIR, 'report', 'results', 'prob_metrics.csv')
@@ -85,6 +87,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--dataset', default=None)
     ap.add_argument('--split', choices=['test', 'val'], default='test')
+    ap.add_argument('--replace-all', dest='replace_all', action='store_true',
+                    help='rewrite the whole CSV instead of merging; use only '
+                         'for a deliberate full regeneration')
     args = ap.parse_args()
 
     rows = []
@@ -109,9 +114,10 @@ def main():
         print('No quantile predictions found.')
         return
 
-    df = pd.DataFrame(rows)
-    os.makedirs(os.path.dirname(OUT_CSV), exist_ok=True)
-    df.to_csv(OUT_CSV, index=False)
+    df = merge_rows(OUT_CSV, rows,
+                    keys=['model', 'dataset', 'horizon', 'seed', 'variant',
+                          'split'],
+                    replace_all=args.replace_all)
     agg = (df.groupby(['dataset', 'horizon', 'variant'])
              .agg(wis=('wis', 'mean'), cov50=('cov50', 'mean'),
                   cov90=('cov90', 'mean'), n_seeds=('seed', 'nunique'))

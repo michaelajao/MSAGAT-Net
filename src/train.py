@@ -18,6 +18,7 @@ import random
 import logging
 import argparse
 import atexit
+from datetime import datetime, timezone
 import signal
 from typing import Dict, List
 from argparse import Namespace
@@ -33,7 +34,9 @@ from sklearn.metrics import (
 )
 from scipy.stats import pearsonr
 
-from .utils import peak_error, plot_loss_curves, save_metrics
+from .utils import peak_error, save_metrics
+from .tokens import build_token, build_variant_tag, manifest_path
+from .manifest import write_manifest
 from .data import DataBasicLoader
 from .models import MSAGATNet_Ablation, pinball_loss
 
@@ -383,6 +386,7 @@ class Trainer:
         self.val_losses: List[float] = []
         self.best_val = float('inf')
         self.best_epoch = 0
+        self.epochs_run = 0
         self.bad_counter = 0
 
     def train(self) -> MetricsResult:
@@ -442,6 +446,8 @@ class Trainer:
             else:
                 self.bad_counter += 1
 
+            self.epochs_run = epoch
+
             if self.bad_counter >= self.config.patience:
                 print(f'Early stopping at epoch {epoch}')
                 break
@@ -462,8 +468,6 @@ class Trainer:
         os.makedirs(self.config.save_dir, exist_ok=True)
         path = os.path.join(self.config.save_dir, f'{self.log_token}.pt')
         torch.save(self.model.state_dict(), path)
-        torch.save(self.model.state_dict(),
-                    os.path.join(self.config.save_dir, 'best_model.pt'))
 
     def _load_best_checkpoint(self):
         path = os.path.join(self.config.save_dir, f'{self.log_token}.pt')
@@ -497,6 +501,12 @@ ABLATIONS = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
 
 
 # ── Single experiment ────────────────────────────────────────────────────────
+
+
+def _utc_now():
+    """ISO-8601 UTC timestamp for manifests."""
+    return datetime.now(timezone.utc).isoformat(timespec='seconds')
+
 
 def run_single_experiment(dataset, horizon, seed, ablation='none',
                           save_dir='save_all', verbose=True, force_cpu=False,
@@ -541,6 +551,8 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+    started_wall = time.time()
+    started_iso = _utc_now()
     data_loader = DataBasicLoader(args)
     model = MSAGATNet_Ablation(args, data_loader)
     model_name = 'MSAGAT-Net'
@@ -548,27 +560,23 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
     if args.cuda:
         model.cuda()
 
-    adj_tag = 'with_adj' if use_adj_prior else 'no_adj'
-    sim_tag = f".{sim_mat}" if sim_mat else ""
-    variant_tag = ""
-    if pprm_supervision != 'repeat':
-        variant_tag += f".pprm-{pprm_supervision}"
-    if spatial_gate:
-        variant_tag += ".sgate"
-    if target_space != 'level':
-        variant_tag += f".{target_space}"
-    if quantiles:
-        variant_tag += ".quant"
-    if attn_fix:
-        variant_tag += ".attnfix"
-    if attn_exp:
-        variant_tag += ".exp-" + attn_exp.replace(',', '-')
-    if renewal:
-        variant_tag += f".renewal{renewal_lag or ''}"
-    if gi_fix:
-        variant_tag += f".gifix{gi_fix[0]:g}-{gi_fix[1]:g}"
-    log_token = (f"{model_name}.{dataset}.w-{args.window}.h-{horizon}."
-                 f"{ablation}.seed-{seed}.{adj_tag}{sim_tag}{variant_tag}")
+    token_spec = dict(
+        dataset=dataset, horizon=horizon, seed=seed, window=args.window,
+        ablation=ablation, use_adj_prior=use_adj_prior, sim_mat=sim_mat,
+        pprm_supervision=pprm_supervision, spatial_gate=spatial_gate,
+        target_space=target_space, quantiles=bool(quantiles),
+        attn_fix=attn_fix, attn_exp=attn_exp, renewal=renewal,
+        renewal_lag=renewal_lag, gi_fix=gi_fix,
+        n_quantiles=len(quantiles) if quantiles else None,
+        level_cap=GROWTH_LEVEL_CAP if target_space != 'level' else None,
+        model_name=model_name)
+    log_token = build_token(**token_spec)
+    # save_metrics keys its dedup mask on the model column, which is
+    # model_name + this suffix; both come from the same definition.
+    variant_tag = build_variant_tag(
+        **{k: v for k, v in token_spec.items()
+           if k not in ('dataset', 'horizon', 'seed', 'window', 'ablation',
+                        'use_adj_prior', 'sim_mat', 'model_name')})
 
     if verbose:
         print(f"\n{'='*60}")
@@ -614,13 +622,59 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
                             **payload)
 
     model_tag = model_name + variant_tag
+    # save_metrics derives all_results.csv from the directory of this path;
+    # the per-run file itself is never written (kept for the call signature).
     results_csv = os.path.join(dataset_results_dir, f"final_metrics_{log_token}.csv")
     save_metrics(final_metrics.to_dict(), results_csv, dataset, args.window,
                  horizon, logger, model_tag, ablation, seed, use_adj_prior,
                  sim_mat=sim_mat or 'default')
 
+    # The manifest records what the token cannot: the code version, the full
+    # configuration, the constants that silently change results (level cap,
+    # quantile count), and whether this was a fresh train or a re-score.
+    finished = time.time()
+    npz_file = (os.path.join(BASE_DIR, 'report', 'predictions', dataset,
+                             f"{log_token}.npz") if save_predictions else None)
+    ckpt_file = os.path.join(BASE_DIR, args.save_dir, f"{log_token}.pt")
+    manifest_file = manifest_path(log_token, dataset=dataset, base=BASE_DIR)
+    write_manifest(
+        manifest_file, run_token=log_token, dataset=dataset,
+        config=vars(args),
+        constants={
+            'GROWTH_LEVEL_CAP': GROWTH_LEVEL_CAP,
+            'G_BOUND_MARGIN': 0.5,
+            'quantile_levels': sorted(quantiles) if quantiles else None,
+            'n_quantiles': len(quantiles) if quantiles else 0,
+            'TRAIN_DEFAULTS': TRAIN_DEFAULTS,
+            'protocol': 'lead_h',
+        },
+        artefacts={'npz': npz_file, 'checkpoint': ckpt_file,
+                   'results_csv': os.path.join(dataset_results_dir,
+                                               'all_results.csv')},
+        metrics=final_metrics.to_dict(),
+        training={
+            'best_epoch': getattr(trainer, 'best_epoch', None),
+            'epochs_run': getattr(trainer, 'epochs_run', None),
+            'best_val_loss': getattr(trainer, 'best_val', None),
+            'early_stopped': (getattr(trainer, 'epochs_run', 0)
+                              < args.epochs),
+            'n_params': sum(p.numel() for p in model.parameters()),
+        },
+        data={
+            'n_nodes': int(data_loader.m),
+            'n_train': len(data_loader.train_set),
+            'n_val': len(data_loader.valid_set),
+            'n_test': len(data_loader.test_set),
+            'sim_mat_file': f"data/{args.sim_mat}.txt" if args.sim_mat else None,
+        },
+        mode='eval_only' if getattr(args, 'eval_only', False) else 'train',
+        started_utc=started_iso, finished_utc=_utc_now(),
+        wall_seconds=round(finished - started_wall, 1),
+    )
+
     if verbose:
-        print(f"Results saved to {results_csv}")
+        print(f"Metrics appended to {os.path.join(dataset_results_dir, 'all_results.csv')}")
+        print(f"Manifest written to {os.path.relpath(manifest_file, BASE_DIR)}")
     return final_metrics.to_dict()
 
 

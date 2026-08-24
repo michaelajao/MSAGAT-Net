@@ -30,6 +30,7 @@ import re
 import numpy as np
 import pandas as pd
 
+from ..csvmerge import merge_rows
 from .prob_eval import wis_components
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -144,6 +145,9 @@ def main():
     ap.add_argument('--horizon', type=int, default=None)
     ap.add_argument('--methods', nargs='+',
                     default=['identity', 'adjacency', 'uniform', 'attention'])
+    ap.add_argument('--replace-all', dest='replace_all', action='store_true',
+                    help='rewrite the whole CSV instead of merging; use only '
+                         'for a deliberate full regeneration')
     args = ap.parse_args()
 
     rows = []
@@ -185,10 +189,11 @@ def main():
                   f"cov50={res['cov50']:.3f} cov90={res['cov90']:.3f}")
 
     if rows:
-        df = pd.DataFrame(rows)
-        os.makedirs(os.path.dirname(OUT_CSV), exist_ok=True)
-        df.to_csv(OUT_CSV, index=False)
-        print(f'\nwrote {OUT_CSV}')
+        # Merge, never replace: a filtered run must not delete the rows it
+        # did not recompute (see src/csvmerge.py).
+        merge_rows(OUT_CSV, rows,
+                   keys=['dataset', 'horizon', 'seed', 'method'],
+                   replace_all=args.replace_all)
 
 
 if __name__ == '__main__':
