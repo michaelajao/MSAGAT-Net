@@ -255,6 +255,60 @@ better than 34% on average. That is a stronger statement about the
 benchmark than any individual model comparison, and it reframes the honest
 DM outcome (mostly ties) from a weakness into the finding.
 
+**E19 (added 25 Aug 2026) — E3, E7 and E13 confirmed across every
+checkpoint.** Until now these rested on a one-off measurement of a handful
+of checkpoints. `src/scripts/attention_diagnostics.py` derives them from the
+state dicts directly, with no forward pass, so it covers **all 625
+checkpoints** in `save_all/`, `save_attn/` and `save_renewal/` in seconds on
+CPU. Artefact: `report/results/attention_diagnostics.csv`. It complements
+`extract_attention.py` rather than duplicating it — that script runs the
+model and persists the [N, N] matrix, but its `build_args` predates
+`attn_exp` so it cannot rebuild the revival checkpoints.
+
+No forward pass is needed for the argument. Logits are
+`S = qk'/sqrt(d) + UV + softplus(adj_scale)·A_norm`, and a softmax is
+selective only if the within-row spread of S is O(1). Two of the three terms
+come straight from the checkpoint plus the adjacency file.
+
+| arm | n | u absmax | UV row-sd | adj logit sd | UV share |
+|---|---|---|---|---|---|
+| v1 (level) | 218 | 6.3e-28 | **0** | 0.070 | **0** |
+| v2 (log-growth) | 161 | 3.6e-07 | 1.8e-14 | 0.104 | 1.6e-13 |
+| revived `nodecay,regpre` | 135 | **1.101** | **0.938** | 0.110 | **0.858** |
+
+The learnable graph bias is not merely small in the frozen arms — in v1 it
+underflows to **exactly zero** in float32, so the term is bit-for-bit absent
+from the logits. Against the O(1) spread a selective softmax needs, the only
+surviving term is the *static* adjacency at 0.07–0.10.
+
+**The fix works, and now at scale.** `nodecay,regpre` moves the learned-term
+share from ~0 to 0.858 across 135 checkpoints, not just the seed-42 proxy
+grid. That does not change E9's verdict — it is a training recipe, and the
+5-seed test confirmation still did not generalise — but the mechanism claim
+is now evidenced 135 times over.
+
+**The density argument is confirmed.** The adjacency logit spread is
+**0.0036 on 372-node LTLA against 0.137–0.187 on 7-node NHS**, a ~38× gap
+driven purely by graph density. Geography is silenced exactly where the
+graph is largest — the reverse of the manuscript's "self-attenuating prior"
+claim.
+
+**MSSFM's "locality-biased" fusion is uniform.** At S=2 the v1 median
+softmax weights are 0.5027 / 0.4973 (spread 0.0055); at S=4 the maximum
+weight is 0.271 against the uniform 0.25 (spread 0.031). The claimed
+ordering alpha_0 > alpha_1 > alpha_2 > alpha_3 does not survive training in
+any arm.
+
+**The `_init_weights` bug is visible in every trained model.** LayerNorm
+gains should be 1.0. Measured medians: mean ~0.000, absolute mean 0.042
+(v1) to 0.129 (v2/revived), and **50% of gains are negative**. They stay
+near the buggy `uniform(+/-1/sqrt(d))` initialisation with random sign, so
+every normalised branch runs at roughly a tenth of unit scale with half its
+channels sign-flipped.
+
+**PPRM's persistence branch decays with the lead**, from 0.570 at h=3 to
+0.009 at h=15 in level space — measured, not assumed.
+
 **Reviewer points now answered:** #4 (single seed), #5 (no significance testing), #7 (ablation inconsistency — now explained mechanistically rather than excused), #10 (interpretability speculation — resolved by deletion).
 
 **E7 completes E3.** Taken together the story is now closed rather than merely observed: the sparsity penalty exerts no gradient (E7), weight decay pulls `u`/`v` toward zero with nothing opposing it, and the observed end state is uniform attention at entropy 1.0000 with parameters at ~1e-36 (E3), which the v2-space ablation confirms is aggregation without selection (removal costs +27.1%, so the module pools but does not attend). Three independent lines — analytical, diagnostic, ablative — agree. This is a demonstrable failure mode, not an anomaly, and it is considerably more publishable in that form.
