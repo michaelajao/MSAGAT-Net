@@ -34,8 +34,17 @@ FLOORS = ['persistence', 'seasonal_naive', 'ar4']
 
 
 def load_index():
+    """Current-protocol runs only, with the attnfix arm excluded.
+
+    attnfix is a separate attention experiment that carries no attn_exp
+    token, so filtering on attn_exp alone silently folds it into the frozen
+    v2 arm and doubles the seed count.
+    """
     df = pd.read_csv(INDEX)
-    return df[(df.arm == 'current') & df.rmse_npz.notna()]
+    df = df[(df.arm == 'current') & df.rmse_npz.notna()]
+    if 'attn_fix' in df.columns:
+        df = df[df.attn_fix != True]                              # noqa: E712
+    return df
 
 
 def build(df):

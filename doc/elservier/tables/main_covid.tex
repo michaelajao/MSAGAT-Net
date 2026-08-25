@@ -1,0 +1,30 @@
+\begin{tabular}{lccc}
+\hline
+\multicolumn{4}{l}{\textbf{Australia-COVID}} \\
+Method & $h=3$ & $h=7$ & $h=14$ \\
+Cola-GNN & $149.89 \pm 65.92$ & $263.06 \pm 118.29$ & $385.94 \pm 75.03$ \\
+EpiGNN & $320.53 \pm 32.54$ & $359.59 \pm 55.26$ & $463.59 \pm 46.84$ \\
+DCRNN & $258.57 \pm 53.32$ & $352.52 \pm 63.83$ & $489.83 \pm 74.17$ \\
+LSTNet & $231.47 \pm 49.28$ & $265.70 \pm 43.34$ & $466.40 \pm 226.86$ \\
+CNNRNN-Res & $\mathbf{90.29 \pm 10.27}$ & $\mathbf{242.20 \pm 58.85}$ & $\mathbf{337.59 \pm 20.74}$ \\
+MSAGAT-Net & $174.12 \pm 170.60$\ensuremath{^{\triangle 3}}\ensuremath{_{\triangledown 2}} & $432.76 \pm 87.77$\ensuremath{_{\triangledown 5}} & $465.48 \pm 168.90$\ensuremath{_{\triangledown 3}} \\
+\hline
+\multicolumn{4}{l}{\textbf{UK-LTLA}} \\
+Method & $h=3$ & $h=7$ & $h=14$ \\
+Cola-GNN & $50.46 \pm 3.31$ & $102.54 \pm 20.68$ & $165.25 \pm 37.16$ \\
+EpiGNN & $174.48 \pm 74.62$ & $192.07 \pm 79.35$ & $196.52 \pm 44.80$ \\
+DCRNN & $67.90 \pm 10.35$ & $99.41 \pm 5.99$ & $137.63 \pm 8.22$ \\
+LSTNet & $\mathbf{48.62 \pm 0.71}$ & $85.45 \pm 4.77$ & $\mathbf{128.07 \pm 5.05}$ \\
+CNNRNN-Res & $120.04 \pm 2.62$ & $127.70 \pm 1.73$ & $134.67 \pm 1.37$ \\
+MSAGAT-Net & $50.52 \pm 1.32$\ensuremath{^{\triangle 3}} & $\mathbf{84.49 \pm 4.34}$\ensuremath{^{\triangle 4}} & $128.78 \pm 11.93$\ensuremath{^{\triangle 1}} \\
+\hline
+\multicolumn{4}{l}{\textbf{NHS-Regions}} \\
+Method & $h=3$ & $h=7$ & $h=14$ \\
+Cola-GNN & $\mathbf{2.32 \pm 0.07}$ & $\mathbf{6.03 \pm 0.43}$ & $12.15 \pm 1.78$ \\
+EpiGNN & $6.29 \pm 1.05$ & $7.61 \pm 0.76$ & $\mathbf{11.92 \pm 2.82}$ \\
+DCRNN & $4.27 \pm 0.50$ & $7.28 \pm 1.65$ & $12.52 \pm 1.42$ \\
+LSTNet & $2.58 \pm 0.08$ & $7.06 \pm 0.82$ & $12.26 \pm 2.53$ \\
+CNNRNN-Res & $3.56 \pm 0.35$ & $7.65 \pm 0.78$ & $12.49 \pm 1.11$ \\
+MSAGAT-Net & $2.52 \pm 0.70$\ensuremath{^{\triangle 4}} & $7.56 \pm 2.42$ & $14.30 \pm 4.13$ \\
+\hline
+\end{tabular}

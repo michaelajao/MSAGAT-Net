@@ -50,7 +50,7 @@ RTOL = 1e-6
 COLUMNS = [
     'run_token', 'family', 'arm', 'dataset', 'horizon', 'seed', 'window', 'ablation',
     'use_adj', 'sim_mat', 'target_space', 'quantiles', 'n_quantiles',
-    'attn_exp', 'renewal', 'renewal_lag', 'gi_fix', 'level_cap',
+    'attn_exp', 'attn_fix', 'renewal', 'renewal_lag', 'gi_fix', 'level_cap',
     'model_column', 'n_test', 'rmse_npz', 'rmse_csv', 'has_val', 'has_quantiles',
     'git_commit', 'mode', 'best_epoch', 'n_params', 'timestamp',
     'npz_path', 'ckpt_path', 'manifest_path', 'consistency',
@@ -62,14 +62,22 @@ def _rmse(y_true, y_pred):
 
 
 def _load_results_rows():
-    """Index every all_results.csv row by (model, dataset, h, seed, ablation)."""
+    """Index every all_results.csv row on save_metrics' own dedup key.
+
+    The key must include sim_mat. It is not part of the `model` column, and
+    an adjacency-threshold run therefore shares (model, dataset, horizon,
+    seed, ablation) with the default-adjacency run of the same cell. Omitting
+    it made the later sensitivity rows supersede the frozen-v2 rows in this
+    lookup, so 58 archives were compared against the wrong metrics row and
+    reported as metric_mismatch.
+    """
     rows = {}
     for path in glob.glob(os.path.join(RESULTS_DIR, '*', 'all_results.csv')):
         with open(path, encoding='utf-8') as fh:
             for row in csv.DictReader(fh):
                 key = (row.get('model', ''), row.get('dataset', ''),
                        str(row.get('horizon', '')), str(row.get('seed', '')),
-                       row.get('ablation', ''))
+                       row.get('ablation', ''), row.get('sim_mat', 'default'))
                 # Later rows supersede earlier ones, matching save_metrics.
                 rows[key] = row
     return rows
@@ -101,6 +109,10 @@ def _msagat_row(path, token, results):
         'quantiles': spec['quantiles'],
         'n_quantiles': spec['n_quantiles'] or '',
         'attn_exp': spec['attn_exp'] or '',
+        # attnfix is a distinct attention experiment that carries no
+        # attn_exp token; without this column every consumer filtering
+        # on attn_exp silently mixes it into the frozen arm.
+        'attn_fix': spec['attn_fix'],
         'renewal': spec['renewal'],
         'renewal_lag': spec['renewal_lag'] if spec['renewal_lag'] else '',
         'gi_fix': f"{spec['gi_fix'][0]:g}-{spec['gi_fix'][1]:g}" if spec['gi_fix'] else '',
@@ -185,7 +197,8 @@ def build(verbose=True):
 
         # --- the metrics row ----------------------------------------------
         key = (rec['model_column'], rec['dataset'], str(rec['horizon']),
-               str(rec['seed']), rec['ablation'] or 'none')
+               str(rec['seed']), rec['ablation'] or 'none',
+               rec['sim_mat'] or 'default')
         row = results.get(key)
         if row is None:
             # Baselines are trained in the sibling colagnn/EpiGNN repos and

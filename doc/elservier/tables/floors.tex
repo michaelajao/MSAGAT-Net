@@ -1,0 +1,27 @@
+\begin{tabular}{llrrrrl}
+\hline
+Dataset & $h$ & MSAGAT-Net & Best baseline & Best floor & Floor & Beaten? \\
+\hline
+Australia-COVID & 3 & 107.79 & 71.76 & 78.51 & Persistence & yes \\
+Australia-COVID & 7 & 410.15 & 121.67 & 166.33 & Persistence & yes \\
+Australia-COVID & 14 & 571.02 & 303.95 & 276.69 & Persistence & \textbf{no} \\
+Japan-Prefectures & 3 & 1481.55 & 1439.45 & 1022.03 & Seasonal-naive & \textbf{no} \\
+Japan-Prefectures & 5 & 1317.29 & 1557.92 & 1022.03 & Seasonal-naive & \textbf{no} \\
+Japan-Prefectures & 10 & 1780.92 & 1968.67 & 1022.03 & Seasonal-naive & \textbf{no} \\
+Japan-Prefectures & 15 & 1769.07 & 1708.68 & 1022.03 & Seasonal-naive & \textbf{no} \\
+UK-LTLA & 3 & 50.42 & 48.84 & 51.22 & Persistence & yes \\
+UK-LTLA & 7 & 86.21 & 85.07 & 88.95 & Persistence & yes \\
+UK-LTLA & 14 & 124.00 & 130.32 & 136.79 & AR(4) & yes \\
+NHS-Regions & 3 & 2.22 & 2.35 & 2.55 & AR(4) & yes \\
+NHS-Regions & 7 & 6.95 & 5.95 & 5.98 & Persistence & yes \\
+NHS-Regions & 14 & 12.78 & 9.13 & 9.40 & Persistence & yes \\
+US-Regions & 3 & 654.82 & 648.79 & 793.13 & AR(4) & yes \\
+US-Regions & 5 & 795.34 & 786.71 & 991.55 & Seasonal-naive & yes \\
+US-Regions & 10 & 882.14 & 962.24 & 991.55 & Seasonal-naive & yes \\
+US-Regions & 15 & 1005.37 & 1059.29 & 991.55 & Seasonal-naive & yes \\
+US-States & 3 & 167.67 & 174.62 & 209.17 & Persistence & yes \\
+US-States & 5 & 182.97 & 206.17 & 246.51 & AR(4) & yes \\
+US-States & 10 & 220.02 & 244.85 & 255.78 & Seasonal-naive & yes \\
+US-States & 15 & 245.72 & 246.78 & 255.78 & Seasonal-naive & yes \\
+\hline
+\end{tabular}
