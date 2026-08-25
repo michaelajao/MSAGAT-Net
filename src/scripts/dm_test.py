@@ -43,14 +43,24 @@ OUT_CSV = os.path.join(BASE_DIR, 'report', 'results', 'dm_tests.csv')
 
 BASELINES = ['cola_gnn', 'CNNRNN_Res', 'lstnet', 'dcrnn', 'epignn']
 
+# Naive forecasting floors (src/scripts/naive_baselines.py). They are
+# deterministic -- one seed, no training randomness -- so the median-seed
+# selection below trivially returns that seed. Neither Cola-GNN nor EpiGNN
+# reports a naive baseline; SpatialEpiBench (2026) shows that omission
+# flatters the whole family, so they are tested here on the same footing.
+FLOORS = ['persistence', 'seasonal_naive', 'ar4']
+
 # MSAGAT-Net arms, distinguished by the log-token suffix the trainer writes.
 # v2 (log-growth targets + 23 quantile heads) is the paper's model; v1 is the
 # level-space target ablation.
 VARIANTS = {'v1': 'with_adj', 'v2': 'with_adj.loggrowth.quant'}
 
-# Baselines carry a '_lg' tag when trained on log-growth targets.
+# Baselines carry a '_lg' tag when trained on log-growth targets; the floors
+# have no arms. Longest-first so 'seasonal_naive' cannot be shadowed.
 BASE_RE = re.compile(
-    r'^(?P<m>(?:' + '|'.join(BASELINES) + r')(?:_lg)?)\.(?P<ds>[^.]+)'
+    r'^(?P<m>(?:'
+    + '|'.join(sorted(BASELINES + FLOORS, key=len, reverse=True))
+    + r')(?:_lg)?)\.(?P<ds>[^.]+)'
     r'\.w-20\.h-(?P<h>\d+)\.none\.seed-(?P<s>\d+)\.npz$')
 
 
@@ -162,6 +172,11 @@ def main():
     ap.add_argument('--arms', choices=['best', 'level'], default='best',
                     help="baseline arm: 'best' of level/log-growth per "
                          "baseline (conservative), or the published 'level'")
+    ap.add_argument('--include-floors', dest='include_floors',
+                    action='store_true',
+                    help='also test against the naive floors (persistence, '
+                         'seasonal-naive, AR(4)) as a SEPARATE Holm family, '
+                         'so the trained-baseline comparison is unchanged')
     args = ap.parse_args()
 
     runs = collect(args.variant)
@@ -207,40 +222,53 @@ def main():
         if not ours:
             continue
         our_seed = median_seed(ours)
-        family = []
-        for base in BASELINES:
-            tag, theirs = choose_arm(models, base, args.arms)
-            if not theirs:
-                continue
-            their_seed = median_seed(theirs)
-            aligned, e2_ours, e2_base = load_pair(ours[our_seed],
-                                                  theirs[their_seed])
-            if not aligned:
-                print(f'WARN {ds} h={h} {tag}: y_true misaligned, skipped')
-                continue
-            dm, p = dm_stat(e2_ours, e2_base, h)
-            agree = 0
-            for s, path in ours.items():
-                al2, ea, eb = load_pair(path, theirs[their_seed])
-                if al2:
-                    dm_i, p_i = dm_stat(ea, eb, h)
-                    agree += int(p_i < args.alpha and dm_i < 0)
-            family.append({
-                'dataset': ds, 'horizon': h, 'baseline': base,
-                'baseline_arm': 'loggrowth' if tag.endswith('_lg') else 'level',
-                'msagat_seed': our_seed, 'baseline_seed': their_seed,
-                'msagat_rmse': rmse(ours[our_seed]),
-                'baseline_rmse': rmse(theirs[their_seed]),
-                'dm': dm, 'p_raw': p, 'n_test': len(e2_ours),
-                'seeds_agree': f'{agree}/{len(ours)}',
-            })
-        if family:
-            adj = holm([r['p_raw'] for r in family])
-            for r, pa in zip(family, adj):
-                r['p_holm'] = pa
-                r['significant'] = bool(pa < args.alpha)
-                r['direction'] = 'MSAGAT better' if r['dm'] < 0 else 'baseline better'
-            rows.extend(family)
+        # Two Holm families, deliberately kept apart. The trained baselines
+        # answer "is this better than competing methods?"; the naive floors
+        # answer "is it better than no method at all?". Pooling them would
+        # enlarge the correction on the primary comparison for an unrelated
+        # question, and would silently move the published W/L/T counts.
+        families = {'baselines': list(BASELINES)}
+        if args.include_floors:
+            families['floors'] = list(FLOORS)
+
+        for family_name, members in families.items():
+            family = []
+            for base in members:
+                tag, theirs = choose_arm(models, base, args.arms)
+                if not theirs:
+                    continue
+                their_seed = median_seed(theirs)
+                aligned, e2_ours, e2_base = load_pair(ours[our_seed],
+                                                      theirs[their_seed])
+                if not aligned:
+                    print(f'WARN {ds} h={h} {tag}: y_true misaligned, skipped')
+                    continue
+                dm, p = dm_stat(e2_ours, e2_base, h)
+                agree = 0
+                for s, path in ours.items():
+                    al2, ea, eb = load_pair(path, theirs[their_seed])
+                    if al2:
+                        dm_i, p_i = dm_stat(ea, eb, h)
+                        agree += int(p_i < args.alpha and dm_i < 0)
+                family.append({
+                    'dataset': ds, 'horizon': h, 'baseline': base,
+                    'family': family_name,
+                    'baseline_arm': ('loggrowth' if tag.endswith('_lg')
+                                     else 'level'),
+                    'msagat_seed': our_seed, 'baseline_seed': their_seed,
+                    'msagat_rmse': rmse(ours[our_seed]),
+                    'baseline_rmse': rmse(theirs[their_seed]),
+                    'dm': dm, 'p_raw': p, 'n_test': len(e2_ours),
+                    'seeds_agree': f'{agree}/{len(ours)}',
+                })
+            if family:
+                adj = holm([r['p_raw'] for r in family])
+                for r, pa in zip(family, adj):
+                    r['p_holm'] = pa
+                    r['significant'] = bool(pa < args.alpha)
+                    r['direction'] = ('MSAGAT better' if r['dm'] < 0
+                                      else 'baseline better')
+                rows.extend(family)
 
     if not rows:
         print('No comparable prediction pairs found yet.')

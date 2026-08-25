@@ -71,10 +71,16 @@ Artefacts: 63 archives in `report/predictions/`, summary in
   16 of 21. SpatialEpiBench (2026) reports "every method beats the naive
   baseline less than 50% of the time" across 11 other datasets; this
   benchmark family behaves the same way.
-- **On Japan-Prefectures, a seasonal-naive forecast at lag 52 beats every
-  trained model at every horizon**: RMSE 1022 against a best trained model
-  of 1244 / 1275 / 1686 / 1709 at h = 3 / 5 / 10 / 15, i.e. the models are
-  18% / 20% / 39% / 40% worse than one line of code.
+- **On Japan-Prefectures, a seasonal-naive forecast at lag 52 has lower RMSE
+  than every trained model at every horizon** — 1022 against a best trained
+  model of 1244 / 1275 / 1686 / 1709 at h = 3 / 5 / 10 / 15, i.e. the models
+  are 18% / 20% / 39% / 40% worse than one line of code. **The difference is
+  NOT statistically significant**: DM with Holm gives p = 0.199 / 0.203 /
+  0.139 / 0.122 against MSAGAT-Net v2, because Japan has only 70 test
+  points. The point estimate favours the naive floor at every horizon and
+  the test cannot resolve it — which is itself a finding about the
+  benchmark, and the same underpowering E5 already reported for Japan. State
+  it that way; do not claim the floor "beats" the models.
 - **It is genuine annual seasonality, not an artefact.** RMSE by lag on
   Japan: 13 wk 3260, 26 wk 3298, 39 wk 3200, **52 wk 1022**, 65 wk 2961,
   78 wk 2994, 104 wk 1486 — a sharp minimum at one year and at two years.
@@ -91,9 +97,28 @@ Artefacts: 63 archives in `report/predictions/`, summary in
   survey's open problem §3.2.5 ("Most of the networks merely focus on
   proximity, yet ignore the trend and periodicity") showing up as a
   measurable loss on the lineage's flagship dataset.
-- Australia h=14 is the only other cell no trained model wins (persistence
-  276.7 vs 303.9, +9%), which is consistent with Australia being the source
-  of all 10 significant DM losses.
+- Australia h=14 is the only other cell no trained model wins on the point
+  estimate (persistence 276.7 vs 303.9, +9%).
+- **The floors were then put through the DM test as a SEPARATE Holm family**
+  (`dm_test.py --include-floors`), deliberately not pooled with the five
+  trained baselines: the two ask different questions, and pooling would have
+  enlarged the correction on the primary comparison and silently moved the
+  published counts. Verified: with the floors excluded, every DM statistic
+  reproduces the committed grid exactly (max |Δdm| = 0, max |Δp_raw| = 0,
+  identical verdicts); the only `p_holm` change is the LTLA h=14 family
+  correctly growing from 3 to 4 members as cola_gnn completed. Selftest
+  still passes (seed-vs-seed 14% ≈ α, degraded 100%).
+  - **baselines family: 104 comparisons, 19W / 10L / 75T.**
+  - **floors family: 63 comparisons, 22W / 6L / 35T.**
+  - **All six significant losses to a floor are Australia** — persistence and
+    AR(4) at h = 3, 7 and 14 (e.g. h=7: ours 410.1 vs persistence 166.3,
+    p = 5.0e-4). Australia is also the source of all 10 significant losses to
+    trained baselines. It is now the single clearest weakness in the paper
+    and needs either a diagnosis or an explicit exclusion with justification.
+  - On the daily COVID series MSAGAT-Net beats seasonal-naive decisively
+    (p ≤ 0.03 everywhere), as expected: those series have no annual cycle,
+    so a lag-364 forecast is a poor null there. The seasonal floor only
+    bites on the weekly ILI sets.
 
 This belongs in Paper B as a first-class result, not a footnote: it is the
 strongest available evidence that the benchmark family's accuracy claims
