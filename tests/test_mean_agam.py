@@ -1,14 +1,22 @@
-"""The mean_agam ablation must actually change the model.
+"""The mean_agam ablation must isolate selectivity, and nothing else.
 
-program.md requires that a new experiment token be shown to change
-behaviour at construction before any run is trusted. That rule exists
-because attention experiment 3 once returned results bit-identical to
-experiment 1: `_init_weights` had silently undone the change, and it was
-only caught because the numbers were suspiciously equal.
+program.md requires a new experiment token be shown to change behaviour at
+construction before any run is trusted. That rule exists because attention
+experiment 3 once returned results bit-identical to experiment 1 --
+`_init_weights` had silently undone it, caught only because the numbers were
+suspiciously equal.
 
-These tests assert that `mean_agam` builds a distinct module, that its
-attention is exactly uniform, and that it produces different predictions
-from both the full attention and the `no_agam` identity.
+A first version of this ablation used a purpose-built mean-pooling module.
+It was wrong: its value projection was rank-8 where EAGAM's comes from the
+shared rank-24 qkv projection, so the comparison confounded capacity with
+selectivity. The NHS h=3 pilot showed mean_agam 16.8% worse than the full
+model while no_agam was 2.5% *better*, which is not a result about
+attention at all. It was caught at 25 of 195 runs and the campaign stopped.
+
+The current version reuses SpatialAttentionModule itself with
+`uniform_attn=True`, so every parameter, projection, residual and norm is
+identical and only the softmax is replaced by a fixed 1/N. These tests
+assert exactly that.
 """
 
 import os
@@ -21,8 +29,8 @@ from argparse import Namespace
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
 
-from src.models import (MSAGATNet_Ablation, MeanPoolSpatialModule,  # noqa: E402
-                        IdentitySpatialModule, SpatialAttentionModule)
+from src.models import (MSAGATNet_Ablation, IdentitySpatialModule,  # noqa: E402
+                        SpatialAttentionModule)
 
 N_NODES, WINDOW, HORIZON, BATCH = 8, 20, 3, 4
 
@@ -64,23 +72,34 @@ def _forward(model, seed=0):
     return out[0] if isinstance(out, tuple) else out
 
 
-def test_builds_the_right_module():
-    assert isinstance(_build('mean_agam').graph_attention, MeanPoolSpatialModule)
-    assert isinstance(_build('none').graph_attention, SpatialAttentionModule)
+def test_builds_the_same_class_as_the_full_model():
+    m = _build('mean_agam').graph_attention
+    assert isinstance(m, SpatialAttentionModule)
+    assert m.uniform_attn is True
+    assert _build('none').graph_attention.uniform_attn is False
     assert isinstance(_build('no_agam').graph_attention, IdentitySpatialModule)
 
 
-def test_attention_is_exactly_uniform():
+def test_parameters_are_identical_to_the_full_model():
+    """This is what the first attempt got wrong: same capacity, same init."""
+    full = dict(_build('none', seed=3).graph_attention.named_parameters())
+    mean = dict(_build('mean_agam', seed=3).graph_attention.named_parameters())
+    assert set(full) == set(mean), 'parameter names differ'
+    for k in full:
+        assert full[k].shape == mean[k].shape, f'{k} shape differs'
+        assert torch.equal(full[k], mean[k]), f'{k} initialised differently'
+
+
+def test_attention_is_exactly_uniform_and_normalised():
     m = _build('mean_agam')
     _forward(m)
     a = m.graph_attention.attn
     assert torch.allclose(a, torch.full_like(a, 1.0 / N_NODES))
-    # Rows must still be a distribution.
     assert torch.allclose(a.sum(-1), torch.ones_like(a.sum(-1)))
 
 
 def test_predictions_differ_from_both_neighbours():
-    """The whole point: it must not be a no-op or a rename of no_agam."""
+    """It must be neither a no-op nor a rename of no_agam."""
     full = _forward(_build('none'))
     mean = _forward(_build('mean_agam'))
     ident = _forward(_build('no_agam'))
@@ -88,29 +107,25 @@ def test_predictions_differ_from_both_neighbours():
     assert not torch.allclose(mean, ident), 'mean_agam is identical to no_agam'
 
 
-def test_pooling_is_permutation_invariant():
-    """A uniform mean cannot depend on node order; a selective one can."""
-    m = _build('mean_agam')
-    torch.manual_seed(1)
-    x = torch.rand(BATCH, N_NODES, 32)
-    perm = torch.randperm(N_NODES)
-    m.eval()
-    with torch.no_grad():
-        a, _ = m.graph_attention(x)
-        b, _ = m.graph_attention(x[:, perm])
-    # The pooled contribution is order-free, so permuting the input permutes
-    # the output exactly.
-    assert torch.allclose(a[:, perm], b, atol=1e-6)
+def test_the_softmax_is_the_only_difference():
+    """Force the full model's attention uniform: it must then match exactly.
 
-
-def test_parameter_count_is_smaller_than_full_attention():
-    """It drops the query/key projections and the learnable graph bias."""
-    full = sum(p.numel() for p in _build('none').graph_attention.parameters())
-    mean = sum(p.numel() for p in _build('mean_agam').graph_attention.parameters())
-    assert mean < full, (mean, full)
+    This is the property that makes the ablation interpretable. If forcing
+    the flag reproduces the mean_agam output bit-for-bit, then any measured
+    difference between the two arms is attributable to attention
+    selectivity and to nothing else.
+    """
+    full = _build('none', seed=7)
+    mean = _build('mean_agam', seed=7)
+    before = _forward(full)
+    full.graph_attention.uniform_attn = True          # flip only the softmax
+    after = _forward(full)
+    assert not torch.allclose(before, after), 'flipping the flag changed nothing'
+    assert torch.allclose(after, _forward(mean), atol=1e-6), (
+        'uniform-forced full model does not match mean_agam, so the two arms '
+        'differ by more than the softmax')
 
 
 @pytest.mark.parametrize('ablation', ['none', 'no_agam', 'mean_agam'])
 def test_forward_shape(ablation):
-    out = _forward(_build(ablation))
-    assert out.shape == (BATCH, HORIZON, N_NODES)
+    assert _forward(_build(ablation)).shape == (BATCH, HORIZON, N_NODES)
