@@ -124,6 +124,48 @@ This belongs in Paper B as a first-class result, not a footnote: it is the
 strongest available evidence that the benchmark family's accuracy claims
 were never tested against the right null.
 
+**E16 (added 25 Aug 2026) — Australia diagnosed, and a general
+under-forecasting bias found.** The ledger has carried "no diagnosis
+attempted" against Australia since 19 Aug; every significant DM loss, to a
+trained baseline or to a naive floor, is on that one dataset. Script:
+`src/scripts/australia_diagnosis.py`; artefact:
+`report/results/australia_diagnosis.csv`. Four hypotheses tested (two others
+were rejected earlier: observation noise, and a train-to-test range shift).
+
+- **REJECTED — the model is noisy.** Prediction volatility is *below* the
+  series', not above: sd(pred)/sd(true) is 0.72 / 0.46 / 0.31 at h = 3 / 7 /
+  14. The model over-smooths, it does not oscillate.
+- **CONFIRMED — the error is a systematic under-forecast** that grows with
+  horizon: bias −6.8% / −14.6% / −23.4% of the test-period level at
+  h = 3 / 7 / 14.
+- **CONFIRMED — and it is not confined to the wave.** RMSE by quartile of
+  the Australia test window at h=7: 226 / 172 / 226 / 701 against
+  persistence 23 / 11 / 43 / 329. The model is an order of magnitude worse
+  than persistence even on the three *flat* quartiles (level ~700), and
+  worst on the rising final quarter (level 980, ending 1282).
+- **SUPPORTED, NOT PROVEN — a regime gap at model-selection time.**
+  Australia's test window peaks at **1.88× the validation maximum** and ends
+  41% above where it starts, the largest such gap of the six datasets;
+  Japan is next at 1.45. Those two are the only datasets where any trained
+  model loses to a naive floor, and every dataset with a gap below 1.1 wins
+  every cell. The gap predicts the bias across cells (Pearson r = −0.514,
+  p = 0.017, n = 21). **But the 21 cells come from only 6 datasets and cells
+  within a dataset share one gap value, so they are not independent and that
+  p-value is optimistic.** State it as a supported hypothesis. Note the
+  earlier rejected version of this test compared the test window against
+  *training*; validation is the right reference, because validation is what
+  early stopping and the growth-space level cap are calibrated on.
+
+**The wider finding matters more than Australia.** The under-forecast is not
+Australia-specific: five of six datasets show a negative bias growing with
+horizon — Japan −21% to −45%, LTLA −2.0% to −29.5%, Australia −6.8% to
+−23.4%, region785 −9.8% to −17.3%, state360 −7.7% to −12.2%; only NHS does
+not (+1.7% to +12.9%). Shrinking toward the mean as the horizon grows is a
+general property of this model, and Australia is simply where it costs most
+because persistence is unusually strong there. This belongs in Paper B's
+limitations as a measured property, and it is a direct target for Paper C,
+whose likelihood formulation and log-population offset address exactly this.
+
 **Reviewer points now answered:** #4 (single seed), #5 (no significance testing), #7 (ablation inconsistency — now explained mechanistically rather than excused), #10 (interpretability speculation — resolved by deletion).
 
 **E7 completes E3.** Taken together the story is now closed rather than merely observed: the sparsity penalty exerts no gradient (E7), weight decay pulls `u`/`v` toward zero with nothing opposing it, and the observed end state is uniform attention at entropy 1.0000 with parameters at ~1e-36 (E3), which the v2-space ablation confirms is aggregation without selection (removal costs +27.1%, so the module pools but does not attend). Three independent lines — analytical, diagnostic, ablative — agree. This is a demonstrable failure mode, not an anomaly, and it is considerably more publishable in that form.
