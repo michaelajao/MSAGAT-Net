@@ -309,6 +309,42 @@ channels sign-flipped.
 **PPRM's persistence branch decays with the lead**, from 0.570 at h=3 to
 0.009 at h=15 in level space — measured, not assumed.
 
+**E11 UPDATE (25 Aug 2026) — recomputed, persisted, and corrected.** The
+horizon-threshold numbers had only ever lived in local variables inside
+`paper_figures.py`, rendered into a PNG and quoted in prose without any
+artefact holding them. `src/scripts/horizon_threshold.py` now computes them
+from the prediction archives and writes
+`report/results/horizon_threshold.csv`. Two errors surfaced in the process:
+
+1. The frozen arm was picking up the `attnfix` runs, which carry no
+   `attn_exp` token, duplicating seeds in the pairing (NHS showed 10 seeds
+   where 5 exist). Excluded explicitly.
+2. The pooled delta was being read as a mean. On the daily series the mean
+   at h=3 is **+117.8%**, driven entirely by Australia h=3, whose paired
+   deltas range over ±350% across seeds. The median is the honest statistic
+   and is what the paper should quote.
+
+Attention side, daily series, revived `nodecay,regpre` against the frozen v2
+model, paired within seed on the test split:
+
+| h | median delta | seeds improved |
+|---|---|---|
+| 3 | +0.02% | 5/15 (33%) |
+| 7 | −1.21% | 9/15 (60%) |
+| 14 | **−6.20%** | **13/15 (87%)** |
+
+The monotone trend holds and the h=14 figure (−6.20%) reproduces the
+previously quoted −6.1%. The previously quoted +12.5% at h=3 does not: the
+median is +0.02%, i.e. restoring a selective attention is **neutral** at
+short horizons rather than clearly harmful, and only the fraction of seeds
+improving (33%) points the same way. Quote the improved-seed fraction, which
+is robust, alongside the median.
+
+**The effect is specific to daily data.** On the weekly ILI series the
+deltas are +2.93 / +2.17 / +5.12 / +1.51% at h = 3 / 5 / 10 / 15 — no
+monotone pattern and consistently mildly harmful. E11 must be stated as a
+daily-series finding, which is how it was originally framed.
+
 **Reviewer points now answered:** #4 (single seed), #5 (no significance testing), #7 (ablation inconsistency — now explained mechanistically rather than excused), #10 (interpretability speculation — resolved by deletion).
 
 **E7 completes E3.** Taken together the story is now closed rather than merely observed: the sparsity penalty exerts no gradient (E7), weight decay pulls `u`/`v` toward zero with nothing opposing it, and the observed end state is uniform attention at entropy 1.0000 with parameters at ~1e-36 (E3), which the v2-space ablation confirms is aggregation without selection (removal costs +27.1%, so the module pools but does not attend). Three independent lines — analytical, diagnostic, ablative — agree. This is a demonstrable failure mode, not an anomaly, and it is considerably more publishable in that form.
