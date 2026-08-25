@@ -378,6 +378,64 @@ The honest summary the paper must carry: **MSAGAT-Net wins a plurality of
 cells, ties most of them, and loses one dataset.** "Consistently outperforms"
 is not supportable and never was.
 
+**E20 (added 25 Aug 2026) — E3 confirmed behaviourally: on the largest
+graph the attention softmax can be deleted without changing the forecast.**
+`chunk_ablation_v2` ran 200 cells (4 arms x 10 dataset-horizons x 5 seeds),
+177 fresh, 0 failures. Script: `src/scripts/ablation_analysis.py`; artefact:
+`report/results/ablation_v2.csv`.
+
+The decisive arm is **`mean_agam`**: the full attention module with
+`uniform_attn=True`, so every parameter, projection, residual and norm is
+identical and **only the softmax becomes a fixed 1/N**. The test suite
+asserts that flipping the flag on the full model reproduces this arm to 1e-6,
+so any difference is attributable to selectivity and nothing else.
+
+Paired within seed, against the full model:
+
+| dataset | N | E19 entropy | h | delta % | sd | max abs | Wilcoxon p |
+|---|---|---|---|---|---|---|---|
+| LTLA | 372 | 1.0000 | 3 | **+0.08** | 0.83 | 0.97 | 0.812 |
+| LTLA | 372 | 1.0000 | 7 | **−0.06** | 1.71 | 2.22 | 1.000 |
+| LTLA | 372 | 1.0000 | 14 | **+0.80** | 1.08 | 2.24 | 0.125 |
+| Japan | 47 | 0.9996 | 3–15 | −1.4 to +4.9 | 5–12 | 7–22 | 0.06–1.00 |
+| NHS | 7 | 0.9937 | 3–14 | −8.2 to +0.5 | 5–26 | 9–44 | 0.31–1.00 |
+
+**On the 372-node graph the mean absolute change is 0.31% and no horizon is
+significant.** Removing the entire attention mechanism — while keeping its
+parameters, its aggregation and its residual — is not detectable in the
+forecast. This is the behavioural counterpart to E19's parameter evidence
+and is far stronger than the original `no_agam` ablation, which removed all
+spatial mixing and so could never separate "attention does not attend" from
+"spatial aggregation is useless".
+
+The deviation again scales with graph size, as both E19 and the conformal
+result predict: LTLA sd ~1%, Japan ~5–12%, NHS up to 26%. On the small
+graphs the attention is slightly non-uniform *and* seed noise is far larger,
+so nothing is resolvable there either.
+
+**The wider ablation picture is bleaker than the attention finding alone.**
+Pooled median delta against the full model across all 10 cells:
+
+| arm | median | interpretation |
+|---|---|---|
+| `no_mtfm` | **−2.53%** | removing multi-hop spatial refinement *improves* it |
+| `mean_agam` | −0.85% | deleting the softmax *improves* it |
+| `no_agam` | +0.24% | removing spatial mixing entirely costs almost nothing |
+| `no_pprm` | +0.82% | removing progressive refinement costs almost nothing |
+
+**No component removal costs more than 1% in the median, and two of the four
+improve the model.** Taken with E13 (no multi-scale temporal convolution
+exists; the hop-fusion weights are uniform) and E19 (the graph bias
+underflows to zero), the architecture's spatial pathway contributes
+essentially nothing that a fixed uniform mean would not. That is the
+honest ablation table Paper B must print, and it is a stronger negative
+result than the manuscript's original "adaptive spatial attention is
+universally essential".
+
+A caveat to state: these cells are individually noisy (per-seed sd 5–26% on
+the small graphs), and per E18 the benchmark cannot resolve small effects.
+The LTLA rows carry the claim because that is where seed noise is ~1%.
+
 **Reviewer points now answered:** #4 (single seed), #5 (no significance testing), #7 (ablation inconsistency — now explained mechanistically rather than excused), #10 (interpretability speculation — resolved by deletion).
 
 **E7 completes E3.** Taken together the story is now closed rather than merely observed: the sparsity penalty exerts no gradient (E7), weight decay pulls `u`/`v` toward zero with nothing opposing it, and the observed end state is uniform attention at entropy 1.0000 with parameters at ~1e-36 (E3), which the v2-space ablation confirms is aggregation without selection (removal costs +27.1%, so the module pools but does not attend). Three independent lines — analytical, diagnostic, ablative — agree. This is a demonstrable failure mode, not an anomaly, and it is considerably more publishable in that form.
