@@ -518,3 +518,4 @@
 [20260820_152846] MSAGAT-Net.loggrowth.quant.exp-nodecay-regpre-reniter.renewal7.gifix5.2-1.72 | Dataset: nhs_timeseries, Window: 20, Horizon: 14, Ablation: none, Seed: 45 | MAE: 8.9270, RMSE: 13.0625, PCC: 0.8627, R2: 0.6909
 [20260820_153119] MSAGAT-Net.loggrowth.quant.exp-nodecay-regpre-reniter.renewal7.gifix5.2-1.72 | Dataset: nhs_timeseries, Window: 20, Horizon: 14, Ablation: none, Seed: 123 | MAE: 7.1771, RMSE: 10.3753, PCC: 0.8992, R2: 0.8050
 [20260820_153346] MSAGAT-Net.loggrowth.quant.exp-nodecay-regpre-reniter.renewal7.gifix5.2-1.72 | Dataset: nhs_timeseries, Window: 20, Horizon: 14, Ablation: none, Seed: 1000 | MAE: 8.4791, RMSE: 12.3994, PCC: 0.8840, R2: 0.7215
+[20260825_004742] MSAGAT-Net.loggrowth.quant.exp-nodecay-regpre | Dataset: nhs_timeseries, Window: 20, Horizon: 3, Ablation: none, Seed: 999 | MAE: 2.1879, RMSE: 3.0122, PCC: 0.9922, R2: 0.9836
