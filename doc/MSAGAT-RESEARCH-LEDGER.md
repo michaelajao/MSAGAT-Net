@@ -166,6 +166,48 @@ because persistence is unusually strong there. This belongs in Paper B's
 limitations as a measured property, and it is a direct target for Paper C,
 whose likelihood formulation and log-population offset address exactly this.
 
+**E17 (added 25 Aug 2026) — E1 confirmed from the opposite direction.**
+The correction used everywhere else pulls the baselines *down* to lead-h
+scoring and retrains them. `src/scripts/pooled_symmetric.py` pushes
+MSAGAT-Net *up* instead: its stored lead-h prediction is replicated across
+leads h..2h-1 and scored against pooled targets, which is exactly how
+LSTNet and CNNRNN-Res were graded (both emitted one prediction and expanded
+it across every step they were scored on). Artefact:
+`report/results/pooled_symmetric.csv`, 5 seeds per cell.
+
+Margin over the best baseline *as submitted* (both figures use the
+submitted, pooled baseline numbers from `doc/archive/paper_results_final.csv`):
+
+| cell | as submitted | symmetric, v1 | symmetric, v2 |
+|---|---|---|---|
+| LTLA h=3 | +13.5% | −1.4% | +2.3% |
+| **LTLA h=7** | **+23.6%** | **+10.4%** | **+13.0%** |
+| LTLA h=14 | +17.3% | +7.0% | −5.0% |
+| NHS h=3 | −9.6% | −44.8% | −4.7% |
+| **NHS h=7** | **+22.1%** | **−4.1%** | **−6.6%** |
+| NHS h=14 | −7.4% | −4.8% | −27.7% |
+
+v1 (level space) is the arm the manuscript actually describes, so it is the
+like-for-like comparison; v2 adds log-growth targets and quantile heads.
+
+- **The 23.5% LTLA headline becomes +10.4%** under symmetric scoring — the
+  direction survives, the magnitude does not.
+- **The 22.2% NHS headline reverses sign, to −4.1%.** Under symmetric
+  scoring MSAGAT-Net is *worse* than EpiGNN in that cell.
+- Pooled scoring costs MSAGAT-Net 11–31% RMSE across the six cells, which is
+  the size of the handicap the baselines carried and the model did not.
+
+Two limitations to state in the paper: pooled targets need h−1 observations
+past each scored index, so the last h−1 test samples are dropped (168 → 155
+on LTLA h=14, 179 → 166 on NHS h=14; counts are in the CSV); and replicating
+one prediction across h leads reproduces the old protocol's *handicap*, not
+a well-specified multi-step task.
+
+**Both directions agree, so the conclusion does not depend on which way the
+correction is applied.** The corrected lead-h protocol remains the headline
+because it matches upstream Cola-GNN and the wider literature; this is the
+appendix table that closes the argument.
+
 **Reviewer points now answered:** #4 (single seed), #5 (no significance testing), #7 (ablation inconsistency — now explained mechanistically rather than excused), #10 (interpretability speculation — resolved by deletion).
 
 **E7 completes E3.** Taken together the story is now closed rather than merely observed: the sparsity penalty exerts no gradient (E7), weight decay pulls `u`/`v` toward zero with nothing opposing it, and the observed end state is uniform attention at entropy 1.0000 with parameters at ~1e-36 (E3), which the v2-space ablation confirms is aggregation without selection (removal costs +27.1%, so the module pools but does not attend). Three independent lines — analytical, diagnostic, ablative — agree. This is a demonstrable failure mode, not an anomaly, and it is considerably more publishable in that form.
