@@ -345,6 +345,39 @@ deltas are +2.93 / +2.17 / +5.12 / +1.51% at h = 3 / 5 / 10 / 15 — no
 monotone pattern and consistently mildly harmful. E11 must be stated as a
 daily-series finding, which is how it was originally framed.
 
+**E5 FINAL (25 Aug 2026) — the baseline campaign is complete and the grid
+is closed.** All **525 runs** (5 baselines x 21 cells x 5 seeds) finished;
+the driver exited clean, 0 failures. `runs_index.csv` covers 1376 archives
+with **zero metric mismatches**. Every cell now has 5 seeds for every
+baseline, including the LTLA h=14 cola_gnn and dcrnn runs that were
+outstanding since 19 August.
+
+Trained-baseline families, all four arm combinations, Holm within each
+(dataset, horizon):
+
+| MSAGAT arm | baseline arm | n | W | L | T |
+|---|---|---|---|---|---|
+| v1 | level (as published) | 105 | 18 | 8 | 79 |
+| v1 | best of level/log-growth | 105 | 17 | 7 | 81 |
+| v2 | level | 105 | 20 | 8 | 77 |
+| **v2** | **best (conservative)** | **105** | **19** | **10** | **76** |
+
+Naive-floor families, tested separately: v1 18W/8L/37T, v2 22W/6L/35T.
+
+**Headline for Paper B: 19 wins, 10 losses, 76 ties out of 105.**
+
+- **All 10 losses are Australia** — every baseline at h=7, three at h=14, two
+  at h=3. See E16 for the diagnosis.
+- Wins concentrate on LTLA (8), NHS (4), US-Regions (4) and Australia (3).
+- **Japan and US-States are ties in all 20 comparisons each**, with 70 and 72
+  test points. Per E18 those cells could not have detected anything smaller
+  than a 33-90% RMSE gap, so they are correctly underpowered rather than
+  evidence of equivalence.
+
+The honest summary the paper must carry: **MSAGAT-Net wins a plurality of
+cells, ties most of them, and loses one dataset.** "Consistently outperforms"
+is not supportable and never was.
+
 **Reviewer points now answered:** #4 (single seed), #5 (no significance testing), #7 (ablation inconsistency — now explained mechanistically rather than excused), #10 (interpretability speculation — resolved by deletion).
 
 **E7 completes E3.** Taken together the story is now closed rather than merely observed: the sparsity penalty exerts no gradient (E7), weight decay pulls `u`/`v` toward zero with nothing opposing it, and the observed end state is uniform attention at entropy 1.0000 with parameters at ~1e-36 (E3), which the v2-space ablation confirms is aggregation without selection (removal costs +27.1%, so the module pools but does not attend). Three independent lines — analytical, diagnostic, ablative — agree. This is a demonstrable failure mode, not an anomaly, and it is considerably more publishable in that form.
