@@ -208,6 +208,53 @@ correction is applied.** The corrected lead-h protocol remains the headline
 because it matches upstream Cola-GNN and the wider literature; this is the
 appendix table that closes the argument.
 
+**E18 (added 25 Aug 2026) — the benchmark cannot resolve the effect sizes
+this literature reports.** The ledger has asked since 19 Aug for a power
+calculation "so ties read as 'correctly underpowered' rather than 'no
+difference found'". `src/scripts/dm_power.py` computes, for every comparison
+in the grid, the smallest RMSE reduction the DM test could detect at 80%
+power, using the same Newey-West variance and HLN correction as
+`dm_test.dm_stat` (imported, not re-implemented). Artefact:
+`report/results/dm_power_v2_best.csv`.
+
+**Across 70 comparisons the median minimum detectable effect is 33.8% RMSE**
+(best cell 9.4%, worst 89.7%).
+
+| claimed effect | source | resolvable in |
+|---|---|---|
+| 5.6% | EpiGNN 2022, its own headline | **0 of 70** |
+| 4.1% | HeatGNN over Cola-GNN, flu sets | **0 of 70** |
+| 23.5% | this manuscript, LTLA | 27 of 70 (39%) |
+| 22.2% | this manuscript, NHS | 24 of 70 (34%) |
+
+Worst cells: state360 h=15 (MDE 89.7%), region785 h=15 (73.5%), Australia
+h=14 (57.3%), Japan h=5 (56.4%). **NHS h=14 is unresolvable at any effect
+size** — the detectable MSE gap exceeds the baseline MSE itself for all five
+baselines. Best-powered: region785 h=3 (14.9%), NHS h=3 (15.2%), LTLA h=3
+(16.0%) — still far above any effect this literature typically reports.
+
+This explains E5 mechanically. Japan and US-States are ties in every cell
+not because the models are equivalent but because nothing smaller than a
+33–90% gap could have been detected there. It also explains E15: Japan's
+seasonal-naive advantage is ~31%, right at the h=3 MDE of 33.3%, which is
+why p = 0.199.
+
+Caveats that must travel with the number: the MDE is conditional on each
+pair's realised loss-differential variance, so it is a diagnostic of this
+data rather than a design calculation; alpha is Holm-adjusted to alpha/m for
+the most conservative family member, which is pessimistic; 80% power is a
+convention; and the published effect sizes above come from a 50/20/30 split
+with a larger test window (Japan 104 points against our 70), which improves
+the standard error by roughly a fifth — not enough to lift a 5% effect above
+these thresholds, but the calculation should be repeated on their split
+before asserting anything about their specific results.
+
+**For Paper B this is a first-class contribution, not a caveat.** The
+family's papers compete over 4–6% differences on data that cannot resolve
+better than 34% on average. That is a stronger statement about the
+benchmark than any individual model comparison, and it reframes the honest
+DM outcome (mostly ties) from a weakness into the finding.
+
 **Reviewer points now answered:** #4 (single seed), #5 (no significance testing), #7 (ablation inconsistency — now explained mechanistically rather than excused), #10 (interpretability speculation — resolved by deletion).
 
 **E7 completes E3.** Taken together the story is now closed rather than merely observed: the sparsity penalty exerts no gradient (E7), weight decay pulls `u`/`v` toward zero with nothing opposing it, and the observed end state is uniform attention at entropy 1.0000 with parameters at ~1e-36 (E3), which the v2-space ablation confirms is aggregation without selection (removal costs +27.1%, so the module pools but does not attend). Three independent lines — analytical, diagnostic, ablative — agree. This is a demonstrable failure mode, not an anomaly, and it is considerably more publishable in that form.
