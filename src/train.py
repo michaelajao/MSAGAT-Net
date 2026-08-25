@@ -497,7 +497,11 @@ TRAIN_DEFAULTS = dict(
 )
 
 SEEDS = [42, 30, 45, 123, 1000]
-ABLATIONS = ['none', 'no_agam', 'no_mtfm', 'no_pprm']
+ABLATIONS = ['none', 'no_agam', 'mean_agam', 'no_mtfm', 'no_pprm']
+# mean_agam replaces the attention softmax with a fixed uniform 1/N,
+# isolating whether the module's value is aggregation or selection.
+# no_agam removes spatial mixing entirely and so answers a different
+# question; see doc/audit-2026-08-24/02-architecture-audit.md.
 
 
 # ── Single experiment ────────────────────────────────────────────────────────

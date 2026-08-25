@@ -615,6 +615,65 @@ class IdentitySpatialModule(nn.Module):
         return self.norm(x), 0.0
 
 
+class MeanPoolSpatialModule(nn.Module):
+    """
+    Uniform spatial mean pooling in place of attention (mean_agam ablation).
+
+    This isolates the claim behind finding E3. The existing `no_agam`
+    ablation replaces EAGAM with an identity pass-through, which removes
+    *all* spatial mixing at once and so conflates two different questions:
+    whether attention is selective, and whether spatial aggregation helps at
+    all. Measured attention entropy is 1.0000 on LTLA and the learnable
+    graph bias underflows to exactly zero (E19), which predicts that EAGAM
+    reduces to an unweighted spatial mean added residually.
+
+    This module implements exactly that prediction: the same value and
+    output projections, the same residual and LayerNorm, but with the
+    softmax replaced by a fixed uniform 1/N. If the prediction is right,
+    `mean_agam` should match the full module closely while `no_agam` should
+    not -- which separates "attention does not attend" from "spatial
+    aggregation is useless".
+
+    Args:
+        hidden_dim: Dimension of hidden representations
+        num_nodes: Number of nodes
+        dropout: Dropout rate applied to the pooled values
+    """
+
+    def __init__(self, hidden_dim, num_nodes, dropout=DROPOUT,
+                 bottleneck_dim=None, **kwargs):
+        super().__init__()
+        b = bottleneck_dim or max(hidden_dim // 4, 1)
+        # Value path only: with uniform weights the query and key
+        # projections cannot influence the output, so they are omitted.
+        self.value_low = nn.Linear(hidden_dim, b)
+        self.value_high = nn.Linear(b, hidden_dim)
+        self.out_low = nn.Linear(hidden_dim, b)
+        self.out_high = nn.Linear(b, hidden_dim)
+        self.dropout = nn.Dropout(dropout)
+        self.norm = nn.LayerNorm(hidden_dim)
+        self.num_nodes = num_nodes
+
+    def forward(self, x, mask=None):
+        """
+        Uniform mean over nodes, projected and added residually.
+
+        Args:
+            x: Input [batch, nodes, hidden_dim]
+            mask: Unused
+        Returns:
+            tuple: (output [batch, nodes, hidden_dim], 0.0)
+        """
+        B, N, _ = x.shape
+        v = self.value_high(self.value_low(x))
+        pooled = self.dropout(v).mean(dim=1, keepdim=True).expand(-1, N, -1)
+        out = self.out_high(self.out_low(pooled))
+        # Recorded for the diagnostics path: this is what E3 says the
+        # trained attention already is.
+        self.attn = torch.full((B, 1, N, N), 1.0 / N, device=x.device)
+        return self.norm(out + x), 0.0
+
+
 class IdentityMultiScaleModule(nn.Module):
     """
     Identity pass-through for ablation of MultiScaleSpatialModule (no_mtfm).
@@ -735,10 +794,17 @@ class MSAGATNet_Ablation(nn.Module):
         self.feature_norm = nn.LayerNorm(self.hidden_dim)
         self.feature_act = nn.ReLU()
         
-        # Spatial component: choose full attention or identity pass-through
+        # Spatial component: full attention, uniform mean pooling, or identity
         if self.ablation == 'no_agam':
             self.graph_attention = IdentitySpatialModule(
                 self.hidden_dim, num_nodes=self.m, dropout=dropout
+            )
+        elif self.ablation == 'mean_agam':
+            # Attention replaced by a fixed uniform mean: the behaviour E3
+            # says the trained module already has.
+            self.graph_attention = MeanPoolSpatialModule(
+                self.hidden_dim, num_nodes=self.m, dropout=dropout,
+                bottleneck_dim=self.low_rank_dim
             )
         else:
             self.graph_attention = SpatialAttentionModule(

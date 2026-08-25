@@ -183,7 +183,58 @@ def chunk_attn_revival():
             for d in order for h in HORIZONS[d] for s in SEEDS]
 
 
+def chunk_ablation_v2():
+    """Component ablations in the target space the paper actually reports.
+
+    The existing `ablation` chunk runs in level space and never completed at
+    five seeds (see ledger E14), so reviewer point #1 has no evidence behind
+    it. This repeats it in v2 configuration -- log-growth targets with
+    quantile heads -- which is the model the paper describes.
+
+    It adds `mean_agam`, which replaces the attention softmax with a fixed
+    uniform 1/N. That separates the two questions `no_agam` conflates: the
+    identity ablation removes all spatial mixing, so it cannot distinguish
+    "attention does not attend" from "spatial aggregation is useless".
+    Finding E19 predicts mean_agam should track the full module closely.
+
+    Small graphs first, so a failure surfaces in minutes rather than hours.
+    """
+    order = ['nhs_timeseries', 'japan', 'ltla_timeseries']
+    specs = []
+    for d in order:
+        for h in HORIZONS[d]:
+            for abl in ('no_agam', 'mean_agam', 'no_mtfm', 'no_pprm'):
+                for s in SEEDS:
+                    specs.append(run_spec(d, h, s, ablation=abl,
+                                          target_space='loggrowth', quant=True))
+    return specs
+
+
+def chunk_sensitivity_v2():
+    """Adjacency-threshold sensitivity, in v2 configuration.
+
+    Reviewer point #3: the 150 km Haversine threshold was never justified or
+    tuned, and no artefact on disk has sim_mat != 'default' (ledger E14), so
+    the sweep has never run. It matters more than it looks: if the static
+    adjacency is the only informative term in the attention logits (E3, E19),
+    the threshold *is* the spatial model.
+
+    150 km is the shipped default and already covered by the main v2 runs, so
+    only 100, 200 and 250 km are run here.
+    """
+    specs = []
+    for d, adj in (('nhs_timeseries', 'nhs-adj'), ('ltla_timeseries', 'ltla-adj')):
+        for thr in (100, 200, 250):
+            for h in HORIZONS[d]:
+                for s in SEEDS:
+                    specs.append(run_spec(d, h, s, sim_mat=f'{adj}-{thr}',
+                                          target_space='loggrowth', quant=True))
+    return specs
+
+
 CHUNKS = {
+    'ablation_v2': chunk_ablation_v2,
+    'sensitivity_v2': chunk_sensitivity_v2,
     'attn_revival': chunk_attn_revival,
     'attnfix': chunk_attnfix,
     'main_uk': chunk_main_uk,
