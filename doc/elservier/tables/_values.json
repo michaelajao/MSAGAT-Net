@@ -8,6 +8,8 @@
   "cov90_identity": 0.9073,
   "cov90_raw": 0.8919,
   "cov90_uniform": 0.9213,
+  "density_ltla_100": 0.179,
+  "density_ltla_250": 0.579,
   "dm_losses": 10,
   "dm_n": 105,
   "dm_ties": 76,
@@ -52,5 +54,8 @@
   "rmse_state360_h10": 216.4309,
   "rmse_state360_h15": 242.1723,
   "rmse_state360_h3": 165.6765,
-  "rmse_state360_h5": 182.4964
+  "rmse_state360_h5": 182.4964,
+  "sensitivity_max_abs_delta": 13.11,
+  "sensitivity_n_cells": 18,
+  "sensitivity_significant_cells": 0
 }

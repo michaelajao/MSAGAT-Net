@@ -436,6 +436,41 @@ A caveat to state: these cells are individually noisy (per-seed sd 5–26% on
 the small graphs), and per E18 the benchmark cannot resolve small effects.
 The LTLA rows carry the claim because that is where seed noise is ~1%.
 
+**E21 (added 25 Aug 2026) — the adjacency threshold does not matter, which
+completes the spatial-pathway story.** `chunk_sensitivity_v2` ran 90 cells
+(2 datasets x 3 thresholds x 3 horizons x 5 seeds), 0 failures, answering
+reviewer point #3. The shipped matrices are the 150 km ones, so 100, 200 and
+250 km are compared against them, paired within seed. Script:
+`src/scripts/sensitivity_analysis.py`; artefact:
+`report/results/sensitivity_v2.csv`.
+
+**Zero of 18 cells show a significant difference** (all Wilcoxon p >= 0.125),
+despite graph density changing more than three-fold:
+
+| dataset | 100 km | 150 km (default) | 200 km | 250 km |
+|---|---|---|---|---|
+| LTLA | 0.179 | 0.310 | 0.451 | 0.579 |
+| NHS | 0.265 | 0.388 | 0.551 | 0.592 |
+
+On LTLA every change is between +0.11% and +2.78% with p >= 0.31. On NHS the
+deltas are larger and consistently negative (up to −13.1% at 200 km, h=14),
+but with per-seed sd of 12–30% none is resolvable, and per E18 that cell
+cannot detect anything smaller than a ~50% effect anyway.
+
+**This closes the loop on the spatial pathway.** E19 showed the learned graph
+bias underflows to zero, leaving the static adjacency as the only attention
+logit with any spread — and that it is silenced by density on large graphs
+(row-sd 0.0036 on LTLA). E20 showed the attention softmax can be deleted on
+LTLA with no measurable effect. E21 now shows the graph *itself* can be
+changed substantially with no measurable effect. The three findings agree:
+**the model's spatial pathway is inert end to end, not merely its attention
+weights.**
+
+For the paper this converts reviewer point #3 from an unanswered objection
+into a supporting result: the 150 km threshold was never justified, and it
+turns out not to need justifying, because nothing downstream depends on it.
+State it that way rather than as a tuning study.
+
 **Reviewer points now answered:** #4 (single seed), #5 (no significance testing), #7 (ablation inconsistency — now explained mechanistically rather than excused), #10 (interpretability speculation — resolved by deletion).
 
 **E7 completes E3.** Taken together the story is now closed rather than merely observed: the sparsity penalty exerts no gradient (E7), weight decay pulls `u`/`v` toward zero with nothing opposing it, and the observed end state is uniform attention at entropy 1.0000 with parameters at ~1e-36 (E3), which the v2-space ablation confirms is aggregation without selection (removal costs +27.1%, so the module pools but does not attend). Three independent lines — analytical, diagnostic, ablative — agree. This is a demonstrable failure mode, not an anomaly, and it is considerably more publishable in that form.

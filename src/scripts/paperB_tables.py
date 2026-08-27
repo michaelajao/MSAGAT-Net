@@ -309,6 +309,37 @@ def table_pooled(values):
     write('pooled_symmetric.tex', lines)
 
 
+# --------------------------------------------------------------------------
+# T9  adjacency-threshold sensitivity
+# --------------------------------------------------------------------------
+def table_sensitivity(values):
+    path = os.path.join(RESULTS, 'sensitivity_v2.csv')
+    if not os.path.exists(path):
+        print('  (sensitivity_v2.csv missing, skipping)')
+        return
+    sv = pd.read_csv(path)
+    lines = [BS + 'begin{tabular}{lrrrrr}', HLINE,
+             ' & '.join(['Dataset', '$h$', 'Threshold (km)', 'Density',
+                         '$' + BS + 'Delta$RMSE', '$p$']) + ' ' + EOL, HLINE]
+    for _, r in sv.iterrows():
+        lines.append(
+            f'{PRETTY.get(r.dataset, r.dataset)} & {int(r.horizon)} & '
+            f'{int(r.threshold_km)} & {r.density:.3f} & '
+            f'{r.delta_pct_mean:+.2f}{BS}% & {r.wilcoxon_p:.2f} ' + EOL)
+    lines += [HLINE, BS + 'end{tabular}']
+    write('sensitivity.tex', lines)
+    values['sensitivity_significant_cells'] = int((sv.wilcoxon_p < 0.05).sum())
+    values['sensitivity_n_cells'] = int(len(sv))
+    values['sensitivity_max_abs_delta'] = round(
+        float(sv.delta_pct_mean.abs().max()), 2)
+    values['density_ltla_100'] = round(float(
+        sv[(sv.dataset == 'ltla_timeseries')
+           & (sv.threshold_km == 100)].density.iloc[0]), 3)
+    values['density_ltla_250'] = round(float(
+        sv[(sv.dataset == 'ltla_timeseries')
+           & (sv.threshold_km == 250)].density.iloc[0]), 3)
+
+
 def main():
     df = index()
     values = {}
@@ -322,6 +353,7 @@ def main():
     table_calibration(values)
     table_power(values)
     table_pooled(values)
+    table_sensitivity(values)
 
     dm = pd.read_csv(os.path.join(RESULTS, 'dm_tests_v2_best.csv'))
     b = dm[dm.family == 'baselines']
