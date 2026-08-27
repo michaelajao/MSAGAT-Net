@@ -1,0 +1,361 @@
+%% Evaluation paper, targeted at Computers in Biology and Medicine.
+%%
+%% This is a new manuscript, not an edit of elsarticle-template-num.tex.
+%% That file is the Artificial Intelligence in Medicine submission and is
+%% kept unchanged as the historical record; every headline number in it was
+%% invalidated by the protocol correction reported here (Section 4).
+%%
+%% Every table is generated: src/scripts/paperB_tables.py reads
+%% report/results/ and the prediction archives and writes tables/*.tex.
+%% Nothing in a table is typed. Numbers quoted in the prose are recorded in
+%% tables/_values.json so the text can be checked against the tables
+%% mechanically -- the 23.5% figure that survived three submissions was a
+%% prose number no table was ever checked against.
+
+\documentclass[final,1p,times]{elsarticle}
+\pdfminorversion=7
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage[psdextra]{hyperref}
+\usepackage{xurl}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{placeins}
+\usepackage{textcomp}
+
+\journal{Computers in Biology and Medicine}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{What a spatiotemporal graph network actually learns: a corrected,
+       multi-seed, calibrated re-evaluation of neural epidemic forecasters}
+
+%% TODO co-authors: confirm the list and order before submission. The
+%% correction in Section 4 changes the headline result of the prior
+%% submission, so everyone named here must see this draft first.
+% \author[inst1]{Michael Ajao-olarinoye\corref{cor1}}
+% \ead{olarinoyem@coventry.ac.uk}
+% \author[inst1]{Vasile Palade}
+% \author[inst1]{Fei He}
+% \author[inst2]{Petra A.~Wark}
+% \author[inst1]{Seyed Mousavi}
+% \author[inst3]{Zindoga Mukandavire}
+% \cortext[cor1]{Corresponding author.}
+% \affiliation[inst1]{organization={Centre for Computational Science and
+%   Mathematical Modelling, Coventry University}, city={Coventry},
+%   country={United Kingdom}}
+% \affiliation[inst2]{organization={Research Centre for Healthcare and
+%   Communities, Coventry University}, city={Coventry},
+%   country={United Kingdom}}
+% \affiliation[inst3]{organization={Institute of Applied Research and
+%   Technology, Emirates Aviation University}, city={Dubai},
+%   country={United Arab Emirates}}
+
+\begin{abstract}
+%% TODO tighten to the CBM word limit once the Results section is final.
+Neural spatiotemporal models for epidemic forecasting are compared against
+one another on a small family of shared datasets, usually with a single
+seed, no significance testing and no naive baseline. We re-evaluate this
+setting end to end and report five results, all of which run against the
+prevailing practice. First, a protocol asymmetry: in a preliminary version
+of our own comparison the baselines were scored on lead times $h$ to $2h-1$
+pooled while our model was scored at lead $h$ alone, and correcting it turns
+an apparent 23.5\% RMSE reduction into a statistical tie. Second, under a
+single declared protocol with five seeds and Diebold--Mariano testing, the
+model wins 19, loses 10 and ties 76 of 105 comparisons, with every loss on
+one dataset. Third, we add persistence, seasonal-naive and autoregressive
+floors, which this literature omits: the model beats the strongest floor in
+only 11 of 21 cells, and on the family's flagship influenza dataset a
+seasonal-naive forecast has lower error than every trained model at every
+horizon. Fourth, a power analysis shows the benchmark's median minimum
+detectable effect is 33.8\% RMSE, so the 4--6\% improvements this literature
+reports are not resolvable on it. Fifth, component ablations across 200 runs
+show that replacing the model's attention softmax with a uniform constant
+changes forecasts on the largest graph by 0.31\% on average, that the graph
+itself can be rewired substantially with no measurable effect, and that
+removing spatial components can improve accuracy. We release calibrated
+probabilistic forecasts for these datasets, where per-region conformal
+calibration raises 90\% interval coverage from 0.72 to 0.92 while lowering
+the weighted interval score. We argue the field's accuracy claims on this
+benchmark family are largely unresolvable, and that evaluation protocol,
+naive floors and calibration deserve the attention currently spent on
+architecture.
+\end{abstract}
+
+\begin{keyword}
+epidemic forecasting \sep evaluation protocol \sep graph neural networks \sep
+forecast calibration \sep statistical power \sep negative results
+\end{keyword}
+
+\end{frontmatter}
+
+% =====================================================================
+\section{Introduction}
+\label{sec:introduction}
+%% TODO write. Spine:
+%%  - epidemic forecasting matters operationally; the operational venues
+%%    (FluSight, COVID-19 Forecast Hub) score probabilistic forecasts with
+%%    WIS and coverage and rely on ensembles [Cramer 2022, Mathis 2024]
+%%  - the ML literature on this dataset family instead reports single-seed
+%%    point RMSE, no naive baseline, no significance test
+%%  - cross-paper numbers for the same model on the same data disagree
+%%    substantially (Cola-GNN US-States h=5: 202 in its own paper, 299 when
+%%    re-run by EARTH; Japan h=2: 929 vs 1168 in HeatGNN), so published
+%%    numbers cannot be compared across papers at all
+%%  - we set out to correct our own submission and found the problem is
+%%    structural, not local
+%%  - contributions, in the order of Section 6
+
+% =====================================================================
+\section{Related work}
+\label{sec:related}
+%% TODO write. Five strands, each with its own subsection:
+%%  (a) epidemic spatiotemporal GNNs: Cola-GNN (CIKM 2020), EpiGNN
+%%      (ECML-PKDD 2022), and the 2023-2026 line -- EARTH, HeatGNN, STTGNN
+%%      (KBS 2026), EpiHybridGNN, PISID, EASTG. State plainly that the
+%%      components of the model evaluated here are Cola-GNN's own three
+%%      modules (its Sections 3.2-3.4) and that STTGNN publishes the same
+%%      combination on two of these datasets.
+%%  (b) adaptive graph learning and bias-based attention outside
+%%      epidemiology: Graphormer, Graph WaveNet, MTGNN, AGCRN, STGAT,
+%%      MixHop. The Wang (2023) survey places this design in a cell it
+%%      considers settled since 2019.
+%%  (c) delay-aware graph learning: PDFormer, ALiBi.
+%%  (d) hybrid mechanistic/statistical: STAN (SIR as a training-time
+%%      penalty, discarded at inference), MepoGNN, EINNs, Fritz et al.
+%%      (2022) -- whose finding that "common ML approaches cannot
+%%      adequately capture the autoregressive term" anticipates ours.
+%%  (e) evaluation practice: Bracher et al. (2021) WIS; Cramer et al.
+%%      (2022); Mathis et al. (2024); SpatialEpiBench (2026), which finds
+%%      adjacency-informed epidemic models mostly lose to persistence;
+%%      EpiCastBench (2026).
+%% NOTE: Bracher and Cramer are in ref.bib but were cited zero times in the
+%% previous manuscript, even though the quantile set is justified entirely
+%% by their convention. Cite them where the 23 levels are introduced.
+
+% =====================================================================
+\section{The model, as implemented}
+\label{sec:model}
+%% TODO write from doc/audit-2026-08-24/02-architecture-audit.md.
+%% This section describes the model that produced the numbers, not the one
+%% the previous manuscript described. Differences that must be stated:
+%%  - there is no multi-scale temporal convolution: the dilation rate is 1
+%%    everywhere in the code, so the temporal encoder is a single 3-tap
+%%    depthwise-separable filter. "Multi-scale" refers to spatial hops.
+%%  - the attention logits are content + a low-rank learned bias + a scaled
+%%    row-normalised adjacency; parameter formula
+%%    P(N,S,h) = 7962 + 64N + 1121S + 23h (+902 with quantile heads),
+%%    validated against three checkpoints.
+%%  - the low-rank QKV projection does not reduce parameters at these
+%%    dimensions (3192 against 3168 for a plain linear).
+%%  - complexity is O(N^2 d), not O(N).
+%%  - every block has a well-known precedent, named: Graphormer for the
+%%    additive attention bias, Graph WaveNet/MTGNN/AGCRN for the low-rank
+%%    adaptive adjacency, MixHop/DCRNN for multi-hop mixing, Xception for
+%%    the separable convolution, LSTNet for the autoregressive highway,
+%%    damped-trend exponential smoothing for the decay branch.
+%% Do NOT restate the "self-attenuating prior" argument: Section 6.5 shows
+%% its empirical direction is the opposite of what was claimed.
+
+\input{tables/datasets}
+
+% =====================================================================
+\section{Evaluation protocol}
+\label{sec:protocol}
+%% TODO write. This is the section the paper turns on. Contents:
+%%  - the lead-h convention, stated exactly, for every model
+%%  - THE CORRECTION. Wording rules, non-negotiable: say "a preliminary
+%%    version of this comparison", never "published"; never claim an error
+%%    in the benchmark family -- upstream Cola-GNN is single-target and the
+%%    pooling was introduced in our own fork. Report both directions:
+%%    correcting the baselines down to lead h (Section 6.1) and scoring our
+%%    model up to the pooled protocol (Section 6.8) agree.
+%%  - chronological 60/20/20 split; input windows may span split boundaries
+%%    while targets never precede the split start (standard rolling-origin
+%%    for this family, and identical for every model)
+%%  - trailing causal 7-day smoothing on the two UK series only; Australia
+%%    raw; weekly ILI unsmoothed. Metrics on the UK series are therefore on
+%%    a smoothed scale.
+%%  - train-only min-max normalisation
+%%  - five seeds [42, 30, 45, 123, 1000]; tables report mean +/- sd with
+%%    ddof=1; the Diebold-Mariano test uses the median-RMSE seed for each
+%%    model so no ensemble advantage is taken
+%%  - DM with Newey-West at truncation lag h-1, the
+%%    Harvey-Leybourne-Newbold small-sample correction, and Holm within each
+%%    (dataset, horizon) family. Naive floors are tested as a SEPARATE Holm
+%%    family: they answer a different question and pooling them would
+%%    enlarge the correction on the primary comparison.
+%%  - minimum detectable effect reported per cell, so ties are legible
+%%  - baselines retrained under this protocol rather than quoted, because
+%%    published numbers for the same model on the same data disagree across
+%%    papers
+%%  - CONFIGURATIONS TRIED, reported for multiple-comparisons hygiene:
+%%    11 attention configurations, 9 renewal configurations, 4 ablation
+%%    arms, 3 adjacency thresholds.
+
+% =====================================================================
+\section{Results}
+\label{sec:results}
+
+\subsection{The corrected comparison}
+\label{sec:results-main}
+%% TODO. 19 wins / 10 losses / 76 ties of 105. All ten losses on
+%% Australia-COVID. Japan and US-States are ties in all 20 comparisons
+%% each; read them against Section 6.4 rather than as equivalence.
+\input{tables/main_influenza}
+\input{tables/main_covid}
+
+\subsection{Naive floors}
+\label{sec:results-floors}
+%% TODO. Beats the strongest floor in 11/21 cells; best of all trained
+%% models 16/21. On Japan a lag-52 seasonal-naive forecast has lower RMSE
+%% than every trained model at every horizon (1022 against 1244-1709), but
+%% the difference is NOT significant at 70 test points (p = 0.12-0.20):
+%% state it as a point estimate the benchmark cannot resolve, which is
+%% itself the finding. Verify the seasonality is genuine: RMSE by lag on
+%% Japan is 3260/3298/3200 at 13/26/39 weeks, 1022 at 52 and 1486 at 104.
+%% Mechanism: every model in this family reads a 20-step window, which on
+%% weekly data is 0.38 of an annual cycle.
+\input{tables/floors}
+
+\subsection{Statistical power}
+\label{sec:results-power}
+%% TODO. Median minimum detectable effect 33.8% RMSE (best cell 9.4%,
+%% worst 89.7%); NHS h=14 unresolvable at any effect size. EpiGNN's own
+%% 5.6% headline and HeatGNN's 4.1% gain are resolvable in 0 of 70
+%% comparisons here. Caveats to keep attached: the MDE is conditional on
+%% each pair's realised loss-differential variance; alpha is Holm-adjusted
+%% to alpha/m for the most conservative family member; 80% power is a
+%% convention; and the published effect sizes come from a 50/20/30 split
+%% whose larger test window improves the standard error by roughly a fifth,
+%% so their split should be recomputed before claiming anything about their
+%% specific results.
+\input{tables/power}
+
+\subsection{What the spatial pathway contributes}
+\label{sec:results-ablation}
+%% TODO. Three independent lines, all pointing the same way.
+%%  (a) Parameters: across 625 checkpoints the learned graph bias
+%%      underflows to exactly zero in float32 in the level-space arm, so
+%%      only the static adjacency carries any within-row spread -- and that
+%%      is 0.0036 on the 372-node graph against 0.137-0.187 on the 7-node
+%%      graph, a 38x gap driven purely by density.
+%%  (b) Behaviour: the mean_agam arm keeps every parameter and replaces
+%%      only the softmax with a uniform 1/N. On LTLA the mean absolute
+%%      change is 0.31% with no horizon significant (min p = 0.125).
+%%  (c) Structure: changing the adjacency threshold moves graph density
+%%      from 0.179 to 0.579 and changes nothing significantly in 18 of 18
+%%      cells.
+%% Then the wider table: no component removal costs more than 1% in the
+%% median and two of four improve the model.
+\input{tables/ablation}
+\input{tables/sensitivity}
+
+\subsection{Calibration}
+\label{sec:results-calibration}
+%% TODO. Quantile heads are well calibrated on weekly ILI and under-cover
+%% badly on the UK daily series (LTLA h=3 90% interval covers 0.72).
+%% Per-region conformal raises it to 0.92 and lowers WIS at the same time.
+%% Attention-weighted conformal is worst on both WIS and coverage error,
+%% which follows mechanically from Section 6.4: a uniform attention matrix
+%% used as a calibration kernel reduces to uniform pooling, and it does so
+%% gradedly -- agreement to 1e-4 on LTLA and Japan, largest deviation 1.2%
+%% on Australia, the dataset with the lowest measured attention entropy.
+\input{tables/calibration}
+
+\subsection{Target-space design}
+\label{sec:results-target}
+%% TODO. Log-growth targets help in 15 of 23 baseline cells, up to -51.9%
+%% (Cola-GNN, Australia), and hurt systematically on LTLA and NHS h=3.
+%% Present as a transferable design axis with a stated failure mode, not as
+%% a universal improvement. The level cap is the decoding guard that makes
+%% it usable; it is selected once on validation, globally.
+
+\subsection{Where the model fails}
+\label{sec:results-australia}
+%% TODO. Every significant loss is Australia-COVID. Diagnosis:
+%%  - rejected: the model is noisy. Prediction volatility is BELOW the
+%%    series', 0.72/0.46/0.31 at h=3/7/14.
+%%  - confirmed: a systematic under-forecast growing with horizon,
+%%    -6.8%/-14.6%/-23.4% of the test level, and not confined to the
+%%    epidemic wave -- RMSE by quartile at h=7 is 226/172/226/701 against
+%%    persistence 23/11/43/329.
+%%  - supported but not proven: the test window peaks at 1.88x the
+%%    validation maximum, the largest gap of the six datasets, and
+%%    validation is what early stopping and the level cap are calibrated
+%%    on. The gap predicts the bias across cells (r = -0.514, p = 0.017)
+%%    but 21 cells come from 6 datasets and share gap values, so that
+%%    p-value is optimistic.
+%% The wider point: the under-forecast is not Australia-specific. Five of
+%% six datasets show a negative bias growing with horizon, up to -45% on
+%% Japan. Australia is where it costs most because persistence is unusually
+%% strong there.
+
+\subsection{The correction seen from the other side}
+\label{sec:results-pooled}
+%% TODO, appendix-weight. Instead of correcting the baselines down to lead
+%% h, score our model up to the pooled protocol by replicating its lead-h
+%% prediction across leads h..2h-1 -- which is exactly how two of the
+%% baselines were graded. The 23.5% LTLA margin becomes +10.4% and the
+%% 22.2% NHS margin reverses sign to -4.1%. Both directions agree, so the
+%% conclusion does not depend on which way the correction is applied.
+%% Limitations to state: pooled targets need h-1 observations past each
+%% scored index so the last h-1 test samples are dropped; and replicating
+%% one prediction across h leads reproduces the old protocol's handicap,
+%% not a well-specified multi-step task.
+\input{tables/pooled_symmetric}
+
+% =====================================================================
+\section{Discussion}
+\label{sec:discussion}
+%% TODO. What the ties mean; what transfers (target-space design,
+%% calibration, the documented failure mode); the relation to
+%% SpatialEpiBench and to Fritz et al.'s finding about the autoregressive
+%% term; and one paragraph naming what the corrected protocol enables next
+%% -- an identifiability-constrained decomposition of forecast into
+%% autoregressive and spatial parts, cross-outbreak transfer, and
+%% endogenous R_t conditioning. Cross-cite the companion paper on the
+%% generation-interval result.
+
+% =====================================================================
+\section{Limitations}
+\label{sec:limitations}
+%% TODO, as a numbered list:
+%%  1. A single chronological split, not rolling-origin retraining.
+%%     SpatialEpiBench argues the latter reflects real-time practice;
+%%     repeating 525 baseline runs under it was out of scope. State it as
+%%     the next step rather than a defence.
+%%  2. Two datasets are underpowered by construction (70-72 test points).
+%%  3. Metrics on the UK series are on a 7-day-smoothed scale.
+%%  4. Centroid definition and the resulting adjacency are one choice among
+%%     several, though Section 6.4 shows the threshold does not matter.
+%%  5. Seeds capture initialisation and data-order variance only, not
+%%     hyperparameter or architecture-search variance.
+%%  6. No mobility or covariate data, by design; several strong methods in
+%%     the literature require them and are therefore not comparable here.
+%%  7. All results are conditional on the corrected protocol of Section 4.
+
+% =====================================================================
+\section*{Data and code availability}
+%% TODO. Case counts and geographic adjacency for all six datasets, the
+%% UKHSA dashboard API endpoints for the two UK series (NHS series ends
+%% 2022-09-12, LTLA 2022-07-18; the LTLA calendar range is inferred, say
+%% so), the Australia series as distributed with EpiGNN, and the repository
+%% URL with a Zenodo DOI. Note that every table is generated from the
+%% released artefacts by a single script.
+
+\section*{Declaration of competing interest}
+%% TODO
+
+\section*{CRediT authorship contribution statement}
+%% TODO
+
+\bibliographystyle{elsarticle-num}
+\bibliography{ref}
+
+\end{document}

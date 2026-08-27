@@ -272,7 +272,7 @@ def table_power(values):
            .reset_index().sort_values('mde', ascending=False))
     lines = [BS + 'begin{tabular}{lrrr}', HLINE,
              ' & '.join(['Dataset', '$h$', 'Test points',
-                         'Min. detectable ' + BS + 'Delta RMSE']) + ' ' + EOL,
+                         'Min. detectable $' + BS + 'Delta$RMSE']) + ' ' + EOL,
              HLINE]
     for _, r in g.iterrows():
         mde = '--' if not np.isfinite(r.mde) else f'{r.mde:.1f}{BS}%'
