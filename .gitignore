@@ -54,6 +54,7 @@ report/attention/
 report/figures/
 report/logs/
 reportOLD/
+hpc/sulis/*.out
 !report/results/
 !report/results/**/*.csv
 !report/manifests/

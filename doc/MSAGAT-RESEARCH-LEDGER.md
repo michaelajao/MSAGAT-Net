@@ -1,6 +1,89 @@
 # MSAGAT-Net — Research Ledger
 
-Status as of 19 August 2026. Covers what is established, what is decided-but-unacted, and what has not been touched at all.
+Status as of 19 August 2026, with the 29 September 2026 audit in §0. Covers what is established, what is decided-but-unacted, and what has not been touched at all.
+
+---
+
+## 0. Audit of 29 September 2026
+
+An independent re-check one month after the last commit (`b52f872`). Numbers
+below were recomputed from committed artefacts unless marked otherwise.
+
+**Why AIIM rejected it (AIIM-D-26-01866, 10 Aug 2026).** The editor's reason
+was scope: *"The mere application of well-known or already published
+algorithms and techniques to medical data is not regarded as original research
+... I do not see sufficient AI-related novelty."* Reviewer #1's ten points are
+now answered by E3-E21 (seeds, DM tests, threshold sweep, smoothing audit,
+ablation, attention), several in the reverse of the direction the manuscript
+hoped; only #8 (STAN/MepoGNN) remains open.
+
+**Reproduced exactly:** E5 19W/10L/76T of 105 (`dm_tests_v2_best.csv`); E15
+11 of 21 (`floor_comparison.csv`); E18 median MDE 33.79%, min 9.44, max 89.74
+(`dm_power_v2_best.csv`: 70 of the 105 comparisons have a finite MDE; the
+other 35 cannot resolve any effect size); E20 LTLA `mean_agam` deltas
+(`ablation_v2.csv`); E21 0 of 18 (`sensitivity_v2.csv`).
+
+**Corrections.**
+- **E1's corrected LTLA h=7 margin of 5.2% is superseded.** It was a
+  single-seed diagnostic of 10 Aug. In the final 5-seed grid LTLA h=7 is a
+  tie: MSAGAT v2 86.21 vs LSTNet 85.07, p = 0.83. Quote the tie; Paper B's
+  abstract already does.
+- **E1 is a self-correction.** Upstream amy-deng/colagnn is single-target;
+  the h..2h-1 pooling was introduced in this project's fork (`9a71d36`). This
+  closes §5 "Scope of the E1 claim".
+- **Paper A's decisive experiment was run** (`doc/plos-renewal/tables/arms_*`,
+  `epiestim.tex`); `renewal-net-design.md`'s "still untested" is stale. But
+  its `arms_test.tex` gives the learned kernel the best NHS *test* RMSE at h=3
+  (2.23 vs 2.79 direct) and h=7, while the headline "0 of 45 wins" is a
+  validation result against the exp-1 bar. Reconcile, with DM tests, before
+  submission.
+- **Paper A's GI table is not traceable to a committed artefact.**
+  `gi_recovery.tex` (5-seed means 3.23 / 4.52 / 3.62 d) is computed from the
+  git-ignored `save_renewal/` checkpoints by `src/scripts/paper_tables.py`.
+  The 3.33 / 4.19 / 3.28 d quoted in §5c-bis are the seed-42 values and lie
+  inside those ranges; persist a `gi_recovery.csv`.
+
+**Data, verified by execution.** Chronological 60/20/20, train-only
+normalisation and no target leakage confirmed by running `DataBasicLoader`;
+test sizes Japan 70, US-States 72, LTLA 168, NHS 179. All data and adjacency
+files are sha256-identical across MSAGAT-Net, colagnn and EpiGNN. LTLA is
+UK-wide: 307 England + 32 Scotland + 22 Wales + 11 NI = 372, which settles
+the 307-vs-372 discrepancy (§5). Minor: Australia has 8 negative cells
+(min -20) and ends mid-rise; LTLA carries ~115 one-day reporting spikes
+smeared by the 7-day mean; state them in the data-limitations text.
+
+**Still wrong or open.** Paper B is prose only in its abstract (266 words,
+over the limit); `highlights.tex` is the AIIM file and states four falsified
+claims. The root `README.md` still claims O(N) and a "self-attenuating" prior
+in a public repo. The baseline lead-h fix exists only as uncommitted edits in
+`../colagnn` and `../EpiGNN`. No record that co-authors have been told.
+
+**Novelty after the 2026 literature.** SpatialEpiBench (Lyu, Turcan, Wilder,
+arXiv 2605.06530) finds most methods lose to a last-value forecast; TERN
+(Nagashima, Funayama, arXiv 2609.18407) builds a seasonal reference into a
+model on the same three Cola-GNN influenza sets. Both verified; they pre-empt
+"seasonal-naive beats the family" as a headline. Still unoccupied: the
+power/MDE argument (E18), the training-dynamics mechanism of the attention
+collapse (E7/E19/E20), and log-growth targets as a cross-architecture effect
+(E2; Bosse et al. 2023 transform the scoring scale, not the training target).
+Also flagged by the review, abstract-level only, read before citing:
+EpiCastBench (2605.11598), Martin et al. (2608.20980), GeoID-PINN (2608.02633,
+narrows Paper C's identifiability framing), Mantis (2508.12260, dominates
+cross-disease transfer).
+
+**Recommendations.**
+- Paper B: answer the editor's novelty objection by adding a remedy to the
+  diagnosis: an evaluation design that *can* resolve ~5% effects (rolling
+  forecast origins; a panel DM over regions, since `dm_test.dm_stat` currently
+  averages squared errors across nodes into one series), with its MDE
+  reported before and after. Sulis makes the retraining cheap
+  (`doc/sulis-hpc.md`).
+- Cheap experiments on the existing harness: zero-shot time-series foundation
+  models under the corrected protocol; a lag-52 seasonal input for every
+  architecture (E15's mechanism as a test, now against TERN).
+- Paper A: PLOS Computational Biology or Epidemics fit a mechanistic
+  interpretability result with a negative accuracy finding better than JAMIA.
+- Paper C: re-scope around GeoID-PINN and Mantis before starting.
 
 ---
 
@@ -572,7 +655,7 @@ Also unreconciled: EpiMoNet's momentum and phase-transition components, and EpiD
 ## 5. Not worked on — nobody has raised these yet
 
 - **Scope of the E1 claim.** Critical and unresolved: are you correcting *your own* use of these baselines, or the *published protocol of the baseline family*? If the h-pooling error exists in the original Cola-GNN / EpiGNN papers, the contribution is far larger — and far more delicate. It requires checking their released code, stating the claim narrowly and factually, and probably contacting authors before submission. If it is only your harness, say so plainly and the paper is smaller but safe.
-- **Co-author communication.** The headline result moved from 23.5% to 5.2%. Palade, He, Wark, Mousavi and Mukandavire signed off on the AIIM version. They need to hear this from you, early, framed as an audit you ran and a correction you found — not discovered later in a revised draft.
+- **Co-author communication.** The headline result moved from 23.5% to a statistical tie (see §0). Palade, He, Wark, Mousavi and Mukandavire signed off on the AIIM version. They need to hear this from you, early, framed as an audit you ran and a correction you found — not discovered later in a revised draft.
 - **Multiple-comparisons hygiene under autoresearch.** Selecting a config from 100 validation-scored runs is a multiple-comparisons machine. A reviewer who already objected to single-seed evaluation will be unforgiving. Protocol: ratchet on validation only, touch test once at the end, re-run survivors across 5 seeds with DM. Log the number of configurations tried and report it.
 - **Venue.** The new framing — protocol correction, target-space design, calibration — is an evaluation-and-methodology paper, not an architecture paper. That is a different readership. Worth a fresh venue scan rather than resubmitting into the same family that rejected the architecture story twice.
 - **Data provenance does not reconcile across documents.** Spain-COVID appears as both 17 regions and 52 regions / 122 timesteps. LTLA appears as both 307 and 372 nodes. One document describes 7 datasets, the AIIM submission uses 6, and Spain does not appear in the submission at all. Some documents report 10-seed results while the submission reports single-seed. Until a single canonical dataset table exists, cross-document claims cannot be checked.
