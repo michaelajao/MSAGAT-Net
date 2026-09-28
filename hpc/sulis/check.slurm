@@ -14,7 +14,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=42
 #SBATCH --mem-per-cpu=3850
-#SBATCH --time=00:50:00
+#SBATCH --time=00:55:00
 #SBATCH --output=hpc/sulis/%x-%j.out
 #SBATCH --export=ALL
 set -euo pipefail
@@ -75,6 +75,34 @@ echo "== same cell on CPU only (is a GPU needed at all?)"
     --horizon 7 --seed 42 --ablation none --pprm_supervision repeat \
     --target_space loggrowth --quantiles 2> /tmp/time_cpu.txt | tail -3
 grep -E "Elapsed|Maximum resident" /tmp/time_cpu.txt
+
+echo "== baselines on GPU: one short run per codebase, via baseline_campaign's own command builder"
+# Reference test RMSEs are the seed-42 archives from the local RTX 5060 Ti
+# campaign. lstnet stands in for CNNRNN_Res and dcrnn (same colagnn trainer);
+# dcrnn itself takes 33-70 min even on the small sets, too long for gpu-devel.
+python - <<'EOF'
+import os, subprocess, time
+import numpy as np
+from src.scripts.baseline_campaign import build_cmd, npz_path
+
+ADJ = {'japan': 'japan-adj', 'australia-covid': 'australia-adj'}
+REF = [('epignn', 'japan', 3, 1272.3615, 49),
+       ('cola_gnn', 'australia-covid', 3, 252.4466, 204),
+       ('lstnet', 'australia-covid', 7, 269.3554, 33)]
+for model, ds, h, ref_rmse, ref_s in REF:
+    cwd, cmd = build_cmd(model, ds, ADJ[ds], h, 42)
+    t0 = time.time()
+    out = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    wall = time.time() - t0
+    if out.returncode != 0:
+        print(out.stdout[-2000:], out.stderr[-2000:])
+        raise SystemExit(f'{model} failed rc={out.returncode}')
+    z = np.load(npz_path(model, ds, h, 42))
+    rmse = float(np.sqrt(np.mean((z['y_true'] - z['y_pred']) ** 2)))
+    print(f'{model:9s} {ds} h={h}: RMSE local {ref_rmse:.4f} | sulis {rmse:.4f} '
+          f'({100 * (rmse - ref_rmse) / ref_rmse:+.2f}%) | wall local {ref_s} s, '
+          f'sulis {wall:.0f} s')
+EOF
 
 # The check runs rewrote tracked manifests and all_results.csv rows in this
 # checkout; restore them so the checkout matches the commit again.
