@@ -55,11 +55,9 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q tests \
 echo "== representative GPU run (reference: local RTX 5060 Ti, RMSE 87.6404, 134.6 s)"
 REF=report/manifests/ltla_timeseries/MSAGAT-Net.ltla_timeseries.w-20.h-7.none.seed-42.with_adj.ltla-adj-100.loggrowth.quant.json
 cp "$REF" /tmp/ref_manifest.json
-/usr/bin/time -v python -m src.train --single --dataset ltla_timeseries \
+python -m src.train --single --dataset ltla_timeseries \
     --horizon 7 --seed 42 --ablation none --pprm_supervision repeat \
-    --target_space loggrowth --sim_mat ltla-adj-100 --quantiles \
-    2> /tmp/time_gpu.txt | tail -5
-grep -E "Elapsed|Maximum resident" /tmp/time_gpu.txt
+    --target_space loggrowth --sim_mat ltla-adj-100 --quantiles | tail -5
 python - "$REF" <<'EOF'
 import json, sys
 ref = json.load(open('/tmp/ref_manifest.json'))
@@ -70,11 +68,12 @@ print(f"wall local {ref['wall_seconds']} s | sulis {new['wall_seconds']} s | "
       f"epochs local {ref['training']['epochs_run']} sulis {new['training']['epochs_run']}")
 EOF
 
-echo "== same cell on CPU only (is a GPU needed at all?)"
-/usr/bin/time -v python -m src.train --single --cpu --dataset nhs_timeseries \
+echo "== NHS cell on CPU only (is a GPU needed at all? local GPU mean for NHS: 56 s)"
+SECONDS=0
+python -m src.train --single --cpu --dataset nhs_timeseries \
     --horizon 7 --seed 42 --ablation none --pprm_supervision repeat \
-    --target_space loggrowth --quantiles 2> /tmp/time_cpu.txt | tail -3
-grep -E "Elapsed|Maximum resident" /tmp/time_cpu.txt
+    --target_space loggrowth --quantiles | tail -3
+echo "CPU wall ${SECONDS} s (OMP_NUM_THREADS=$OMP_NUM_THREADS)"
 
 echo "== baselines on GPU: one short run per codebase, via baseline_campaign's own command builder"
 # Reference test RMSEs are the seed-42 archives from the local RTX 5060 Ti
