@@ -30,28 +30,24 @@ already published.
 
 | File | Role |
 |---|---|
-| `MSAGAT-RESEARCH-LEDGER.md` | Single source of truth: findings E1–E14, decisions, outcomes of both autoresearch programmes |
+| `MSAGAT-RESEARCH-LEDGER.md` | Single source of truth: findings E1–E21, decisions, outcomes of both autoresearch programmes; §0 is the 29 Sep 2026 audit |
 | `attention-revival-summary.md` | Attention campaign: the two-line fix, nine failed elaborations, 5-seed confirmation (did not generalise), horizon-dependence finding |
 | `renewal-net-design.md` | Renewal lab record: design, corrections, final verdict (0/45 on accuracy; interpretability earned) |
 | `adversarial-priority-check.md` | Priority audit of novelty claims + verified bibliography corrections |
 | `preprocessing-audit.md` | Leakage audit (clean); protocol facts both papers must state |
 | `paper-c-design.md` | Paper C design spec, with changelog |
-| `EpiSIG-Net-v3-Design.md` | Parked architecture line (results predate the protocol fix) |
 | `../program.md` | Both autoresearch programmes, CLOSED, kept for the record |
+| `sulis-hpc.md` | Running the campaigns on the Sulis cluster (scripts in `../hpc/sulis/`) |
 
-## Superseded
-
-`paper-renewal-interpretability.md` — Paper A's content outline. The LaTeX in
-`plos-renewal/` is now the live artefact and carries newer numbers (5-seed
-kernel statistics, the naive-baseline table, the Wallinga–Lipsitch reframe).
+The pre-protocol-fix analyses, the EpiSIG design note, the superseded Paper A
+outline and the AIIM manuscript source were removed on 29 Sep 2026; they
+remain in git history (before that commit) for anyone auditing the record.
 
 ## `archive/` — do not cite
 
-Pre-protocol-fix analyses, the AIIM submission bundle, and stale results CSVs.
-Every comparison in them uses the invalid pooled h…2h−1 baseline scoring
-(ledger E1), and most use a 50/20/30 split rather than the current 60/20/20.
-`paper_results_final.csv` is the provenance of the AIIM manuscript's table —
-kept as evidence, not as data.
+`paper_results_final.csv` is the provenance of the AIIM manuscript's table,
+scored with the invalid pooled h…2h−1 baseline protocol (ledger E1). Kept as
+evidence, not as data; `src/scripts/pooled_symmetric.py` reads it.
 
 ## `GNN forecasting/`
 
