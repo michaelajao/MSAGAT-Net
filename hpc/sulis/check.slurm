@@ -33,13 +33,16 @@ print('torch', torch.__version__, '| device', torch.cuda.get_device_name(0),
       '| matmul ok', float((x @ x).abs().mean()) > 0)
 EOF
 
-echo "== data: every baseline input is identical to MSAGAT-Net's copy"
-# The 100/150/200/250 km adjacency variants exist only in MSAGAT-Net (the
-# baselines never use them), so check baseline files against MSAGAT-Net.
+echo "== data: the baselines read byte-identical copies of MSAGAT-Net's inputs"
+# Exactly the series/adjacency pairs baseline_campaign.py uses (DATASETS);
+# the repos also hold extras (threshold variants, spain-*, duplicates).
+USED="japan.txt japan-adj.txt region785.txt region-adj.txt state360.txt
+      state-adj-49.txt australia-covid.txt australia-adj.txt nhs_timeseries.txt
+      nhs-adj.txt ltla_timeseries.txt ltla-adj.txt"
 for repo in colagnn EpiGNN; do
-    (cd "$MSAGAT_ROOT/$repo/data" && sha256sum *.txt) > "/tmp/$repo.sha"
-    (cd data && sha256sum -c --quiet "/tmp/$repo.sha")
-    echo "$repo: $(wc -l < "/tmp/$repo.sha") files match"
+    for f in $USED; do cmp -s "data/$f" "$MSAGAT_ROOT/$repo/data/$f" \
+        || { echo "MISMATCH $repo/data/$f"; exit 1; }; done
+    echo "$repo: all 12 files identical"
 done
 
 echo "== test suite"
