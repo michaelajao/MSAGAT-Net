@@ -29,6 +29,6 @@ echo "== $(date -u +%FT%TZ) args=$* host=$(hostname) job=$SLURM_JOB_ID"
 echo "   MSAGAT-Net $(git rev-parse --short HEAD)"
 nvidia-smi --query-gpu=name --format=csv,noheader
 
-python -m src.scripts.baseline_campaign --dry-run "$@" | head -1
+python -m src.scripts.baseline_campaign --dry-run "$@" | sed -n 1p
 srun python -m src.scripts.baseline_campaign --parallel "${PARALLEL:-6}" "$@"
 echo "== finished $(date -u +%FT%TZ)"

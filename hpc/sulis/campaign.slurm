@@ -28,6 +28,6 @@ cd "$MSAGAT_ROOT/MSAGAT-Net"
 echo "== $(date -u +%FT%TZ) chunk=$CHUNK host=$(hostname) job=$SLURM_JOB_ID commit=$(git rev-parse --short HEAD)"
 nvidia-smi --query-gpu=name --format=csv,noheader
 
-python -m src.scripts.campaign --chunk "$CHUNK" --dry-run | head -1
+python -m src.scripts.campaign --chunk "$CHUNK" --dry-run | sed -n 1p
 srun python -m src.scripts.campaign --chunk "$CHUNK"
 echo "== finished $(date -u +%FT%TZ)"
