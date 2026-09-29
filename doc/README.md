@@ -1,5 +1,9 @@
 # doc/ — canonical documents
 
+Active work moved on 29 Sep 2026 to the private repository
+`michaelajao/epipanel` (evaluation harness and models; see ledger §0,
+follow-up). This repository is the record of MSAGAT-Net and Paper A.
+
 ## Papers
 
 | Path | Paper | Venue | Status |

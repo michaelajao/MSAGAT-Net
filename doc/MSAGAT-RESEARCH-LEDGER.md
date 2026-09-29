@@ -85,6 +85,42 @@ cross-disease transfer).
   interpretability result with a negative accuracy finding better than JAMIA.
 - Paper C: re-scope around GeoID-PINN and Mantis before starting.
 
+**Follow-up, 29 Sep 2026: the work moved to `michaelajao/epipanel`.** The
+one-paper programme continues in a new private repository that carries this
+repository's evaluation code, not its model, from commit `4bc7ed7`. Its Gate 1
+re-scores this repository's 850 fixed-protocol archives and reproduces
+exactly the DM grid (19/10/76), every floor RMSE, and the 29 Sep probes. The
+port found three things.
+
+- **A panel DM over regions adds no power; the recommendation above is
+  withdrawn.** For the mean of a panel differential with arbitrary
+  cross-regional dependence, the Driscoll–Kraay test equals Newey–West on the
+  regional mean, which is what `dm_stat` already computes (checked
+  numerically in epipanel's tests). Power has to come instead from four
+  sources:
+  - longer rolling test spans;
+  - seed ensembles;
+  - region-scaled losses;
+  - pooling effects across cells.
+
+  The design-stage MDE, computed from validation data for two trained models,
+  is 22.5% on the fixed split and 14.2% under rolling origins (medians over
+  cells).
+- **`prob_eval.wis_components` swaps the labels of the overprediction and
+  underprediction terms.** Total WIS is unaffected, but the two decomposition
+  columns of `prob_metrics.csv` and `conformal_metrics.csv` are each other's.
+- **`conformal.py` feeds each test score back one step after its target.** A
+  lead-h forecast should see it only h steps later. Re-run with h-step
+  feedback (identity kernel, all 105 v2 archives; the one-step version
+  reproduces `conformal_metrics.csv` exactly):
+  - LTLA h=3 coverage is 0.914 rather than 0.916, so Paper B's "0.72 → 0.92"
+    stands.
+  - Long horizons were flattered. At h=14, calibrated WIS is now worse than
+    raw on LTLA (49.5 vs 48.1) and on NHS (6.42 vs 6.33). Calibrated 90%
+    coverage is 0.843 on NHS h=14 and 0.860 on US-States h=15.
+  - Over all cells, coverage is 0.900 rather than 0.907, and WIS is 166.3
+    rather than 165.6 (raw 172.4).
+
 ---
 
 ## 1. Established findings
