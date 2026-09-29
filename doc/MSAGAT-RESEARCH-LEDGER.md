@@ -120,6 +120,17 @@ port found three things.
     coverage is 0.843 on NHS h=14 and 0.860 on US-States h=15.
   - Over all cells, coverage is 0.900 rather than 0.907, and WIS is 166.3
     rather than 165.6 (raw 172.4).
+- **Australia-COVID is JHU active cases, not daily new cases.**
+  `audit-2026-08-24/06-data-provenance.md` §3 is wrong on this point. Every
+  one of the 8 × 556 cells equals confirmed − deaths − recovered, rebuilt
+  from the JHU files EpiGNN ships in `data/`:
+  - columns in alphabetical order (ACT, NSW, NT, QLD, SA, TAS, VIC, WA);
+  - 27 Jan 2020 to 4 Aug 2021.
+
+  JHU zeroes New South Wales recoveries from 1 Aug 2020, so that column is
+  cumulative confirmed minus deaths for the last 368 days. That covers all of
+  validation and test, where it dominates the natural-scale error. The
+  reconstruction is `epipanel/scripts/australia_provenance.py`.
 
 ---
 
