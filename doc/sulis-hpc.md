@@ -156,6 +156,26 @@ times one run on CPU only. Tracked result files it overwrites are restored at
 the end. Use its wall time to cost any campaign:
 `GPU-hours ≈ runs × wall_seconds / 3600` for serial MSAGAT-Net chunks.
 
+Measured by job 2223714 (29 Sep 2026, A100, 6 min 41 s, all steps passed):
+
+| Run (seed 42) | Laptop RMSE | Sulis RMSE | Wall laptop / Sulis |
+|---|---|---|---|
+| MSAGAT-Net LTLA h=7 | 87.64 | 82.12 | 135 s / 130 s |
+| EpiGNN Japan h=3 | 1272.36 | 1261.28 | 49 s / 41 s |
+| Cola-GNN Australia h=3 | 252.45 | 277.16 | 204 s / 128 s |
+| LSTNet Australia h=7 | 269.36 | 237.60 | 33 s / 21 s |
+| MSAGAT-Net NHS h=7, CPU, 2 threads | (GPU mean 56 s) | — | — / 57 s |
+
+- **Sulis is deterministic run to run** (LTLA gave 82.1178 at epoch 229 twice),
+  but **laptop and Sulis differ by -12% to +10%** on the same seed (torch 2.7 /
+  Windows vs 2.4 / Linux). Never pair a Sulis run with a laptop run in a DM
+  test, ablation or sensitivity comparison: regenerate every arm of a
+  comparison on the same platform.
+- MSAGAT-Net does not need a GPU (CPU as fast as the laptop GPU). CPU jobs
+  need `--partition=compute --gres=` (empty; `--gres=none` is rejected), but
+  the compute partition was the slower queue on 29 Sep (estimated start ~24 h
+  away versus immediate on `gpu`).
+
 ## 7. Campaigns
 
 ```bash
