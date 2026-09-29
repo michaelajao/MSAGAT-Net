@@ -38,6 +38,7 @@ already published.
 | `paper-c-design.md` | Paper C design spec, with changelog |
 | `../program.md` | Both autoresearch programmes, CLOSED, kept for the record |
 | `sulis-hpc.md` | Running the campaigns on the Sulis cluster (scripts in `../hpc/sulis/`) |
+| `literature-review.md` | Close reading of 35 papers and 4 codebases (29 Sep 2026): claims, exact protocols, copied vs re-run baselines, writing patterns; synthesis and corrections first. Supersedes `audit-2026-08-24/03` and `04` where they disagree |
 
 The pre-protocol-fix analyses, the EpiSIG design note, the superseded Paper A
 outline and the AIIM manuscript source were removed on 29 Sep 2026; they
