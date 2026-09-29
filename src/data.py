@@ -85,12 +85,17 @@ class DataBasicLoader:
 
         self.scale = np.ones(self.m)
 
-        # Split indices
-        train_end = int(args.train * self.n)
-        val_end = int((args.train + args.val) * self.n)
-        
+        # Split indices. split_idx (train_end,val_end,test_end row indices)
+        # sets one rolling-origin fold; otherwise split by fractions.
+        if getattr(args, 'split_idx', None):
+            train_end, val_end, test_end = (int(v) for v in args.split_idx.split(','))
+        else:
+            train_end = int(args.train * self.n)
+            val_end = int((args.train + args.val) * self.n)
+            test_end = self.n
+
         # Compute normalization parameters and normalize data
-        self._compute_normalization(train_end, val_end)
+        self._compute_normalization(train_end, val_end, test_end)
         
         # Create train/val/test splits
         self._create_splits(train_end, val_end)
@@ -138,11 +143,12 @@ class DataBasicLoader:
         if args.cuda:
             self.external = extra_adj.cuda()
 
-    def _compute_normalization(self, train_end: int, val_end: int):
+    def _compute_normalization(self, train_end: int, val_end: int,
+                               test_end: int):
         """Compute min-max normalization parameters from training data."""
         self.train_set = range(self.P + self.h - 1, train_end)
         self.valid_set = range(train_end, val_end)
-        self.test_set = range(val_end, self.n)
+        self.test_set = range(val_end, test_end)
         
         # Get training data for normalization
         tmp_train = self._batchify(self.train_set, self.h, useraw=True)

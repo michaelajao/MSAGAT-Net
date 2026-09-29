@@ -519,7 +519,16 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
                           spatial_gate=False, target_space='level',
                           quantiles=None, eval_only=False, attn_fix=False,
                           attn_exp='', renewal=False, renewal_lag=0,
-                          gi_fix=None):
+                          gi_fix=None, split_idx=None, out_dir=None):
+    """Train and evaluate one configuration.
+
+    ``split_idx`` ("train_end,val_end,test_end" row indices) sets one fold of
+    a rolling-origin evaluation instead of the 60/20/20 fractions, and tags
+    the run token with the fold. ``out_dir`` sends the prediction archive,
+    manifest and checkpoint there and leaves report/ untouched (no
+    all_results.csv row, no tensorboard), for runs driven by another
+    repository. Both default to the behaviour the published grid used.
+    """
     cfg = DATASET_CONFIGS[dataset]
     args = Namespace(
         dataset=dataset, sim_mat=sim_mat or cfg['sim_mat'],
@@ -536,7 +545,8 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
         use_adj_prior=use_adj_prior, adj_weight=0.1, use_graph_bias=True,
         adaptive=False, seed=seed, gpu=0,
         cuda=torch.cuda.is_available() and not force_cpu,
-        save_dir=save_dir, mylog=True, highway_window=4,
+        save_dir=os.path.join(out_dir, 'ckpt') if out_dir else save_dir,
+        mylog=not out_dir, highway_window=4, split_idx=split_idx,
         extra='', label='', pcc='',
         pprm_supervision=pprm_supervision, spatial_gate=spatial_gate,
         target_space=target_space, quantiles=quantiles, eval_only=eval_only,
@@ -575,6 +585,8 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
         level_cap=GROWTH_LEVEL_CAP if target_space != 'level' else None,
         model_name=model_name)
     log_token = build_token(**token_spec)
+    if split_idx:
+        log_token += '.split-' + split_idx.replace(',', '-')
     # save_metrics keys its dedup mask on the model column, which is
     # model_name + this suffix; both come from the same definition.
     variant_tag = build_variant_tag(
@@ -597,8 +609,9 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
     dataset_results_dir = os.path.join(RESULTS_DIR, dataset)
     os.makedirs(dataset_results_dir, exist_ok=True)
 
+    pred_dir = (os.path.join(out_dir, 'predictions', dataset) if out_dir
+                else os.path.join(BASE_DIR, 'report', 'predictions', dataset))
     if save_predictions:
-        pred_dir = os.path.join(BASE_DIR, 'report', 'predictions', dataset)
         os.makedirs(pred_dir, exist_ok=True)
         payload = dict(
             y_true=final_metrics.y_true, y_pred=final_metrics.y_pred,
@@ -629,18 +642,21 @@ def run_single_experiment(dataset, horizon, seed, ablation='none',
     # save_metrics derives all_results.csv from the directory of this path;
     # the per-run file itself is never written (kept for the call signature).
     results_csv = os.path.join(dataset_results_dir, f"final_metrics_{log_token}.csv")
-    save_metrics(final_metrics.to_dict(), results_csv, dataset, args.window,
-                 horizon, logger, model_tag, ablation, seed, use_adj_prior,
-                 sim_mat=sim_mat or 'default')
+    if not out_dir:
+        save_metrics(final_metrics.to_dict(), results_csv, dataset, args.window,
+                     horizon, logger, model_tag, ablation, seed, use_adj_prior,
+                     sim_mat=sim_mat or 'default')
 
     # The manifest records what the token cannot: the code version, the full
     # configuration, the constants that silently change results (level cap,
     # quantile count), and whether this was a fresh train or a re-score.
     finished = time.time()
-    npz_file = (os.path.join(BASE_DIR, 'report', 'predictions', dataset,
-                             f"{log_token}.npz") if save_predictions else None)
+    npz_file = (os.path.join(pred_dir, f"{log_token}.npz")
+                if save_predictions else None)
     ckpt_file = os.path.join(BASE_DIR, args.save_dir, f"{log_token}.pt")
-    manifest_file = manifest_path(log_token, dataset=dataset, base=BASE_DIR)
+    manifest_file = (os.path.join(out_dir, 'manifests', dataset,
+                                  f'{log_token}.json') if out_dir
+                     else manifest_path(log_token, dataset=dataset, base=BASE_DIR))
     write_manifest(
         manifest_file, run_token=log_token, dataset=dataset,
         config=vars(args),
@@ -788,6 +804,12 @@ def main():
     parser.add_argument('--eval_only', action='store_true',
                         help='re-evaluate an existing checkpoint without '
                              'retraining')
+    parser.add_argument('--split_idx', default=None,
+                        help='train_end,val_end,test_end row indices: one '
+                             'rolling-origin fold instead of 60/20/20')
+    parser.add_argument('--out_dir', default=None,
+                        help='write the archive, manifest and checkpoint here '
+                             'and leave report/ untouched')
     args = parser.parse_args()
 
     quantiles = args.quantiles
@@ -809,7 +831,9 @@ def main():
                               attn_exp=args.attn_exp,
                               renewal=args.renewal,
                               renewal_lag=args.renewal_lag,
-                              gi_fix=args.gi_fix)
+                              gi_fix=args.gi_fix,
+                              split_idx=args.split_idx,
+                              out_dir=args.out_dir)
     else:
         datasets = args.datasets or list(DATASET_CONFIGS.keys())
         if args.experiment in ('main', 'all'):
