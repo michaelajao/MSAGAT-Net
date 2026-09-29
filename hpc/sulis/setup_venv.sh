@@ -28,10 +28,13 @@ python -m pip install --upgrade pip
 CONSTRAINTS="$MSAGAT_ROOT/constraints.txt"
 printf 'torch==2.4.0\nnumpy==1.26.2\nscipy==1.11.4\npandas==2.1.3\n' > "$CONSTRAINTS"
 # tensorboardX is imported by the colagnn and EpiGNN trainers; tensorboard by
-# MSAGAT-Net's optional writer.
+# MSAGAT-Net's optional writer. colagnn's train.py imports
+# spatiotemporal_transformer_gat at start-up, which needs torch_geometric's
+# GATConv (pure Python; no torch_scatter/torch_sparse needed).
 python -m pip install --constraint "$CONSTRAINTS" \
     scikit-learn==1.5.2 matplotlib==3.8.4 seaborn==0.13.2 \
-    tensorboard==2.17.1 tensorboardX==2.6.2.2 pytest==7.4.4
+    tensorboard==2.17.1 tensorboardX==2.6.2.2 pytest==7.4.4 \
+    torch_geometric==2.6.1
 
 python - <<'EOF'
 import sys, torch, numpy, pandas, scipy, sklearn
