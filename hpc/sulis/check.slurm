@@ -54,7 +54,7 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q tests \
 
 echo "== representative GPU run (reference: local RTX 5060 Ti, RMSE 87.6404, 134.6 s)"
 REF=report/manifests/ltla_timeseries/MSAGAT-Net.ltla_timeseries.w-20.h-7.none.seed-42.with_adj.ltla-adj-100.loggrowth.quant.json
-cp "$REF" /tmp/ref_manifest.json
+git show "HEAD:$REF" > /tmp/ref_manifest.json   # from git: a killed earlier check may have overwritten the file
 python -m src.train --single --dataset ltla_timeseries \
     --horizon 7 --seed 42 --ablation none --pprm_supervision repeat \
     --target_space loggrowth --sim_mat ltla-adj-100 --quantiles | tail -5
@@ -106,5 +106,6 @@ EOF
 # The check runs rewrote tracked manifests and all_results.csv rows in this
 # checkout; restore them so the checkout matches the commit again.
 git checkout -- report/manifests report/results
+rm -f report/manifests/nhs_timeseries/MSAGAT-Net.nhs_timeseries.w-20.h-7.none.seed-42.with_adj.loggrowth.quant.json
 git status --short
 echo "== done $(date -u +%FT%TZ)"
