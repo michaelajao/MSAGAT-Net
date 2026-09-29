@@ -93,6 +93,11 @@ def main():
     ap.add_argument('--growth', action='store_true',
                     help='run the growth-space generality experiment '
                          '(GROWTH_SPECS models/datasets with loggrowth targets)')
+    # Subset filters let the multi-hour cells (cola_gnn/dcrnn on LTLA) be
+    # spread over several GPUs as separate jobs instead of queueing in one.
+    ap.add_argument('--datasets', nargs='+', default=None,
+                    choices=[d for d, _, _ in DATASETS])
+    ap.add_argument('--horizons', nargs='+', type=int, default=None)
     args = ap.parse_args()
 
     if args.growth:
@@ -107,6 +112,10 @@ def main():
                  for h in horizons
                  for m in args.models
                  for s in SEEDS]
+    if args.datasets:
+        specs = [t for t in specs if t[1] in args.datasets]
+    if args.horizons:
+        specs = [t for t in specs if t[3] in args.horizons]
     specs.sort(key=lambda t: is_heavy(t[0], t[1]))   # heavy cells last
     todo = [s for s in specs
             if args.force or not os.path.exists(
